@@ -1,29 +1,43 @@
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.pool import NullPool
 import os
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "database.db")
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}")
 
-from sqlalchemy.pool import NullPool
+# ── Render/Supabase Compatibility Fix ────────────────────────────────────────
+# Supabase and Render both issue connection strings starting with "postgres://"
+# but SQLAlchemy 2.0+ strictly requires "postgresql://" — fix it automatically.
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+is_sqlite = SQLALCHEMY_DATABASE_URL.startswith("sqlite")
+
+connect_args = {}
+if is_sqlite:
+    connect_args = {
+        "check_same_thread": False,
+        "timeout": 30,
+    }
+
+# Use NullPool for SQLite only — prevents lock storms on concurrent requests.
+# PostgreSQL benefits from the default connection pool, so we skip NullPool there.
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={
-        "check_same_thread": False,
-        "timeout": 30,           # Wait up to 30s for a locked DB before raising
-    },
-    poolclass=NullPool
+    connect_args=connect_args,
+    **({"poolclass": NullPool} if is_sqlite else {}),
 )
 
-# Enable WAL mode — allows concurrent readers + one writer, prevents lock storms
+# Enable WAL mode for SQLite only — prevents lock storms
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA synchronous=NORMAL")
-    cursor.execute("PRAGMA busy_timeout=30000")  # 30s busy timeout at SQLite level
-    cursor.close()
+    if engine.url.get_backend_name() == "sqlite":
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

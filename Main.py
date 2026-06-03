@@ -129,10 +129,23 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Global CORS relief for development testing
+# ── CORS ──────────────────────────────────────────────────────────────────────
+# In development: allow localhost Vite dev server.
+# In production (Render): set the ALLOWED_ORIGIN env var to your Vercel URL.
+_allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+_production_origin = os.getenv("ALLOWED_ORIGIN", "")
+if _production_origin:
+    _allowed_origins.append(_production_origin)
+
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"],
-    allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.middleware("http")
