@@ -74,7 +74,7 @@ export default function Login() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="mt-2 text-center text-sm text-slate-500 font-mono tracking-[0.2em] uppercase"
+          className="mt-2 text-center text-sm text-slate-500 font-mono tracking-[0.2em] uppercase whitespace-nowrap"
         >
           AI Interview Platform · Sterling E-Mobility
         </motion.p>
