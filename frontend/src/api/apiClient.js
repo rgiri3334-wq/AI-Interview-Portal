@@ -45,12 +45,23 @@ api.interceptors.response.use(
   (res) => res.data,
   (err) => {
     const status = err.response?.status;
-    const detail =
+    const rawDetail =
       err.response?.data?.detail ||
       err.response?.data?.error  ||
       err.response?.data?.message ||
       err.message ||
       'Unknown API error';
+
+    // FastAPI 422 validation errors return `detail` as an array of objects like:
+    // [{ loc: ["body","password"], msg: "ensure this value has at least 6 characters" }]
+    // Joining the `msg` fields gives a readable error string.
+    let detail;
+    if (Array.isArray(rawDetail)) {
+      detail = rawDetail.map(e => e.msg || JSON.stringify(e)).join('; ');
+    } else {
+      detail = String(rawDetail);
+    }
+
     if (detail !== 'Network Error') {
       console.error(
         `%c[API Error] ${status ? `HTTP ${status}` : 'Network'}: ${detail}`,
@@ -72,6 +83,7 @@ api.interceptors.response.use(
     return Promise.reject(normalized);
   }
 );
+
 
 // ── Retry Utility (manual exponential backoff — no extra dependency) ───────
 async function withRetry(fn, { retries = 3, baseDelayMs = 500 } = {}) {
