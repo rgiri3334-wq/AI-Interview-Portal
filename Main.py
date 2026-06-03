@@ -131,14 +131,20 @@ app = FastAPI(
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 # In development: allow localhost Vite dev server.
-# In production (Render): set the ALLOWED_ORIGIN env var to your Vercel URL.
+# In production: Vercel URLs are included directly + env var override supported.
 _allowed_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    # Production Vercel domains — hardcoded as reliable fallback
+    "https://ai-interview-portal.vercel.app",
+    "https://ai-interview-portal-git-main-rgiri3334-wqs-projects.vercel.app",
 ]
-_production_origin = os.getenv("ALLOWED_ORIGIN", "")
-if _production_origin:
-    _allowed_origins.append(_production_origin)
+# Also support env var — allows comma-separated list of extra origins
+_env_origins = os.getenv("ALLOWED_ORIGIN", "")
+for _origin in _env_origins.split(","):
+    _origin = _origin.strip()
+    if _origin and _origin not in _allowed_origins:
+        _allowed_origins.append(_origin)
 
 app.add_middleware(
     CORSMiddleware,
@@ -147,6 +153,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.middleware("http")
 async def verify_admin_jwt(request: Request, call_next):
