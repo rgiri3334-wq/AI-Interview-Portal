@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Zap, Brain, Eye, Mic, BarChart3, ArrowRight, CheckCircle, Shield } from 'lucide-react';
 import ParticleCanvas from '../components/UI/ParticleCanvas';
-import logoUrl from '../assets/sparkhire_ai_logo.jpeg'; // BUG-06 fix: Use bundled asset, not absolute machine path
+import logoUrl from '../assets/sterling_logo.png'; // BUG-06 fix: Use bundled asset, not absolute machine path
 
 const features = [
   { icon: Brain, title: 'AI Question Engine', desc: 'AI-powered dynamic questions tailored to each role and skill level.' },
@@ -11,9 +11,9 @@ const features = [
   { icon: Mic, title: 'Voice Analytics', desc: 'Detects filler words, speech pace, clarity, and confidence patterns.' },
   { icon: BarChart3, title: 'Live Scorecards', desc: 'Instant technical & EQ scores with detailed feedback per question.' },
   { icon: Shield, title: 'Anti-Cheat Monitoring', desc: 'Eye gaze tracking and tab-switch detection for integrity assurance.' },
-  { icon: Zap, title: 'Spark-Hire-Grade Reports', desc: 'Enterprise-quality PDF-ready interview reports with AI summaries.' },
+  { icon: Zap, title: 'Sterling-Grade Reports', desc: 'Enterprise-quality PDF-ready interview reports with AI summaries.' },
 ];
-const stack = ['Spark-Hire AI', 'FastAPI', 'React', 'WebRTC', 'SQLite', 'WebSocket'];
+const stack = ['Sterling AI', 'FastAPI', 'React', 'WebRTC', 'SQLite', 'WebSocket'];
 
 // Animated typewriter hook
 function useTypewriter(words, speed = 100) {
@@ -61,11 +61,12 @@ export default function Landing() {
         <div className="absolute top-0 left-0 right-0 px-10 py-5 flex items-center justify-between border-b border-slate-200 bg-white/80 backdrop-blur-md z-50 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-md border border-slate-800">
-              <img src={logoUrl} alt="Spark-Hire Logo" className="w-9 h-9 object-contain mix-blend-screen" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
-              <div className="hidden w-9 h-9 bg-[#EF4444] text-white flex items-center justify-center font-bold text-sm">Spark-Hire</div>
+              <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain mix-blend-screen" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+              <div className="hidden w-9 h-9 bg-[#EF4444] text-white flex items-center justify-center font-bold text-sm">Sterling</div>
             </div>
-            <span className="font-extrabold text-lg tracking-wide text-slate-900 flex items-center">
-              Sterling E-Mobility <span className="text-slate-400 font-light mx-2">x</span> <span className="text-[#EF4444]">Spark-Hire</span>
+            <span className="font-extrabold text-lg tracking-wide text-slate-900">
+              Sterling <span className="text-[#EF4444]">E-Mobility</span>
+              <span className="text-slate-500 text-xs ml-3 tracking-[0.2em] font-mono">ENTERPRISE</span>
             </span>
           </div>
           <div className="flex gap-4">
@@ -86,7 +87,7 @@ export default function Landing() {
           className="relative z-10 max-w-4xl w-full mx-auto flex flex-col items-center mt-16"
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-50 border border-red-100 text-red-600 text-xs font-bold uppercase tracking-widest mb-8 shadow-sm">
-            <Shield size={14} /> Spark-Hire Enterprise Grade Assessment
+            <Shield size={14} /> Sterling Enterprise Grade Assessment
           </div>
 
           <h1 className="text-5xl md:text-7xl font-black leading-tight mb-6 tracking-tight text-slate-900">
@@ -224,7 +225,7 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="text-center py-8 border-t border-slate-200 text-slate-500 text-xs tracking-widest uppercase font-mono bg-white">
-        Spark-Hire AI
+        Sterling AI
       </footer>
     </div>
   );

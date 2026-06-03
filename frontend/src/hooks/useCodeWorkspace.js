@@ -11,7 +11,7 @@
  *   - getCode() for clean submission to assessment endpoint
  *   - Exposes editor ref for direct Monaco API access if needed
  * =============================================================================
- * Author: Aditya Singh | Spark-Hire AI AI Platform
+ * Author: Aditya Singh | Sterling AI AI Platform
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -21,7 +21,7 @@ const STORAGE_KEY = 'sterling_interview_code';
 
 // Default starter stubs per language
 const STARTERS = {
-  javascript: `// Spark-Hire AI Interview — Code Workspace
+  javascript: `// Sterling AI Interview — Code Workspace
 // Write your solution or architectural notes below.
 // This editor supports syntax highlighting, auto-indent, and bracket matching.
 
@@ -29,14 +29,14 @@ function solution() {
   // Your code here
 }
 `,
-  python: `# Spark-Hire AI Interview — Code Workspace
+  python: `# Sterling AI Interview — Code Workspace
 # Write your solution or architectural notes below.
 
 def solution():
     # Your code here
     pass
 `,
-  cpp: `// Spark-Hire AI Interview — Code Workspace
+  cpp: `// Sterling AI Interview — Code Workspace
 // Write your solution or architectural notes below.
 
 #include <iostream>
@@ -47,7 +47,7 @@ int main() {
     return 0;
 }
 `,
-  java: `// Spark-Hire AI Interview — Code Workspace
+  java: `// Sterling AI Interview — Code Workspace
 // Write your solution or architectural notes below.
 
 public class Solution {

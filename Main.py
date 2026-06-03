@@ -3,7 +3,7 @@
 AI Virtual Interview Platform — Enterprise Backend v4.0
 =============================================================================
 Author:       Aditya Singh (Principal Architect)
-Architecture: FastAPI + Spark-Hire AI 2.0 Flash + SQLite + WebSockets
+Architecture: FastAPI + Sterling AI 2.0 Flash + SQLite + WebSockets
 AI Layer:     services/sterling ai_service.py (context-aware, adaptive, memory-backed)
 =============================================================================
 """
@@ -117,14 +117,14 @@ async def lifespan(app: FastAPI):
     if not key or key == "your_sterling ai_api_key_here":
         logger.warning("AI_API_KEY missing — running in MOCK / Fallback mode.")
     else:
-        logger.info("AI Subsystem ONLINE — Spark-Hire Assessment Engine + Context Memory Active.")
+        logger.info("AI Subsystem ONLINE — Sterling Assessment Engine + Context Memory Active.")
     yield
     logger.info("Graceful shutdown complete.")
 
 # ── App ───────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="AI Virtual Interview Engine",
-    description="Production-grade AI interview platform with Spark-Hire AI 2.0 Flash + Multi-LLM orchestration.",
+    description="Production-grade AI interview platform with Sterling AI 2.0 Flash + Multi-LLM orchestration.",
     version="5.0.0",
     lifespan=lifespan,
 )
@@ -338,8 +338,8 @@ class ExecuteCodeRequest(BaseModel):
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    # Serve the Spark-Hire logo bundled relative to this file
-    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "src", "assets", "sparkhire_ai_logo.jpeg")
+    # Serve the Sterling logo bundled relative to this file
+    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "src", "assets", "sterling_logo.png")
     if os.path.exists(logo_path):
         return FileResponse(logo_path, media_type="image/png")
     from fastapi.responses import Response
@@ -352,7 +352,7 @@ def health_check():
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "ai_status": get_orchestrator_stats(),
         "architect": "Aditya Singh",
-        "ai_models": ["Spark-Hire Assessment Engine", "Intelligent Analysis Engine", "Candidate Analysis Engine"],
+        "ai_models": ["Sterling Assessment Engine", "Intelligent Analysis Engine", "Candidate Analysis Engine"],
         "orchestrator_mode": "ACTIVE"
     }
 
@@ -472,7 +472,7 @@ async def login_candidate(request: Request, data: CandidateLogin, db: Session = 
 @app.post("/api/auth/admin-login", tags=["Auth"])
 async def admin_login(data: CandidateLogin):
     # Hardcoded admin credentials for prototype
-    if data.email == "admin@sparkhire.com" and data.password == "admin":
+    if data.email == "admin@sterling.com" and data.password == "admin":
         # Token expires in 2 hours
         payload = {"sub": "admin", "exp": int(time.time()) + 7200}
         token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
@@ -699,7 +699,7 @@ async def delete_admin_question(q_id: str, db: Session = Depends(get_db)):
 
 @app.post("/api/admin/seed", tags=["Admin"])
 async def seed_admin_questions(db: Session = Depends(get_db)):
-    """Seed the database with Spark-Hire AI default roles and questions."""
+    """Seed the database with Sterling AI default roles and questions."""
     seed_data = [
         # EV Engineering
         ("EV Engineering", "Battery Management System (BMS) Engineer", "How do you design a passive cell balancing circuit, and what are the trade-offs compared to active balancing?", "Passive balancing, Active balancing, Resistors, Heat dissipation, Cell state of charge (SoC), Cell life, Efficiency", "Hard"),
@@ -897,7 +897,7 @@ async def upload_resume(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """Upload a resume PDF/TXT, parse it with Spark-Hire AI, and score it against the job role."""
+    """Upload a resume PDF/TXT, parse it with Sterling AI, and score it against the job role."""
     resume = db.query(Resume).filter_by(resume_id=resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
@@ -1175,7 +1175,7 @@ async def assess_candidate(data: AssessRequest):
         model_used=              "sterling ai-2.0-flash",
     )
 
-# ── Audio Transcription (Spark-Hire Analysis Engine) ───────────────────────────────────
+# ── Audio Transcription (Sterling Analysis Engine) ───────────────────────────────────
 
 @app.post("/api/transcribe", tags=["AI Engine"])
 async def transcribe_audio_endpoint(file: UploadFile = File(...)):
@@ -1194,7 +1194,7 @@ async def transcribe_audio_endpoint(file: UploadFile = File(...)):
 
 @app.get("/api/interview/ai-report/{candidate_id}", tags=["AI Engine"])
 async def get_ai_report(candidate_id: str, db: Session = Depends(get_db)):
-    """Generate Spark-Hire AI-powered final evaluation report from memory."""
+    """Generate Sterling AI-powered final evaluation report from memory."""
     c = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
     if not c: raise HTTPException(status_code=404, detail="Candidate not found")
     
@@ -1435,7 +1435,7 @@ async def websocket_interview(websocket: WebSocket, candidate_id: str):
                 emotion  = msg.get("emotion", "Neutral")
                 fillers  = detect_filler_words(answer)
                 wpm      = msg.get("wpm", 0)
-                await websocket.send_json({"type": "assessing", "message": "Spark-Hire AI is evaluating your answer..."})
+                await websocket.send_json({"type": "assessing", "message": "Sterling AI is evaluating your answer..."})
                 try:
                     result = await assess_answer(
                         candidate_id=candidate_id,

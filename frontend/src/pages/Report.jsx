@@ -12,7 +12,7 @@ import {
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
 
-// ── Spark-Hire Premium Score Ring ──────────────────────────────────────────
+// ── Sterling Premium Score Ring ──────────────────────────────────────────
 function ScoreRing({ score, max = 100, color = '#DC2626', label, size = 120 }) {
   const r = (size - 12) / 2;
   const circ = 2 * Math.PI * r;
@@ -131,7 +131,7 @@ export default function Report() {
   const gradeColor = overall >= 80 ? '#10B981' : overall >= 60 ? '#DC2626' : '#991B1B';
 
   const handleExport = () => {
-    const dossierContent = `STERLING E-MOBILITY x SPARK-HIRE - AI DOSSIER
+    const dossierContent = `STERLING E-MOBILITY - ENTERPRISE AI DOSSIER
 ===================================================
 CANDIDATE: ${c.name}
 ROLE: ${c.job_role}
@@ -179,7 +179,7 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Spark-Hire_Dossier_${c.name.replace(/\s+/g, '_')}.txt`;
+    a.download = `Sterling_Dossier_${c.name.replace(/\s+/g, '_')}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -200,7 +200,7 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
             <h1 className="text-4xl font-extrabold tracking-tight mb-2 text-slate-900">
               Candidate <span className="text-red-700">Intelligence Report</span>
             </h1>
-            <p className="text-slate-500 font-medium">Sterling E-Mobility x Spark-Hire AI evaluation for {c.name}</p>
+            <p className="text-slate-500 font-medium">Advanced metrics and Sterling AI evaluation for {c.name}</p>
           </div>
           <div className="flex gap-4">
             <button onClick={() => { localStorage.removeItem('candidate_id'); navigate('/dashboard'); }} className="px-5 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors text-slate-800 shadow-sm">
@@ -286,7 +286,7 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
         {/* AI Synthesis */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white border border-slate-200 rounded-2xl p-8 mb-8 shadow-sm border-t-4 border-t-red-600">
           <h3 className="text-sm font-bold mb-4 text-slate-900 flex items-center uppercase tracking-widest">
-            <MessageSquare size={16} className="text-red-600 mr-3" /> Spark-Hire AI Synthesis
+            <MessageSquare size={16} className="text-red-600 mr-3" /> Sterling AI Synthesis
           </h3>
           <p className="text-slate-600 leading-relaxed text-lg font-medium">{iv.summary}</p>
         </motion.div>

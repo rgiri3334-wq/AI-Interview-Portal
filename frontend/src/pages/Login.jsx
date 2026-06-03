@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { apiClient } from '../api/apiClient';
-import logoUrl from '../assets/sparkhire_ai_logo.jpeg';
+import logoUrl from '../assets/sterling_logo.png';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -31,7 +31,7 @@ export default function Login() {
         navigate('/home'); 
       }
     } catch (err) {
-      setError(err.message || 'Invalid credentials. Hint: admin@sparkhire.com / admin');
+      setError(err.message || 'Invalid credentials. Hint: admin@sterling.com / admin');
       setLoading(false);
     }
   };
@@ -48,7 +48,7 @@ export default function Login() {
             {/* The transparent 3D logo from public folder */}
             <img 
               src={logoUrl} 
-              alt="Spark-Hire Logo" 
+              alt="Sterling Logo" 
               className="w-16 h-16 object-contain relative z-10 mix-blend-screen"
               onError={(e) => {
                 e.target.style.display = 'none';
@@ -57,7 +57,7 @@ export default function Login() {
             />
             {/* Fallback if logo.png is missing */}
             <div className="hidden w-full h-full bg-[#EF4444] text-white flex-col items-center justify-center font-bold text-2xl relative z-10">
-              Spark-Hire
+              Sterling
             </div>
           </div>
         </motion.div>
@@ -66,9 +66,9 @@ export default function Login() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight flex items-center justify-center"
+          className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight"
         >
-          Sterling E-Mobility <span className="text-slate-400 font-light mx-2">x</span> <span className="text-[#EF4444]">Spark-Hire</span>
+          Sterling <span className="text-[#EF4444]">E-Mobility</span>
         </motion.h2>
         <motion.p 
           initial={{ opacity: 0 }}
@@ -99,7 +99,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full px-4 py-3.5 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EF4444]/50 focus:border-[#EF4444] transition-all sm:text-sm font-medium text-slate-900"
-                  placeholder="admin@sparkhire.com"
+                  placeholder="admin@sterling.com"
                 />
               </div>
             </div>

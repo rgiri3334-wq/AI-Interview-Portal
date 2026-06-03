@@ -4,7 +4,7 @@ import {
   LayoutDashboard, User, Mic, FileText,
   ChevronRight, Activity, Database
 } from 'lucide-react';
-import logoUrl from '../../assets/sparkhire_ai_logo.jpeg';
+import logoUrl from '../../assets/sterling_logo.png';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -23,15 +23,15 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex items-center gap-3 mb-10 cursor-pointer" onClick={() => navigate('/')}>
         <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-slate-200">
-          <img src={logoUrl} alt="Spark-Hire Logo" className="w-9 h-9 object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
-          <div className="hidden w-9 h-9 bg-red-600 text-white flex items-center justify-center font-bold text-sm">Spark-Hire</div>
+          <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+          <div className="hidden w-9 h-9 bg-red-600 text-white flex items-center justify-center font-bold text-sm">Sterling</div>
         </div>
         <div>
-          <div className="font-bold text-[14px] tracking-widest leading-tight text-slate-900 uppercase">
-            STERLING E-MOBILITY
+          <div className="font-bold text-[15px] tracking-widest leading-tight text-slate-900 uppercase">
+            STERLING
           </div>
-          <div className="text-[12px] text-slate-500 tracking-widest uppercase mt-0.5">
-            x SPARK-HIRE
+          <div className="text-[13px] text-slate-500 tracking-widest uppercase mt-0.5">
+            E-MOBILITY
           </div>
         </div>
       </div>
@@ -83,7 +83,7 @@ export default function Sidebar() {
           </div>
           <div className="text-left flex-1 overflow-hidden">
             <p className="text-sm font-bold text-slate-900 truncate">HR Admin</p>
-            <p className="text-xs text-slate-500 truncate">admin@sterlingemobility.com</p>
+            <p className="text-xs text-slate-500 truncate">admin@sterling.ai</p>
           </div>
         </div>
       </div>

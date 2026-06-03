@@ -1,4 +1,4 @@
-/* Tailwind PostCSS config for Spark-Hire AI Platform */
+/* Tailwind PostCSS config for Sterling AI Platform */
 export default {
   plugins: {
     tailwindcss: {},

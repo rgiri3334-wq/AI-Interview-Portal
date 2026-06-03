@@ -5,7 +5,7 @@ import { ShieldAlert } from 'lucide-react';
 import { Editor } from '@monaco-editor/react';
 
 import { apiClient } from '../api/apiClient';
-import logoUrl from '../assets/sparkhire_ai_logo.jpeg'; // Fix #1: Use bundled asset, not absolute machine path
+import logoUrl from '../assets/sterling_logo.png'; // Fix #1: Use bundled asset, not absolute machine path
 import Avatar3D from '../components/Avatar3D';
 
 import { useWebSocketSTT } from '../hooks/useWebSocketSTT';
@@ -377,7 +377,7 @@ export default function LiveInterview() {
       setTimeout(async () => {
         try {
           // Natural human-like HR greeting instead of robotic intro
-          const greeting = `Hello ${candidateName.split(' ')[0]}, it's great to meet you. Welcome to Spark-Hire AI. To kick things off, could you briefly walk me through your background and what drew you to the ${jobRole} role?`;
+          const greeting = `Hello ${candidateName.split(' ')[0]}, it's great to meet you. Welcome to Sterling AI. To kick things off, could you briefly walk me through your background and what drew you to the ${jobRole} role?`;
         console.debug('[State] Transition: Initializing -> Interviewing');
         setPhase('interviewing');
         setQuestion(greeting);
@@ -638,7 +638,7 @@ export default function LiveInterview() {
   // ── Pre-render avatar on ready screen so it's visible immediately ────────
   if (phase === 'ready' || phase === 'initializing') {
     return (
-      <div className="min-h-screen bg-sparkhire-bg text-sparkhire-text font-sans flex flex-col justify-center items-center p-6">
+      <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col justify-center items-center p-6">
         <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           
           {/* LEFT: Avatar — visible immediately, no loading delay */}
@@ -655,22 +655,22 @@ export default function LiveInterview() {
               />
             </div>
             <div className="text-center">
-              <h3 className="text-sm font-bold text-slate-900 tracking-wide">Live AI Assessment</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Sterling E-Mobility x Spark-Hire AI</p>
+              <p className="text-sm font-bold text-slate-700">Your AI Interviewer</p>
+              <p className="text-xs text-slate-500 mt-0.5">Sterling AI · HR Excellence Division</p>
             </div>
           </div>
 
           {/* RIGHT: Readiness Check Panel */}
-          <div className="bg-white border border-sparkhire-border rounded-3xl p-8 shadow-sm">
+          <div className="bg-white border border-sterling-border rounded-3xl p-8 shadow-sm">
             {/* Logo */}
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-md border border-slate-800">
-                <img src={logoUrl} alt="Spark-Hire Logo" className="w-7 h-7 object-contain mix-blend-screen"
+                <img src={logoUrl} alt="Sterling Logo" className="w-7 h-7 object-contain mix-blend-screen"
                   onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }} />
-                <div className="hidden w-7 h-7 bg-red-600 text-white items-center justify-center font-bold text-xs">Spark-Hire</div>
+                <div className="hidden w-7 h-7 bg-red-600 text-white items-center justify-center font-bold text-xs">Sterling</div>
               </div>
               <div>
-                <div className="text-xs font-bold tracking-widest text-slate-500 uppercase">Spark-Hire AI</div>
+                <div className="text-xs font-bold tracking-widest text-slate-500 uppercase">Sterling AI</div>
                 <div className="text-xs text-slate-400">AI Interview Platform</div>
               </div>
             </div>
@@ -681,7 +681,7 @@ export default function LiveInterview() {
             <p className="text-slate-500 text-sm mb-6">
               {phase === 'ready'
                 ? `Role: ${jobRole} · Your interviewer is ready and waiting.`
-                : 'Initializing Spark-Hire AI models and behavioral telemetry...'}
+                : 'Initializing Sterling AI models and behavioral telemetry...'}
             </p>
 
             {/* Readiness checklist */}
@@ -728,30 +728,30 @@ export default function LiveInterview() {
 
   if (phase === 'ending') {
     return (
-      <div className="min-h-screen bg-sparkhire-bg text-sparkhire-text font-sans flex flex-col justify-center items-center">
+      <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col justify-center items-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
           <h2 className="text-2xl font-bold mb-4 text-slate-900">Processing Evaluation</h2>
-          <p className="text-sparkhire-text uppercase tracking-widest text-sm">Transferring secure telemetry to Report Engine...</p>
+          <p className="text-sterling-text uppercase tracking-widest text-sm">Transferring secure telemetry to Report Engine...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-sparkhire-bg text-sparkhire-text font-sans flex flex-col">
+    <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col">
       
       {/* HEADER - Matching the screenshot's top nav */}
-      <header className="bg-sparkhire-surface/80 backdrop-blur-md border-b border-sparkhire-border px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+      <header className="bg-sterling-surface/80 backdrop-blur-md border-b border-sterling-border px-8 py-4 flex justify-between items-center sticky top-0 z-50">
         {/* Logo Area */}
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-md border border-slate-800">
-            <img src={logoUrl} alt="Spark-Hire Logo" className="w-9 h-9 object-contain mix-blend-screen" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
-            <div className="hidden w-9 h-9 bg-sparkhire-blue text-white flex items-center justify-center font-bold text-sm">Spark-Hire</div>
+            <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain mix-blend-screen" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+            <div className="hidden w-9 h-9 bg-sterling-blue text-white flex items-center justify-center font-bold text-sm">Sterling</div>
           </div>
-          <div>
-            <h1 className="text-[14px] font-bold tracking-widest leading-tight text-slate-900 uppercase">STERLING E-MOBILITY</h1>
-            <h2 className="text-[12px] tracking-widest text-slate-500 uppercase mt-0.5">x SPARK-HIRE</h2>
+          <div className="leading-tight">
+            <h1 className="text-sm font-bold tracking-widest text-slate-900">STERLING</h1>
+            <h2 className="text-sm tracking-widest text-slate-500">E-MOBILITY</h2>
           </div>
         </div>
         
@@ -789,7 +789,7 @@ export default function LiveInterview() {
         <div className="col-span-5 flex flex-col gap-8">
           
           {/* Webcam Area */}
-          <div className="bg-sparkhire-surface border border-sparkhire-border rounded-2xl overflow-hidden h-72 relative shadow-xl">
+          <div className="bg-sterling-surface border border-sterling-border rounded-2xl overflow-hidden h-72 relative shadow-xl">
              {memoizedVideo}
              {(!camOn || camError) && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-white/80 backdrop-blur-sm text-slate-500 text-sm font-bold">
@@ -808,7 +808,7 @@ export default function LiveInterview() {
           </div>
 
           {/* Transcript Box */}
-          <div className="bg-sparkhire-surface/50 backdrop-blur-md border border-sparkhire-border rounded-2xl flex-1 p-6 flex flex-col shadow-xl">
+          <div className="bg-sterling-surface/50 backdrop-blur-md border border-sterling-border rounded-2xl flex-1 p-6 flex flex-col shadow-xl">
             <div className="flex items-center justify-between mb-4">
                <div className="flex items-center gap-3">
                  <div className="w-1 h-6 bg-red-600 rounded-full"></div>
@@ -816,7 +816,7 @@ export default function LiveInterview() {
                </div>
                {isListening && <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]" />}
             </div>
-            <div className="text-sparkhire-text leading-relaxed flex-1 overflow-y-auto mb-4 font-medium text-[15px]">
+            <div className="text-sterling-text leading-relaxed flex-1 overflow-y-auto mb-4 font-medium text-[15px]">
               {finalTranscript && <span>{finalTranscript} </span>}
               {interimTranscript && <span className="text-sterling-muted italic">{interimTranscript}</span>}
               {!finalTranscript && !interimTranscript && !isListening && !isSpeaking && (
@@ -833,7 +833,7 @@ export default function LiveInterview() {
                 onChange={(e) => setTextFallback(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSubmitAnswer(); }}
                 placeholder={(!isSpeaking && finalTranscript) ? "✅ Answer captured. Press Enter or click Submit to continue." : "Microphone issues? Type your answer here..."}
-                className="w-full bg-white border border-sparkhire-border rounded-xl px-4 py-3 pr-24 text-sm text-slate-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all duration-300 shadow-sm"
+                className="w-full bg-white border border-sterling-border rounded-xl px-4 py-3 pr-24 text-sm text-slate-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all duration-300 shadow-sm"
                 disabled={loading || isSpeaking}
               />
               {(!isSpeaking && finalTranscript && !loading) && (
@@ -852,7 +852,7 @@ export default function LiveInterview() {
         <div className="col-span-7 flex flex-col gap-8 h-full">
           
           {/* AI Question Box */}
-          <div className="bg-sparkhire-surface/50 backdrop-blur-md border border-sparkhire-border rounded-2xl p-6 flex flex-col gap-4 shadow-xl">
+          <div className="bg-sterling-surface/50 backdrop-blur-md border border-sterling-border rounded-2xl p-6 flex flex-col gap-4 shadow-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-1 h-6 bg-red-600"></div>
@@ -887,7 +887,7 @@ export default function LiveInterview() {
           </div>
 
           {/* Code/Workspace Area */}
-          <div className="bg-sparkhire-surface/50 backdrop-blur-md border border-sparkhire-border rounded-2xl flex-1 flex flex-col shadow-xl overflow-hidden">
+          <div className="bg-sterling-surface/50 backdrop-blur-md border border-sterling-border rounded-2xl flex-1 flex flex-col shadow-xl overflow-hidden">
             {/* Editor Header */}
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex justify-between items-center">
               <span className="text-sm font-bold text-slate-900 uppercase tracking-wider">Technical Workspace</span>
