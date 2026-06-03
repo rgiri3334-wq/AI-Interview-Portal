@@ -65,8 +65,8 @@ export default function Landing() {
               <div className="hidden w-9 h-9 bg-[#EF4444] text-white flex items-center justify-center font-bold text-sm">Sterling</div>
             </div>
             <span className="font-extrabold text-lg tracking-wide text-slate-900">
-              Sterling <span className="text-[#EF4444]">E-Mobility</span>
-              <span className="text-slate-500 text-xs ml-3 tracking-[0.2em] font-mono">ENTERPRISE</span>
+              Spark-<span className="text-[#EF4444]">Hire</span>
+              <span className="text-slate-500 text-xs ml-3 tracking-[0.2em] font-mono">by Sterling E-Mobility</span>
             </span>
           </div>
           <div className="flex gap-4">
@@ -87,7 +87,7 @@ export default function Landing() {
           className="relative z-10 max-w-4xl w-full mx-auto flex flex-col items-center mt-16"
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-50 border border-red-100 text-red-600 text-xs font-bold uppercase tracking-widest mb-8 shadow-sm">
-            <Shield size={14} /> Sterling Enterprise Grade Assessment
+            <Shield size={14} /> Spark-Hire · Powered by Sterling E-Mobility
           </div>
 
           <h1 className="text-5xl md:text-7xl font-black leading-tight mb-6 tracking-tight text-slate-900">
@@ -225,7 +225,7 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="text-center py-8 border-t border-slate-200 text-slate-500 text-xs tracking-widest uppercase font-mono bg-white">
-        Sterling AI
+        Spark-Hire &copy; 2025 &middot; Sterling E-Mobility
       </footer>
     </div>
   );

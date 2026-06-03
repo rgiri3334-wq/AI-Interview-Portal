@@ -28,10 +28,10 @@ export default function Sidebar() {
         </div>
         <div>
           <div className="font-bold text-[15px] tracking-widest leading-tight text-slate-900 uppercase">
-            STERLING
+            SPARK-HIRE
           </div>
-          <div className="text-[13px] text-slate-500 tracking-widest uppercase mt-0.5">
-            E-MOBILITY
+          <div className="text-[11px] text-slate-500 tracking-widest uppercase mt-0.5">
+            by Sterling E-Mobility
           </div>
         </div>
       </div>
@@ -83,7 +83,7 @@ export default function Sidebar() {
           </div>
           <div className="text-left flex-1 overflow-hidden">
             <p className="text-sm font-bold text-slate-900 truncate">HR Admin</p>
-            <p className="text-xs text-slate-500 truncate">admin@sterling.ai</p>
+            <p className="text-xs text-slate-500 truncate">admin@sterling.com</p>
           </div>
         </div>
       </div>

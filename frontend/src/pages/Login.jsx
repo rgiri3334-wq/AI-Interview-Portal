@@ -31,7 +31,7 @@ export default function Login() {
         navigate('/home'); 
       }
     } catch (err) {
-      setError(err.message || 'Invalid credentials. Hint: admin@sterling.com / admin');
+      setError(err.message || 'Invalid credentials. Please try again.');
       setLoading(false);
     }
   };
@@ -68,7 +68,7 @@ export default function Login() {
           transition={{ delay: 0.1 }}
           className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight"
         >
-          Sterling <span className="text-[#EF4444]">E-Mobility</span>
+          Spark-<span className="text-[#EF4444]">Hire</span>
         </motion.h2>
         <motion.p 
           initial={{ opacity: 0 }}
@@ -76,7 +76,7 @@ export default function Login() {
           transition={{ delay: 0.2 }}
           className="mt-2 text-center text-sm text-slate-500 font-mono tracking-[0.2em] uppercase"
         >
-          Enterprise Authentication
+          AI Interview Platform · Sterling E-Mobility
         </motion.p>
       </div>
 

@@ -3,7 +3,7 @@
  * AI Virtual Interview Platform - Enterprise UI Initialization
  * =============================================================================
  * Architect: Aditya Singh (Principal Architect)
- * Description: React 18 DOM Entry Point. Initializes the Sterling AI
+ * Description: React 18 DOM Entry Point. Initializes the Spark-Hire AI
  * design system, injects global styles, and mounts the application router.
  * =============================================================================
  */
@@ -11,7 +11,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-// Sterling AI Design Tokens & Global Styles
+// Spark-Hire Design Tokens & Global Styles
 import './index.css';
 
 // Core Application Component / Router
@@ -19,7 +19,7 @@ import App from './App.jsx';
 
 // ── Enterprise Boot Diagnostics ──────────────────────────────────────────
 console.log(
-  "%c🚀 Sterling AI UI Engine Booting...",
+  "%c⚡ Spark-Hire AI Engine Booting...",
   "color: #00D1FF; font-weight: bold; font-size: 14px; padding: 4px;"
 );
 console.log(
