@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { apiClient } from '../api/apiClient';
-import logoUrl from '../assets/sterling_logo.png';
+import logoUrl from '../assets/sparkhire_ai_logo.jpeg';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -31,7 +31,7 @@ export default function Login() {
         navigate('/home'); 
       }
     } catch (err) {
-      setError(err.message || 'Invalid credentials. Hint: admin@sterling.com / admin');
+      setError(err.message || 'Invalid credentials. Hint: admin@sparkhire.com / admin');
       setLoading(false);
     }
   };
@@ -48,7 +48,7 @@ export default function Login() {
             {/* The transparent 3D logo from public folder */}
             <img 
               src={logoUrl} 
-              alt="SEM Logo" 
+              alt="Spark-Hire Logo" 
               className="w-16 h-16 object-contain relative z-10 mix-blend-screen"
               onError={(e) => {
                 e.target.style.display = 'none';
@@ -57,7 +57,7 @@ export default function Login() {
             />
             {/* Fallback if logo.png is missing */}
             <div className="hidden w-full h-full bg-[#EF4444] text-white flex-col items-center justify-center font-bold text-2xl relative z-10">
-              SEM
+              Spark-Hire
             </div>
           </div>
         </motion.div>
@@ -68,7 +68,7 @@ export default function Login() {
           transition={{ delay: 0.1 }}
           className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight"
         >
-          Sterling <span className="text-[#EF4444]">E-Mobility</span>
+          Spark-Hire <span className="text-[#EF4444]">AI</span>
         </motion.h2>
         <motion.p 
           initial={{ opacity: 0 }}
@@ -76,7 +76,7 @@ export default function Login() {
           transition={{ delay: 0.2 }}
           className="mt-2 text-center text-sm text-slate-500 font-mono tracking-[0.2em] uppercase"
         >
-          Enterprise Authentication
+          For Sterling E-Mobility
         </motion.p>
       </div>
 
@@ -99,7 +99,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full px-4 py-3.5 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EF4444]/50 focus:border-[#EF4444] transition-all sm:text-sm font-medium text-slate-900"
-                  placeholder="admin@sterling.com"
+                  placeholder="admin@sparkhire.com"
                 />
               </div>
             </div>

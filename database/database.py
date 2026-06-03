@@ -23,11 +23,11 @@ if is_sqlite:
 
 # Use NullPool for SQLite only — prevents lock storms on concurrent requests.
 # PostgreSQL benefits from the default connection pool, so we skip NullPool there.
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args=connect_args,
-    **({"poolclass": NullPool} if is_sqlite else {}),
-)
+engine_kwargs: dict = {"connect_args": connect_args}
+if is_sqlite:
+    engine_kwargs["poolclass"] = NullPool
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_kwargs)
 
 # Enable WAL mode for SQLite only — prevents lock storms
 @event.listens_for(engine, "connect")

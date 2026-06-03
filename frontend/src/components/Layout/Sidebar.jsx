@@ -4,7 +4,7 @@ import {
   LayoutDashboard, User, Mic, FileText,
   ChevronRight, Activity, Database
 } from 'lucide-react';
-import logoUrl from '../../assets/sterling_logo.png';
+import logoUrl from '../../assets/sparkhire_ai_logo.jpeg';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -23,15 +23,15 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex items-center gap-3 mb-10 cursor-pointer" onClick={() => navigate('/')}>
         <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-slate-200">
-          <img src={logoUrl} alt="SEM Logo" className="w-9 h-9 object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
-          <div className="hidden w-9 h-9 bg-red-600 text-white flex items-center justify-center font-bold text-sm">SEM</div>
+          <img src={logoUrl} alt="Spark-Hire Logo" className="w-9 h-9 object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+          <div className="hidden w-9 h-9 bg-red-600 text-white flex items-center justify-center font-bold text-sm">Spark-Hire</div>
         </div>
         <div>
           <div className="font-bold text-[15px] tracking-widest leading-tight text-slate-900 uppercase">
-            STERLING
+            SPARK-HIRE AI
           </div>
-          <div className="text-[13px] text-slate-500 tracking-widest uppercase mt-0.5">
-            E-MOBILITY
+          <div className="text-[10px] text-slate-500 tracking-widest uppercase mt-0.5">
+            FOR STERLING E-MOBILITY
           </div>
         </div>
       </div>
