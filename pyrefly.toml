@@ -1,0 +1,20 @@
+# Pyrefly configuration for AI Virtual Interview Platform
+# Suppresses false-positive parse errors caused by Pyrefly analysing
+# individual code blocks (f-strings, function bodies) in isolation.
+
+[python]
+# Do not type-check third-party namespace packages that lack stubs.
+# google-genai ships no py.typed marker, so imports will always warn.
+ignore_missing_imports = true
+ignore_paths = [
+  "**/__pyrefly_virtual__/**"
+]
+
+[errors]
+# Suppress errors from the virtual in-memory fragments Pyrefly creates
+# when it splits a file into blocks for incremental type checking.
+# These are NOT real Python errors — the code runs correctly.
+ignore = [
+  "missing-import",      # google.genai has no type stubs
+  "unresolved-import",
+]

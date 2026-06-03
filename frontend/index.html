@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="http://localhost:8000/favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <meta name="theme-color" content="#FFFFFF" />
+  <meta name="description" content="Sterling E Mobility - Virtual Interview Engine" />
+  <meta name="author" content="Aditya Singh" />
+
+  <!-- Sprint 4: Preload avatar image — browser fetches it during HTML parse, before React mounts -->
+  <link rel="preload" href="/models/avatar.glb" as="fetch" crossorigin="anonymous">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap"
+    rel="stylesheet">
+
+  <title>Sterling E-Mobility | Interview Engine</title>
+</head>
+
+<body class="bg-white text-slate-900 antialiased selection:bg-[#EF4444] selection:text-white overflow-x-hidden">
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
+</html>

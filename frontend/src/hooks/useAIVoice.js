@@ -1,0 +1,144 @@
+/**
+ * hooks/useAIVoice.js
+ * AI Voice Interviewer using browser Web Speech Synthesis API.
+ * Zero cost, zero API key, works completely offline.
+ *
+ * The AI Interviewer speaks questions aloud with a natural, professional voice.
+ * Features:
+ *   - Selects best available system voice (prefers Google/Microsoft neural voices)
+ *   - Configurable rate, pitch, and volume
+ *   - Queue system: speaks one sentence at a time from a queue
+ *   - Cancels any in-progress speech before speaking a new question
+ *   - isSpeaking state exposed to animate the AI avatar
+ *
+ * Author: Aditya Singh
+ */
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+
+// Try to find the best quality voice
+const selectVoice = (voices) => {
+  if (!voices.length) return null;
+
+  // Priority: neural/natural English voices
+  const priorities = [
+    'Google US English',
+    'Microsoft Aria Online',
+    'Microsoft Guy Online',
+    'Google UK English Female',
+    'Google UK English Male',
+    'Microsoft David - English (United States)',
+    'en-US',
+    'en-GB',
+    'en',
+  ];
+
+  for (const name of priorities) {
+    const found = voices.find(v =>
+      v.name.includes(name) || v.lang.startsWith(name)
+    );
+    if (found) return found;
+  }
+
+  // Fallback: any English voice
+  return voices.find(v => v.lang.startsWith('en')) || voices[0];
+};
+
+export function useAIVoice({ rate = 0.95, pitch = 0.95, volume = 1.0 } = {}) {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isReady, setIsReady]       = useState(false);
+  const voiceRef                    = useRef(null);
+  const synthRef                    = useRef(null);
+  const queueRef                    = useRef([]);
+  const processingRef               = useRef(false);
+
+  // Initialize synthesis engine and load voices
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      console.warn('[AIVoice] SpeechSynthesis not supported in this browser.');
+      return;
+    }
+    synthRef.current = window.speechSynthesis;
+
+    const loadVoices = () => {
+      const voices = synthRef.current.getVoices();
+      voiceRef.current = selectVoice(voices);
+      if (voiceRef.current) {
+        console.log(`[AIVoice] Selected voice: "${voiceRef.current.name}" (${voiceRef.current.lang})`);
+        setIsReady(true);
+      }
+    };
+
+    // Voices may load asynchronously on first call
+    loadVoices();
+    synthRef.current.onvoiceschanged = loadVoices;
+
+    return () => {
+      synthRef.current?.cancel();
+    };
+  }, []);
+
+  const _processQueue = useCallback(() => {
+    if (processingRef.current || !queueRef.current.length) return;
+    if (!synthRef.current) return;
+
+    processingRef.current = true;
+    const text = queueRef.current.shift();
+
+    const utterance         = new SpeechSynthesisUtterance(text);
+    utterance.voice         = voiceRef.current;
+    utterance.rate          = rate;
+    utterance.pitch         = pitch;
+    utterance.volume        = volume;
+    utterance.lang          = 'en-US';
+
+    utterance.onstart  = () => setIsSpeaking(true);
+    utterance.onend    = () => {
+      setIsSpeaking(false);
+      processingRef.current = false;
+      _processQueue(); // process next in queue
+    };
+    utterance.onerror  = (e) => {
+      console.error('[AIVoice] Speech error:', e.error);
+      setIsSpeaking(false);
+      processingRef.current = false;
+      _processQueue();
+    };
+
+    synthRef.current.speak(utterance);
+  }, [rate, pitch, volume]);
+
+  /**
+   * Speak a text string. Cancels any current speech and speaks immediately.
+   * @param {string} text - The AI question or message to speak
+   */
+  const speak = useCallback((text) => {
+    if (!synthRef.current || !text) return;
+    // Cancel current speech and clear queue
+    synthRef.current.cancel();
+    queueRef.current = [text];
+    processingRef.current = false;
+    setTimeout(_processQueue, 100); // brief delay for cancel to flush
+  }, [_processQueue]);
+
+  /**
+   * Add text to the speech queue without interrupting current speech.
+   */
+  const enqueue = useCallback((text) => {
+    if (!text) return;
+    queueRef.current.push(text);
+    _processQueue();
+  }, [_processQueue]);
+
+  /**
+   * Stop speaking immediately.
+   */
+  const stop = useCallback(() => {
+    synthRef.current?.cancel();
+    queueRef.current = [];
+    processingRef.current = false;
+    setIsSpeaking(false);
+  }, []);
+
+  return { speak, enqueue, stop, isSpeaking, isReady };
+}

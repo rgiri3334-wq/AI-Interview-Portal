@@ -1,0 +1,6 @@
+[tool.pyright]
+include = ["."]
+exclude = ["frontend", "node_modules", "__pycache__"]
+reportMissingImports = false
+reportMissingModuleSource = false
+reportGeneralTypeIssues = false

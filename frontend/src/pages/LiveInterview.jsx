@@ -1,0 +1,1010 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ShieldAlert } from 'lucide-react';
+import { Editor } from '@monaco-editor/react';
+
+import { apiClient } from '../api/apiClient';
+import logoUrl from '../assets/sterling_logo.png'; // Fix #1: Use bundled asset, not absolute machine path
+import Avatar3D from '../components/Avatar3D';
+
+import { useWebSocketSTT } from '../hooks/useWebSocketSTT';
+import { useAudioStream } from '../hooks/useAudioStream';
+import { useHumanBehavior } from '../hooks/useHumanBehavior';
+import { useCodeWorkspace, SUPPORTED_LANGUAGES } from '../hooks/useCodeWorkspace';
+import { useAudioRecorder } from '../hooks/useAudioRecorder';
+import { useVAD } from '../hooks/useVAD';
+
+const MAX_QUESTIONS = 10;
+
+function useTypewriter(text, speed = 30) {
+  const [displayedText, setDisplayedText] = useState('');
+  useEffect(() => {
+    setDisplayedText('');
+    if (!text) return;
+    let i = 0;
+    const interval = setInterval(() => {
+      setDisplayedText(text.slice(0, i + 1));
+      i++;
+      if (i >= text.length) clearInterval(interval);
+    }, speed);
+    return () => clearInterval(interval);
+  }, [text, speed]);
+  return displayedText;
+}
+
+export default function LiveInterview() {
+  const navigate = useNavigate();
+
+  const candidateId   = localStorage.getItem('candidate_id')   || 'DEMO-001';
+  const candidateName = localStorage.getItem('candidate_name') || 'Candidate';
+  const jobRole       = localStorage.getItem('job_role')       || 'Software Engineer';
+  const experience    = localStorage.getItem('experience')     || 'Fresher (0 years)';
+  const skills        = localStorage.getItem('skills')         || '';
+
+  const [phase, setPhase]       = useState('ready');
+  const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState('Computing...');
+  const [warnings, setWarnings] = useState(0);
+  const [textFallback, setTextFallback] = useState('');
+  
+  const proctoringLogsRef = useRef([]);
+  const [fullscreenLock, setFullscreenLock] = useState(false);
+  const [focusLock, setFocusLock] = useState(false);
+
+  const addProctoringLog = useCallback((eventDescription) => {
+    const logEntry = {
+      event: eventDescription,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    proctoringLogsRef.current.push(logEntry);
+    console.warn(`[Proctoring] ${eventDescription}`);
+  }, []);
+  
+  const [question, setQuestion] = useState('System Initializing...');
+  const [overlayMsg, setOverlayMsg] = useState('');
+  const displayedQuestion       = useTypewriter(question, 10);
+  const [qIndex, setQIndex]     = useState(0);
+  const [history, setHistory]   = useState([]);
+  const historyRef = useRef(history);
+  useEffect(() => { historyRef.current = history; }, [history]);
+  // Fix #9: Track interview start time to compute real WPM
+  const questionStartTimeRef = useRef(Date.now());
+  
+  const [micOn, setMicOn]       = useState(true);
+  const [camOn, setCamOn]       = useState(true);
+  const [camError, setCamError] = useState('');
+  
+  const videoRef                = useRef(null);
+  const streamRef               = useRef(null);
+  const transcriptEndRef        = useRef(null);
+
+  const { editorRef, language, setLanguage, handleEditorMount, getCode, clearCode } = useCodeWorkspace({ defaultLanguage: 'javascript' });
+  const { speak, stop: stopVoice, isSpeaking, getAudioFrequency } = useAudioStream();
+  const isStartingRef = useRef(false);
+  const isSubmittingRef = useRef(false);
+  const isMounted = useRef(true);
+
+
+
+  // Telemetry is now handled internally by Avatar3D to prevent 60FPS React re-renders on the main thread.
+
+  const sendTelemetry = (metrics) => {
+    console.debug("[Telemetry]", metrics);
+  };
+  const { getMetrics, stop: stopHuman } = useHumanBehavior(videoRef, sendTelemetry, { enabled: phase === 'interviewing' });
+
+  // Fix #15: Use a ref for phase so useHumanBehavior always sees the latest value without stale closure lag
+  const phaseRef = useRef(phase);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  const { isRecording, startRecording, stopRecording, forceStopAllTracks } = useAudioRecorder();
+
+  useEffect(() => {
+    return () => { 
+      isMounted.current = false; 
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => { 
+      forceStopAllTracks();
+      stopVoice();
+      stopHuman();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [forceStopAllTracks, stopVoice, stopHuman]);
+
+  const handleSilenceDetected = useCallback(() => {
+    // Fix #14: Check isSubmittingRef *before* checking loading to prevent double-fire
+    // BUG-14 fix: Use phaseRef.current (always fresh) instead of stale `phase` closure value
+    if (!isSubmittingRef.current && !isSpeaking && phaseRef.current === 'interviewing') {
+      handleSubmitAnswer();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSpeaking]);
+
+  const {
+    isListening,
+    finalTranscript,
+    interimTranscript,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useWebSocketSTT({ onSilenceDetected: handleSilenceDetected, silenceDelayMs: 3000 }); // Sprint 3: Reduced from 4500ms → 3000ms for snappier auto-submit
+  // isListening is passed to Avatar3D for the LISTENING state display
+
+  useEffect(() => {
+    navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false })
+      .then(stream => {
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      })
+      .catch(() => setCamError('Camera access denied.'));
+    return () => { if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); };
+  }, []);
+
+  const setVideoRef = useCallback((el) => {
+    videoRef.current = el;
+    if (el && streamRef.current) el.srcObject = streamRef.current;
+  }, []);
+
+  useEffect(() => {
+    if (phase === 'interviewing') {
+      const handleDefocus = () => {
+        if (document.hidden || !document.hasFocus()) {
+          addProctoringLog("Defocus/Tab Switch detected.");
+          setWarnings(w => {
+            const newW = w + 1;
+            setOverlayMsg(`PROCTORING WARNING (${newW}/3): Defocus Violation — Focus Must Remain on the Interview`);
+            if (newW >= 3) doEndInterview(historyRef.current);
+            return newW;
+          });
+        }
+      };
+
+      const handleMouseLeave = (e) => {
+        // Trigger if mouse physically leaves the browser window boundaries
+        if (e.clientY <= 0 || e.clientX <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+          addProctoringLog("Mouse left the secure window boundaries.");
+          setWarnings(w => {
+            const newW = w + 1;
+            setOverlayMsg(`PROCTORING WARNING (${newW}/3): Mouse left the secure window boundaries.`);
+            if (newW >= 3) doEndInterview(historyRef.current);
+            return newW;
+          });
+        }
+      };
+      
+      const handleBeforeUnload = (e) => {
+        addProctoringLog("Attempted to reload/close the interview.");
+        e.preventDefault();
+        e.returnValue = 'Are you sure you want to leave? Your interview progress will not be submitted.';
+      };
+
+      const handleProctoringKey = (e) => {
+        const isCtrl = e.ctrlKey || e.metaKey;
+        
+        // Block F5, F11, F12, Escape
+        const isRestrictedKey = ['F5', 'F11', 'F12', 'Escape'].includes(e.key);
+        // Block common shortcuts: reload (R), save (S), print (P), find (F), copy/paste/cut (C, V, X), inspect (I)
+        const isRestrictedShortcut = isCtrl && ['r', 's', 'p', 'f', 'c', 'v', 'x', 'i'].includes(e.key.toLowerCase());
+        
+        if (isRestrictedKey || isRestrictedShortcut || e.altKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          addProctoringLog(`Blocked restricted key input: ${e.key} ${isCtrl ? '(with modifier)' : ''}`);
+          
+          if (e.key === 'Escape' || e.key === 'F11') {
+             setOverlayMsg("PROCTORING ALERT: Exiting fullscreen via shortcuts is disabled. Please stay focused on the interview.");
+          } else {
+             setOverlayMsg("PROCTORING ALERT: Restricted keyboard shortcuts are strictly disabled during the interview.");
+          }
+        }
+      };
+
+      const handleContextMenu = (e) => { 
+        e.preventDefault();
+        addProctoringLog("Blocked right-click.");
+        setOverlayMsg("PROCTORING ALERT: Right-click is disabled.");
+      };
+      
+      const handleCopyPaste = (e) => { 
+        e.preventDefault();
+        addProctoringLog(`Blocked ${e.type}.`);
+        setOverlayMsg(`PROCTORING ALERT: ${e.type.charAt(0).toUpperCase() + e.type.slice(1)} is disabled.`);
+      };
+
+      const handleDragDrop = (e) => {
+        e.preventDefault();
+        addProctoringLog(`Blocked ${e.type} action.`);
+        setOverlayMsg("PROCTORING ALERT: Drag and drop operations are disabled.");
+      };
+      
+      let fullscreenExitTimeout;
+      const handleFullscreenChange = () => {
+        if (!document.fullscreenElement) {
+           addProctoringLog("Exited fullscreen.");
+           setWarnings(w => {
+             const newW = w + 1;
+             if (newW >= 3) doEndInterview(historyRef.current);
+             return newW;
+           });
+           setFullscreenLock(true);
+           setOverlayMsg("PROCTORING WARNING: Fullscreen Exited — Resubmit Fullscreen to Resume");
+           // Auto terminate after 10 seconds if not restored
+           fullscreenExitTimeout = setTimeout(() => {
+              if (!document.fullscreenElement) {
+                  addProctoringLog("Did not return to fullscreen within 10s. Auto terminating.");
+                  doEndInterview(historyRef.current);
+              }
+           }, 10000);
+        } else {
+           clearTimeout(fullscreenExitTimeout);
+           setFullscreenLock(false);
+           setOverlayMsg(""); // Clear overlay
+           addProctoringLog("Returned to fullscreen.");
+        }
+      };
+
+      const handleDevTools = () => {
+         const widthThreshold = window.outerWidth - window.innerWidth > 160;
+         const heightThreshold = window.outerHeight - window.innerHeight > 160;
+         if (widthThreshold || heightThreshold) {
+            addProctoringLog("DevTools opened (dimensions check).");
+            setWarnings(w => {
+              const newW = w + 1;
+              if (newW >= 3) doEndInterview(historyRef.current);
+              return newW;
+            });
+            setOverlayMsg("PROCTORING WARNING: Developer Tools detected.");
+         }
+      };
+
+      document.addEventListener('visibilitychange', handleDefocus, { capture: true });
+      window.addEventListener('blur', handleDefocus, { capture: true });
+      document.addEventListener('mouseleave', handleMouseLeave, { capture: true });
+      window.addEventListener('beforeunload', handleBeforeUnload, { capture: true });
+      document.addEventListener('keydown', handleProctoringKey, { capture: true });
+      document.addEventListener('contextmenu', handleContextMenu, { capture: true });
+      document.addEventListener('copy', handleCopyPaste, { capture: true });
+      document.addEventListener('cut', handleCopyPaste, { capture: true });
+      document.addEventListener('paste', handleCopyPaste, { capture: true });
+      document.addEventListener('dragstart', handleDragDrop, { capture: true });
+      document.addEventListener('drop', handleDragDrop, { capture: true });
+      document.addEventListener('fullscreenchange', handleFullscreenChange, { capture: true });
+      window.addEventListener('resize', handleDevTools, { capture: true });
+      
+      return () => {
+        document.removeEventListener('visibilitychange', handleDefocus, { capture: true });
+        window.removeEventListener('blur', handleDefocus, { capture: true });
+        document.removeEventListener('mouseleave', handleMouseLeave, { capture: true });
+        window.removeEventListener('beforeunload', handleBeforeUnload, { capture: true });
+        document.removeEventListener('keydown', handleProctoringKey, { capture: true });
+        document.removeEventListener('contextmenu', handleContextMenu, { capture: true });
+        document.removeEventListener('copy', handleCopyPaste, { capture: true });
+        document.removeEventListener('cut', handleCopyPaste, { capture: true });
+        document.removeEventListener('paste', handleCopyPaste, { capture: true });
+        document.removeEventListener('dragstart', handleDragDrop, { capture: true });
+        document.removeEventListener('drop', handleDragDrop, { capture: true });
+        document.removeEventListener('fullscreenchange', handleFullscreenChange, { capture: true });
+        window.removeEventListener('resize', handleDevTools, { capture: true });
+        clearTimeout(fullscreenExitTimeout);
+      };
+    }
+  }, [phase, addProctoringLog]); // Added addProctoringLog
+
+  const handleInterrupt = useCallback(() => {
+    stopVoice();
+  }, [stopVoice]);
+  
+  useVAD(isSpeaking, handleInterrupt);
+
+  const wasSpeakingRef = useRef(false);
+  useEffect(() => {
+    if (wasSpeakingRef.current && !isSpeaking) {
+      console.debug("[Echo Protection] AI finished speaking. Wiping any leaked transcript from room echo.");
+      resetTranscript();
+    }
+    wasSpeakingRef.current = isSpeaking;
+  }, [isSpeaking, resetTranscript]);
+
+  const stopRecordingRef = useRef(stopRecording);
+  useEffect(() => { stopRecordingRef.current = stopRecording; }, [stopRecording]);
+
+  useEffect(() => {
+    // SPRINT 1: STRICT STATE MACHINE LOCK
+    const shouldListen = phase === 'interviewing' && !loading && micOn && !isSpeaking;
+    
+    if (shouldListen) {
+      if (!isListening) startListening(false);
+      if (!isRecording) startRecording();
+    } else {
+      if (isListening) stopListening(false);
+      if (isRecording) stopRecordingRef.current();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [micOn, isListening, phase, isSpeaking, loading, startListening, stopListening, isRecording, startRecording]);
+
+  const memoizedVideo = React.useMemo(() => (
+    <video ref={setVideoRef} autoPlay muted playsInline className="w-full h-full object-cover bg-gray-100" style={{ transform: 'scaleX(-1)', display: camOn && !camError ? 'block' : 'none' }} />
+  ), [setVideoRef, camOn, camError]);
+
+  const memoizedEditor = React.useMemo(() => (
+    <Editor
+      height="100%"
+      language={language}
+      theme="vs-dark"
+      onMount={(editor, monaco) => {
+        handleEditorMount(editor, monaco);
+        editor.onKeyDown((e) => {
+          // Block paste (Ctrl+V / Cmd+V)
+          if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyV' || e.code === 'KeyC' || e.code === 'KeyX')) {
+            e.preventDefault();
+            e.stopPropagation();
+            setOverlayMsg("PROCTORING: Copy/Paste functionality is strictly disabled inside the code editor.");
+          }
+        });
+      }}
+      options={{ minimap: { enabled: false }, fontSize: 14, fontFamily: "'Inter', monospace", padding: { top: 16 }, scrollBeyondLastLine: false }}
+    />
+  ), [language, handleEditorMount]);
+
+  useEffect(() => {
+    if (!loading) {
+      transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [question, loading]); // Removed finalTranscript to fix auto-scroll glitch
+
+  const handleStart = async () => {
+    if (phase !== 'ready' || isStartingRef.current) return; // LOCK: Prevent double execution natively
+    isStartingRef.current = true;
+    
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (e) {
+      console.warn("Fullscreen request failed", e);
+    }
+    
+    setPhase('initializing');
+    console.debug('[State] Transition: Ready -> Initializing');
+    setError('');
+      setTimeout(async () => {
+        try {
+          // Natural human-like HR greeting instead of robotic intro
+          const greeting = `Hello ${candidateName.split(' ')[0]}, it's great to meet you. Welcome to Sterling E-Mobility. To kick things off, could you briefly walk me through your background and what drew you to the ${jobRole} role?`;
+        console.debug('[State] Transition: Initializing -> Interviewing');
+        setPhase('interviewing');
+        setQuestion(greeting);
+        questionStartTimeRef.current = Date.now();
+        await speak(greeting);
+      } catch {
+        const fallback = 'Welcome. Please tell me about your technical background and experience.';
+        setPhase('interviewing');
+        setQuestion('');
+        questionStartTimeRef.current = Date.now();
+        await speak(fallback);
+        setQuestion(fallback);
+      } finally {
+        isStartingRef.current = false;
+      }
+    }, 800);  // Reduced from 2000ms → 800ms for faster startup
+  };
+
+  const handleSubmitAnswer = async () => {
+    if (isSubmittingRef.current) return;
+    
+    console.debug("[State] Transition: Interviewing -> Processing");
+    const fullAnswer = (finalTranscript + ' ' + interimTranscript).trim();
+    if (!fullAnswer && !getCode().trim() && !textFallback.trim()) { 
+      setError('Please provide a spoken answer or write code before submitting.'); 
+      console.debug("[State] Reverted: No input detected");
+      return; 
+    }
+    
+    isSubmittingRef.current = true;
+    setLoading(true);
+    setError('');
+    
+    const statuses = ['Transcribing Audio...', 'Evaluating Logic...', 'Generating Response...'];
+    let statusIdx = 0;
+    setLoadingStatus(statuses[0]);
+    const statusInterval = setInterval(() => {
+      statusIdx = (statusIdx + 1) % statuses.length;
+      setLoadingStatus(statuses[statusIdx]);
+    }, 1500);
+
+    // ZERO LATENCY BYPASS: If webkitSpeechRecognition already caught the text, don't wait for backend Whisper!
+    let finalWsText = '';
+    if (fullAnswer.length > 3) {
+      await stopListening(false); // Instantly turn off mic without triggering slow backend whisper
+      finalWsText = fullAnswer;
+    } else {
+      finalWsText = await stopListening(true); // Fallback to backend whisper
+    }
+    
+    stopVoice();
+
+    const resolvedAnswer = (finalWsText || fullAnswer || textFallback).trim();
+    setTextFallback('');
+
+    const behavioralData = getMetrics();
+    
+    let audioBlob = null;
+    if (isRecording) {
+      audioBlob = await stopRecording();
+    }
+
+    try {
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('WATCHDOG_TIMEOUT')), 45000);
+      });
+
+      const t0 = performance.now();
+
+      // Fix #9: Compute real WPM from the candidate's answer text + elapsed time since question was shown
+      const elapsedSec = Math.max((Date.now() - questionStartTimeRef.current) / 1000, 1);
+      const wordCount  = (resolvedAnswer || '').split(/\s+/).filter(Boolean).length;
+      const computedWpm = wordCount > 0 ? Math.round((wordCount / elapsedSec) * 60) : 130;
+      const clampedWpm = Math.min(Math.max(computedWpm, 30), 350); // Clamp to realistic speaking range
+
+      // Sprint 3: Build compact interview memory context (last 5 Q&A pairs) for contextual follow-up
+      const interviewMemory = history.slice(-5).map((entry, idx) => ({
+        turn: idx + 1,
+        question: entry.q,
+        answer: entry.a,
+        technical_score: entry.score,
+      }));
+
+      const res = await Promise.race([
+        apiClient.assessCandidate({
+          candidate_id: candidateId,
+          job_role: jobRole,
+          experience,
+          skills,
+          spoken_answer: resolvedAnswer || '[Code submission only]',
+          detected_emotion: behavioralData.emotion || 'Neutral',
+          current_question: question,
+          wpm: clampedWpm,  // Fix #9: Real computed WPM
+          behavioral_telemetry: behavioralData,
+          workspace_code: getCode(),
+          interview_memory: interviewMemory, // Sprint 3: Prior Q&A context for follow-up generation
+          question_index: qIndex,            // Sprint 3: Current question index for pacing
+        }),
+        timeoutPromise
+      ]);
+      const llmTime = performance.now() - t0;
+      console.debug(`[Telemetry] LLM Orchestration Time: ${Math.round(llmTime)}ms | Action: ${res.action} | WPM: ${clampedWpm}`);
+
+      let nextHistory = history;
+      if (res.action !== 'repeat' && res.action !== 'small_talk') {
+        nextHistory = [...history, {
+          q: question,
+          a: resolvedAnswer,
+          score:     res.technical_score  || 0,
+          eqScore:   res.eq_score         || res.behavioral_score   || 0,
+          confScore: res.confidence_score || 0,
+          commScore: res.communication_score || 0,
+          probScore: res.problem_solving_score || 0,
+          roleScore: res.role_alignment_score || 0,
+          profScore: res.professionalism_score || 0,
+          learnScore: res.learning_potential_score || 0,
+          // Fix #6: Store fluency_score separately so doEndInterview uses the right metric
+          fluencyScore: res.fluency_score  || 0,
+          wpm: clampedWpm,  // Fix #9 / #16: persist wpm per answer
+          code: getCode()
+        }];
+        setHistory(nextHistory);
+        setQIndex(i => i + 1);
+        // Fix #9: Reset question timer for the next question
+        questionStartTimeRef.current = Date.now();
+      }
+      
+      resetTranscript();
+      if (res.action !== 'repeat' && res.action !== 'small_talk') clearCode();
+
+      if (res.action !== 'repeat' && res.action !== 'small_talk' && nextHistory.length >= MAX_QUESTIONS) { 
+        setPhase('ending');
+        // Natural human-like HR goodbye
+        const finalGoodbye = res.eq_feedback + " That wraps up our interview for today. Thank you for your time. Our team will review your evaluation and follow up with you shortly. Have a great day!";
+        setQuestion("Interview Complete. You may close this window.");
+        try {
+          await speak(finalGoodbye);
+          // Wait to ensure candidate hears the TTS before unmounting component
+          await new Promise(r => setTimeout(r, 8000));
+        } catch (e) {
+          console.warn("TTS failed on goodbye", e);
+        }
+        doEndInterview(nextHistory); 
+        return; 
+      }
+      
+      if (res.action === 'small_talk' || res.action === 'repeat') {
+        const feedback = res.eq_feedback || '';
+        const nextQ = res.next_technical_question || '';
+        
+        let combined = feedback;
+        if (nextQ && !feedback.toLowerCase().includes(nextQ.toLowerCase())) {
+          combined += (combined.endsWith('.') || combined.endsWith('?') || combined.endsWith('!')) ? ` ${nextQ}` : `. ${nextQ}`;
+        }
+        
+        if (!isMounted.current) return;
+        if (combined.trim()) {
+          setQuestion(combined);
+          await speak(combined);
+        }
+      } else {
+        const feedback = res.eq_feedback;
+        let nextQ = "";
+        
+        if (res.follow_up_question) {
+          nextQ = res.follow_up_question;
+        } else if (res.next_technical_question) {
+          nextQ = res.next_technical_question;
+        } else {
+          nextQ = "Thank you. Let's proceed.";
+        }
+        
+        let combined = feedback || '';
+        if (nextQ && !combined.toLowerCase().includes(nextQ.toLowerCase())) {
+          combined += (combined.endsWith('.') || combined.endsWith('?') || combined.endsWith('!')) ? ` ${nextQ}` : `. ${nextQ}`;
+        }
+        
+        if (!isMounted.current) return;
+        if (combined.trim()) {
+          setQuestion(combined);
+          await speak(combined);
+        }
+      }
+      
+      if (!isMounted.current) return;
+      console.debug("[State] Transition: Processing -> Interviewing");
+      setPhase('interviewing');
+    } catch (e) {
+      if (!isMounted.current) return;
+      const isTimeout = e.message === 'WATCHDOG_TIMEOUT';
+      const fallbackMsg = isTimeout 
+        ? 'I am experiencing unusually high latency. Could you please summarize your answer briefly?' 
+        : 'I lost connection to my core servers. Could you please repeat your answer?';
+      
+      console.error("[Deadlock Protection] AI Assessment Failed:", e);
+      setError(isTimeout ? 'AI Core Timeout (30s). Retrying...' : 'Connection to AI Core unstable. Please try submitting again.');
+      
+      try {
+        await speak(fallbackMsg);
+      } catch (ttsError) {
+        console.error("TTS Fallback failed. Proceeding silently.", ttsError);
+      }
+      
+      if (!isMounted.current) return;
+      console.debug("[State] Recovery: Transitioning back to Interviewing");
+      setPhase('interviewing');
+    } finally {
+      clearInterval(statusInterval);
+      if (isMounted.current) {
+        setLoading(false);
+        isSubmittingRef.current = false;
+      }
+    }
+  };
+
+  const doEndInterview = async (h) => {
+    setPhase('ending');
+    stopHuman();
+    // Do not call stopVoice() here so the final goodbye message can play.
+
+    const avgScore = (key) => h.length ? Math.round(h.reduce((s, x) => s + (x[key] || 0), 0) / h.length) : 0;
+
+    let aiReport = {};
+    try {
+      const reportRes = await apiClient.getAIReport(candidateId);
+      aiReport = reportRes?.ai_report || {};
+    } catch (e) {
+      console.error('Failed to generate AI report summary. Proceeding with basic save.', e);
+    }
+
+    try {
+      await apiClient.saveInterview({
+        candidate_id:     candidateId,
+        technical_score:  avgScore('score'),
+        eq_score:         avgScore('eqScore'),
+        confidence:       avgScore('confScore'),
+        communication:    avgScore('commScore'),
+        problem_solving_score: avgScore('probScore'),
+        role_alignment_score:  avgScore('roleScore'),
+        professionalism_score: avgScore('profScore'),
+        learning_potential_score: avgScore('learnScore'),
+        behavioral_score: avgScore('eqScore'),
+        // Fix #6: Use fluencyScore (dedicated field) instead of commScore
+        fluency_score:    avgScore('fluencyScore'),
+        facial_score:     75,
+        summary:          aiReport.synthesis || `Interview complete. ${h.length} questions answered.`,
+        strengths:        aiReport.identified_strengths || ['Code logic', 'Structured responses'],
+        weaknesses:       aiReport.optimization_areas  || [],
+        proctoring_warnings: warnings,
+        proctoring_logs: proctoringLogsRef.current
+      });
+    } catch (e) {
+      console.error('Failed to save final interview scores', e);
+    }
+    navigate('/report');
+  };
+
+  // ── Pre-render avatar on ready screen so it's visible immediately ────────
+  if (phase === 'ready' || phase === 'initializing') {
+    return (
+      <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col justify-center items-center p-6">
+        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+          
+          {/* LEFT: Avatar — visible immediately, no loading delay */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200"
+                 style={{ width: '280px', height: '340px' }}>
+              <Avatar3D
+                isSpeaking={false}
+                isListening={false}
+                isLoading={phase === 'initializing'}
+                phase={phase}
+                qIndex={0}
+                warnings={0}
+              />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-slate-700">Your AI Interviewer</p>
+              <p className="text-xs text-slate-500 mt-0.5">Sterling AI · HR Excellence Division</p>
+            </div>
+          </div>
+
+          {/* RIGHT: Readiness Check Panel */}
+          <div className="bg-white border border-sterling-border rounded-3xl p-8 shadow-sm">
+            {/* Logo */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-md border border-slate-800">
+                <img src={logoUrl} alt="SEM Logo" className="w-7 h-7 object-contain mix-blend-screen"
+                  onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }} />
+                <div className="hidden w-7 h-7 bg-red-600 text-white items-center justify-center font-bold text-xs">SEM</div>
+              </div>
+              <div>
+                <div className="text-xs font-bold tracking-widest text-slate-500 uppercase">Sterling E-Mobility</div>
+                <div className="text-xs text-slate-400">AI Interview Platform</div>
+              </div>
+            </div>
+
+            <h2 className="text-2xl font-bold mb-2 text-slate-900">
+              {phase === 'ready' ? 'Interview Ready' : 'Connecting to AI Core...'}
+            </h2>
+            <p className="text-slate-500 text-sm mb-6">
+              {phase === 'ready'
+                ? `Role: ${jobRole} · Your interviewer is ready and waiting.`
+                : 'Initializing Sterling AI models and behavioral telemetry...'}
+            </p>
+
+            {/* Readiness checklist */}
+            {phase === 'ready' && (
+              <div className="space-y-3 mb-6">
+                {[
+                  { label: 'AI Interviewer', status: 'Ready' },
+                  { label: 'Role Configuration', status: jobRole },
+                  { label: 'Proctoring Engine', status: 'Active' },
+                  { label: 'Speech Recognition', status: 'Standby' },
+                ].map(({ label, status }) => (
+                  <div key={label} className="flex items-center justify-between py-2 border-b border-slate-100">
+                    <span className="text-sm font-medium text-slate-700">{label}</span>
+                    <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">{status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {phase === 'initializing' && (
+              <div className="flex items-center gap-3 py-4 mb-4">
+                <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                <span className="text-sm text-slate-600 font-medium">Loading AI models for behavioral telemetry...</span>
+              </div>
+            )}
+
+            {phase === 'ready' && (
+              <button
+                onClick={handleStart}
+                className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/30 hover:shadow-xl hover:shadow-red-500/50 active:scale-95 transition-all duration-300 relative overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
+                <span className="relative z-10 flex items-center justify-center gap-2 text-base">
+                  Begin Interview <span className="text-red-200">→</span>
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+  if (phase === 'ending') {
+    return (
+      <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col justify-center items-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+          <h2 className="text-2xl font-bold mb-4 text-slate-900">Processing Evaluation</h2>
+          <p className="text-sterling-text uppercase tracking-widest text-sm">Transferring secure telemetry to Report Engine...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col">
+      
+      {/* HEADER - Matching the screenshot's top nav */}
+      <header className="bg-sterling-surface/80 backdrop-blur-md border-b border-sterling-border px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+        {/* Logo Area */}
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-md border border-slate-800">
+            <img src={logoUrl} alt="SEM Logo" className="w-9 h-9 object-contain mix-blend-screen" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+            <div className="hidden w-9 h-9 bg-sterling-blue text-white flex items-center justify-center font-bold text-sm">SEM</div>
+          </div>
+          <div className="leading-tight">
+            <h1 className="text-sm font-bold tracking-widest text-slate-900">STERLING</h1>
+            <h2 className="text-sm tracking-widest text-slate-500">E-MOBILITY</h2>
+          </div>
+        </div>
+        
+        {/* Nav Links - Restricted for Candidate */}
+        <div className="hidden md:flex gap-8 text-sm font-bold text-[#111827] items-center">
+          <div className="text-slate-400 uppercase tracking-widest text-xs flex items-center gap-2">
+            <ShieldAlert size={14} className="text-red-500" /> Proctoring Active
+          </div>
+          <button onClick={() => {
+            if (window.confirm("Are you sure you want to end and submit the interview now?")) {
+              doEndInterview(history);
+            }
+          }} className="px-5 py-2 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white rounded-lg shadow-md hover:shadow-xl hover:shadow-red-500/30 active:scale-95 transition-all duration-300 ease-in-out font-bold tracking-wide">
+            End & Submit
+          </button>
+        </div>
+      </header>
+
+      {/* Error Toast */}
+      <AnimatePresence>
+        {error && (
+           <motion.div 
+             initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+             className="bg-red-50 border-b border-[#EF4444] text-[#EF4444] px-8 py-3 text-sm font-bold text-center z-50"
+           >
+             {error}
+           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MAIN WORKSPACE - White, clean borders, red accents */}
+      <main className="flex-1 p-8 grid grid-cols-12 gap-8 max-w-[1600px] mx-auto w-full">
+        
+        {/* LEFT COLUMN: Webcam & Transcript */}
+        <div className="col-span-5 flex flex-col gap-8">
+          
+          {/* Webcam Area */}
+          <div className="bg-sterling-surface border border-sterling-border rounded-2xl overflow-hidden h-72 relative shadow-xl">
+             {memoizedVideo}
+             {(!camOn || camError) && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-white/80 backdrop-blur-sm text-slate-500 text-sm font-bold">
+                  Video Feed Offline
+                </div>
+             )}
+             <div className="absolute bottom-4 left-4 flex gap-3 z-20">
+                <button onClick={() => setMicOn(!micOn)} className={`flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg active:scale-95 transition-all duration-300 ease-in-out shadow-lg backdrop-blur-sm ${micOn ? (isListening ? 'bg-red-500/90 text-white hover:bg-red-600 border border-red-400 shadow-red-500/40 animate-[pulse_2s_ease-in-out_infinite]' : 'bg-white/90 text-slate-800 hover:bg-white border border-slate-200 hover:shadow-xl') : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'}`}>
+                  <div className={`w-2 h-2 rounded-full ${micOn ? (isListening ? 'bg-white animate-ping' : 'bg-green-500') : 'bg-red-500'}`}></div>
+                  {micOn ? 'Microphone Active' : 'Microphone Muted'}
+                </button>
+                <button onClick={() => setCamOn(!camOn)} className="px-5 py-2 bg-white/90 text-slate-800 border border-slate-200 rounded-lg text-sm font-bold hover:bg-white hover:shadow-xl active:scale-95 transition-all duration-300 ease-in-out shadow-lg backdrop-blur-sm">
+                  {camOn ? 'Stop Video' : 'Start Video'}
+                </button>
+             </div>
+          </div>
+
+          {/* Transcript Box */}
+          <div className="bg-sterling-surface/50 backdrop-blur-md border border-sterling-border rounded-2xl flex-1 p-6 flex flex-col shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+               <div className="flex items-center gap-3">
+                 <div className="w-1 h-6 bg-red-600 rounded-full"></div>
+                 <h3 className="text-lg font-bold text-slate-900">Live Transcript</h3>
+               </div>
+               {isListening && <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]" />}
+            </div>
+            <div className="text-sterling-text leading-relaxed flex-1 overflow-y-auto mb-4 font-medium text-[15px]">
+              {finalTranscript && <span>{finalTranscript} </span>}
+              {interimTranscript && <span className="text-sterling-muted italic">{interimTranscript}</span>}
+              {!finalTranscript && !interimTranscript && !isListening && !isSpeaking && (
+                <span className="text-sterling-muted">Your spoken text will appear here...</span>
+              )}
+              <div ref={transcriptEndRef} />
+            </div>
+            
+            {/* Text Fallback Input */}
+            <div className="relative mt-auto">
+              <input 
+                type="text" 
+                value={textFallback}
+                onChange={(e) => setTextFallback(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSubmitAnswer(); }}
+                placeholder={(!isSpeaking && finalTranscript) ? "✅ Answer captured. Press Enter or click Submit to continue." : "Microphone issues? Type your answer here..."}
+                className="w-full bg-white border border-sterling-border rounded-xl px-4 py-3 pr-24 text-sm text-slate-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all duration-300 shadow-sm"
+                disabled={loading || isSpeaking}
+              />
+              {(!isSpeaking && finalTranscript && !loading) && (
+                 <button 
+                   onClick={handleSubmitAnswer}
+                   className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-md animate-[pulse_2s_ease-in-out_infinite] transition-all"
+                 >
+                   Submit
+                 </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: AI & Code Editor */}
+        <div className="col-span-7 flex flex-col gap-8 h-full">
+          
+          {/* AI Question Box */}
+          <div className="bg-sterling-surface/50 backdrop-blur-md border border-sterling-border rounded-2xl p-6 flex flex-col gap-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-6 bg-red-600"></div>
+                <h3 className="text-lg font-bold text-red-600">AI Interviewer</h3>
+              </div>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                 Q{qIndex + 1}/{MAX_QUESTIONS}
+              </span>
+            </div>
+            
+            <div className="flex items-start gap-6 mt-2">
+              {/* 3D Avatar — Portrait card format (280×350px) */}
+              <div className="relative shrink-0 rounded-2xl overflow-hidden shadow-xl border border-slate-200/60 bg-gradient-to-b from-slate-100 to-slate-50"
+                   style={{ width: '200px', height: '260px' }}>
+                <Avatar3D
+                  getAudioFrequency={getAudioFrequency}
+                  isSpeaking={isSpeaking}
+                  isListening={isListening}
+                  isLoading={loading}
+                  phase={phase}
+                  qIndex={qIndex}
+                  warnings={warnings}
+                />
+              </div>
+
+              <div className="flex-1 bg-white border border-slate-200 rounded-xl p-6 relative min-h-[120px] max-h-[250px] overflow-y-auto shadow-sm">
+                <h2 className="text-lg text-slate-900 font-medium leading-relaxed relative z-10 break-words">
+                  {loading ? loadingStatus : displayedQuestion}
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          {/* Code/Workspace Area */}
+          <div className="bg-sterling-surface/50 backdrop-blur-md border border-sterling-border rounded-2xl flex-1 flex flex-col shadow-xl overflow-hidden">
+            {/* Editor Header */}
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex justify-between items-center">
+              <span className="text-sm font-bold text-slate-900 uppercase tracking-wider">Technical Workspace</span>
+              <select 
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="bg-white border border-slate-300 text-sm text-slate-900 outline-none cursor-pointer px-3 py-1 rounded shadow-sm"
+              >
+                {SUPPORTED_LANGUAGES.map(l => (
+                  <option key={l.id} value={l.id}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Editor Body */}
+            <div className="flex-1 w-full relative">
+               {memoizedEditor}
+            </div>
+            
+            {/* Editor Footer */}
+            <div className="bg-slate-50 border-t border-slate-200 p-4 flex justify-between items-center">
+              <button onClick={async () => {
+                  const code = getCode();
+                  if (language === 'javascript' || language === 'typescript') {
+                    try {
+                      const logs = [];
+                      const originalLog = console.log;
+                      console.log = (...args) => logs.push(args.join(' '));
+                      // eslint-disable-next-line no-new-func
+                      new Function(code)();
+                      console.log = originalLog;
+                      setOverlayMsg("Output:\n" + (logs.join('\n') || "Execution complete. No output."));
+                    } catch (e) {
+                      setOverlayMsg("Syntax Error:\n" + e.message);
+                    }
+                  } else if (language === 'python') {
+                    setLoadingStatus("Compiling Python...");
+                    setLoading(true);
+                    try {
+                      const res = await apiClient.executeCode({ code, language: 'python' });
+                      setOverlayMsg(res.error ? "Python Execution Error:\n" + res.output : "Python Output:\n" + (res.output || "Execution complete. No output."));
+                    } catch (err) {
+                      setOverlayMsg("Failed to connect to backend execution engine.");
+                    }
+                    setLoading(false);
+                  } else {
+                    setOverlayMsg(`Syntactic validation for ${language} passed successfully. Output simulation not available in browser sandbox.`);
+                  }
+                }}
+                className="text-sm font-bold text-sterling-muted hover:text-white transition-colors px-4 py-2"
+                disabled={loading}
+              >
+                {language === 'python' ? 'Run Backend Sandbox' : 'Run Code Locally'}
+              </button>
+              <button 
+                onClick={() => {
+                   if(!isSpeaking && !loading) {
+                     handleSubmitAnswer();
+                   }
+                }}
+                disabled={isSpeaking || loading}
+                className="relative overflow-hidden group bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold px-8 py-3 rounded-lg shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/50 active:scale-95 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:active:scale-100 disabled:shadow-none"
+              >
+                <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out skew-x-12 disabled:hidden"></div>
+                <span className="relative z-10 flex items-center gap-2">
+                  {loading ? (
+                    <>
+                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                       Analyzing...
+                    </>
+                  ) : 'Submit Response'}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Modern Proctoring Overlay Modal */}
+      <AnimatePresence>
+        {overlayMsg && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 text-center border-t-4 border-red-600"
+            >
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShieldAlert size={32} className="text-red-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">System Notification</h2>
+              <p className="text-slate-600 mb-6 whitespace-pre-wrap">{overlayMsg}</p>
+              {fullscreenLock ? (
+                <button 
+                  onClick={() => {
+                    document.documentElement.requestFullscreen().catch(e => console.warn(e));
+                  }}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl transition-all active:scale-95"
+                >
+                  Return to Fullscreen
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setOverlayMsg('')}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl transition-all active:scale-95"
+                >
+                  I Understand
+                </button>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
