@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { apiClient } from '../api/apiClient';
-import logoUrl from 'c:/Users/Niraj Singh/.gemini/antigravity/brain/1449c250-172d-4221-bf93-df68be45f591/media__1779878456343.png';
+import logoUrl from '../assets/sterling_logo.png';
 
 export default function Login() {
   const navigate = useNavigate();

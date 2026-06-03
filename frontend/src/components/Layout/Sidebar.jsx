@@ -4,7 +4,7 @@ import {
   LayoutDashboard, User, Mic, FileText,
   ChevronRight, Activity, Database
 } from 'lucide-react';
-import logoUrl from 'c:/Users/Niraj Singh/.gemini/antigravity/brain/1449c250-172d-4221-bf93-df68be45f591/media__1779878456343.png';
+import logoUrl from '../../assets/sterling_logo.png';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
