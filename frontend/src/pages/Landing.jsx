@@ -64,9 +64,8 @@ export default function Landing() {
               <img src={logoUrl} alt="Spark-Hire Logo" className="w-9 h-9 object-contain mix-blend-screen" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
               <div className="hidden w-9 h-9 bg-[#EF4444] text-white flex items-center justify-center font-bold text-sm">Spark-Hire</div>
             </div>
-            <span className="font-extrabold text-lg tracking-wide text-slate-900">
-              Spark-Hire <span className="text-[#EF4444]">AI</span>
-              <span className="text-slate-500 text-xs ml-3 tracking-[0.2em] font-mono">FOR STERLING E-MOBILITY</span>
+            <span className="font-extrabold text-lg tracking-wide text-slate-900 flex items-center">
+              Sterling E-Mobility <span className="text-slate-400 font-light mx-2">x</span> <span className="text-[#EF4444]">Spark-Hire</span>
             </span>
           </div>
           <div className="flex gap-4">

@@ -5,12 +5,12 @@
 @tailwind utilities;
 
 :root {
-  --sterling-bg: #FFFFFF;
-  --sterling-surface: #F9FAFB;
-  --sterling-border: #E5E7EB;
+  --sparkhire-bg: #FFFFFF;
+  --sparkhire-surface: #F9FAFB;
+  --sparkhire-border: #E5E7EB;
   --sterling-red: #C1272D;
   --sterling-darkRed: #9A1F24;
-  --sterling-text: #1F2937;
+  --sparkhire-text: #1F2937;
   --sterling-nav: #000000;
   
   --font-main: 'Inter', system-ui, sans-serif;
@@ -31,8 +31,8 @@ html {
 
 body {
   font-family: var(--font-main);
-  background-color: var(--sterling-bg);
-  color: var(--sterling-text);
+  background-color: var(--sparkhire-bg);
+  color: var(--sparkhire-text);
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
@@ -51,16 +51,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--sterling-surface);
+  background: var(--sparkhire-surface);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--sterling-border);
+  background: var(--sparkhire-border);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--sterling-text);
+  background: var(--sparkhire-text);
 }
 
 .main-content {

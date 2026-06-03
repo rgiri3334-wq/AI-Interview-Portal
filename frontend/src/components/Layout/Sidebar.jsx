@@ -27,11 +27,11 @@ export default function Sidebar() {
           <div className="hidden w-9 h-9 bg-red-600 text-white flex items-center justify-center font-bold text-sm">Spark-Hire</div>
         </div>
         <div>
-          <div className="font-bold text-[15px] tracking-widest leading-tight text-slate-900 uppercase">
-            SPARK-HIRE AI
+          <div className="font-bold text-[14px] tracking-widest leading-tight text-slate-900 uppercase">
+            STERLING E-MOBILITY
           </div>
-          <div className="text-[10px] text-slate-500 tracking-widest uppercase mt-0.5">
-            FOR STERLING E-MOBILITY
+          <div className="text-[12px] text-slate-500 tracking-widest uppercase mt-0.5">
+            x SPARK-HIRE
           </div>
         </div>
       </div>
@@ -83,7 +83,7 @@ export default function Sidebar() {
           </div>
           <div className="text-left flex-1 overflow-hidden">
             <p className="text-sm font-bold text-slate-900 truncate">HR Admin</p>
-            <p className="text-xs text-slate-500 truncate">admin@sterling.ai</p>
+            <p className="text-xs text-slate-500 truncate">admin@sterlingemobility.com</p>
           </div>
         </div>
       </div>

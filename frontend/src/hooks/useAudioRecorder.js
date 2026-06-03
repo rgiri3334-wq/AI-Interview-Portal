@@ -5,7 +5,7 @@
  * This ensures we can send the raw audio to the backend Whisper endpoint for
  * maximum accuracy, bypassing the limitations of the browser's native STT.
  * =============================================================================
- * Author: Aditya Singh | Sterling E-Mobility AI Platform
+ * Author: Aditya Singh | Spark-Hire AI AI Platform
  */
 
 import { useState, useRef, useCallback } from 'react';

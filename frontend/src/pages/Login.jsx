@@ -66,9 +66,9 @@ export default function Login() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight"
+          className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight flex items-center justify-center"
         >
-          Spark-Hire <span className="text-[#EF4444]">AI</span>
+          Sterling E-Mobility <span className="text-slate-400 font-light mx-2">x</span> <span className="text-[#EF4444]">Spark-Hire</span>
         </motion.h2>
         <motion.p 
           initial={{ opacity: 0 }}
@@ -76,7 +76,7 @@ export default function Login() {
           transition={{ delay: 0.2 }}
           className="mt-2 text-center text-sm text-slate-500 font-mono tracking-[0.2em] uppercase"
         >
-          For Sterling E-Mobility
+          Enterprise Authentication
         </motion.p>
       </div>
 

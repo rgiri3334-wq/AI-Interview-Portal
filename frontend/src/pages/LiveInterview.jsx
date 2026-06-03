@@ -655,8 +655,8 @@ export default function LiveInterview() {
               />
             </div>
             <div className="text-center">
-              <p className="text-sm font-bold text-slate-700">Your AI Interviewer</p>
-              <p className="text-xs text-slate-500 mt-0.5">Spark-Hire AI · HR Excellence Division</p>
+              <h3 className="text-sm font-bold text-slate-900 tracking-wide">Live AI Assessment</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Sterling E-Mobility x Spark-Hire AI</p>
             </div>
           </div>
 
@@ -749,9 +749,9 @@ export default function LiveInterview() {
             <img src={logoUrl} alt="Spark-Hire Logo" className="w-9 h-9 object-contain mix-blend-screen" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
             <div className="hidden w-9 h-9 bg-sparkhire-blue text-white flex items-center justify-center font-bold text-sm">Spark-Hire</div>
           </div>
-          <div className="leading-tight">
-            <h1 className="text-sm font-bold tracking-widest text-slate-900">SPARK-HIRE AI</h1>
-            <h2 className="text-[10px] tracking-widest text-slate-500">FOR STERLING E-MOBILITY</h2>
+          <div>
+            <h1 className="text-[14px] font-bold tracking-widest leading-tight text-slate-900 uppercase">STERLING E-MOBILITY</h1>
+            <h2 className="text-[12px] tracking-widest text-slate-500 uppercase mt-0.5">x SPARK-HIRE</h2>
           </div>
         </div>
         

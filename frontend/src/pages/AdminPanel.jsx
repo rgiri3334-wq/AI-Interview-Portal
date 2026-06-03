@@ -536,7 +536,7 @@ export default function AdminPanel() {
                   onChange={e => setCompanyContext(e.target.value)} 
                   rows={3} 
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-red-600 transition-colors resize-none shadow-inner" 
-                  placeholder="e.g. Sterling just launched an 800V battery platform. Weave this into the interview." 
+                  placeholder="e.g. Spark-Hire just launched an 800V battery platform. Weave this into the interview." 
                 />
                 <button onClick={handleSaveCompanyContext} className="w-full mt-3 bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-sm transition-all shadow-sm">
                   Inject Global Context
@@ -714,7 +714,7 @@ export default function AdminPanel() {
                   Evaluation Rubrics for {roleConfigs.job_role === 'ALL' ? 'All Roles' : (roleConfigs.job_role || 'Selected Role')}
                 </h3>
                 <button onClick={handleSeed} className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors text-slate-800 shadow-sm">
-                  <RefreshCw size={14} /> Seed SEM Defaults
+                  <RefreshCw size={14} /> Seed Spark-Hire Defaults
                 </button>
               </div>
 

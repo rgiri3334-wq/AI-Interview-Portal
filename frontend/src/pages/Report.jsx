@@ -131,7 +131,7 @@ export default function Report() {
   const gradeColor = overall >= 80 ? '#10B981' : overall >= 60 ? '#DC2626' : '#991B1B';
 
   const handleExport = () => {
-    const dossierContent = `SPARK-HIRE AI DOSSIER - FOR STERLING E-MOBILITY
+    const dossierContent = `STERLING E-MOBILITY x SPARK-HIRE - AI DOSSIER
 ===================================================
 CANDIDATE: ${c.name}
 ROLE: ${c.job_role}
@@ -200,7 +200,7 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
             <h1 className="text-4xl font-extrabold tracking-tight mb-2 text-slate-900">
               Candidate <span className="text-red-700">Intelligence Report</span>
             </h1>
-            <p className="text-slate-500 font-medium">Advanced metrics and Spark-Hire AI evaluation for {c.name}</p>
+            <p className="text-slate-500 font-medium">Sterling E-Mobility x Spark-Hire AI evaluation for {c.name}</p>
           </div>
           <div className="flex gap-4">
             <button onClick={() => { localStorage.removeItem('candidate_id'); navigate('/dashboard'); }} className="px-5 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors text-slate-800 shadow-sm">
