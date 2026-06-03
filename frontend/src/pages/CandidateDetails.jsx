@@ -81,13 +81,46 @@ export default function CandidateDetails() {
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
+  // ── Field-level validation errors ─────────────────────────────────────────
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const validate = () => {
+    const errs = {};
+    if (!isLoginMode) {
+      if (!form.name.trim())
+        errs.name = 'Full name is required.';
+      const phoneDigits = form.phone.replace(/\D/g, '');
+      if (!phoneDigits)
+        errs.phone = 'Phone number is required.';
+      else if (phoneDigits.length !== 10)
+        errs.phone = `Phone must be exactly 10 digits (you entered ${phoneDigits.length}).`;
+      else if (!/^[6-9]/.test(phoneDigits))
+        errs.phone = 'Phone must start with 6, 7, 8, or 9 (Indian mobile number).';
+      if (!form.department)
+        errs.department = 'Please select a department.';
+      if (!form.job_role)
+        errs.job_role = 'Please select a job role.';
+    }
+    if (!form.email.trim())
+      errs.email = 'Email address is required.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+      errs.email = 'Please enter a valid email address.';
+    if (!form.password)
+      errs.password = 'Password is required.';
+    else if (form.password.length < 6)
+      errs.password = `Password must be at least 6 characters (currently ${form.password.length}).`;
+    return errs;
+  };
+
   const [isLoginMode, setIsLoginMode] = useState(false);
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.email || !form.password) {
-      setError('Please fill in Email and Password.');
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
       return;
     }
+    setFieldErrors({});
     setLoading(true);
     setError('');
     try {
@@ -209,51 +242,72 @@ export default function CandidateDetails() {
                   Personal Information
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 mb-6">
-                  {!isLoginMode && (<Field label="Full Name" icon={User} value={form.name}>
-                    <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
-                      value={form.name} onChange={set('name')} required />
-                  </Field>)}
-                  <Field label="Password" icon={User} value={form.password}>
-                  <input type="password" className="peer w-full px-4 py-4 rounded-xl border border-slate-200 shadow-inner bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-slate-900 font-medium placeholder-transparent" 
-                         value={form.password} onChange={set('password')} required />
-                </Field>
-                <Field label="Email Address" icon={Mail} value={form.email}>
-                    <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium" type="email"
-                      value={form.email} onChange={set('email')} required />
-                  </Field>
-                  {!isLoginMode && (<Field label="Phone Number" icon={Phone} value={form.phone} alwaysFloat={true}>
-                    <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
-                      type="tel"
-                      pattern="^[6-9][0-9]{9}$"
-                      maxLength="10"
-                      title="Please enter a valid 10-digit Indian phone number starting with 6-9"
-                      placeholder="e.g. 9876543210"
-                      value={form.phone} 
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                        setForm(prev => ({...prev, phone: val}));
-                      }} 
-                      required
-                    />
-                  </Field>)}
-                  <Field label="Department" icon={Briefcase} value={form.department} alwaysFloat={true}>
-                    <select className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all cursor-pointer font-medium"
-                      value={form.department} 
-                      onChange={e => {
-                        const newDept = e.target.value;
-                        setForm({...form, department: newDept, job_role: ''});
-                      }} required>
-                      <option value="" disabled className="text-slate-500">Select Department</option>
-                      {Object.keys(companyStructure).map((d) => <option key={d} value={d} className="bg-white text-slate-900">{d}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="Job Role" icon={Briefcase} value={form.job_role} alwaysFloat={true}>
-                    <select className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all cursor-pointer font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      value={form.job_role} onChange={set('job_role')} disabled={!form.department} required>
-                      <option value="" disabled className="text-slate-500">{form.department ? "Select Job Role" : "Select Department First"}</option>
-                      {(companyStructure[form.department] || []).map((r) => <option key={r} value={r} className="bg-white text-slate-900">{r}</option>)}
-                    </select>
-                  </Field>
+                  {!isLoginMode && (
+                    <div>
+                      <Field label="Full Name" icon={User} value={form.name}>
+                        <input className={`peer w-full bg-white border rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:ring-1 transition-all font-medium ${fieldErrors.name ? 'border-red-500 focus:border-red-600 focus:ring-red-600' : 'border-slate-300 focus:border-red-600 focus:ring-red-600'}`}
+                          value={form.name} onChange={set('name')} />
+                      </Field>
+                      {fieldErrors.name && <p className="text-red-500 text-xs mt-1 font-semibold">⚠ {fieldErrors.name}</p>}
+                    </div>
+                  )}
+                  <div>
+                    <Field label="Password" icon={User} value={form.password}>
+                      <input type="password" className={`peer w-full px-4 py-4 rounded-xl border shadow-inner bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 transition-all text-slate-900 font-medium placeholder-transparent ${fieldErrors.password ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500' : 'border-slate-200 focus:ring-red-500/20 focus:border-red-500'}`}
+                        value={form.password} onChange={set('password')} />
+                    </Field>
+                    {fieldErrors.password && <p className="text-red-500 text-xs mt-1 font-semibold">⚠ {fieldErrors.password}</p>}
+                  </div>
+                  <div>
+                    <Field label="Email Address" icon={Mail} value={form.email}>
+                      <input className={`peer w-full bg-white border rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:ring-1 transition-all font-medium ${fieldErrors.email ? 'border-red-500 focus:border-red-600 focus:ring-red-600' : 'border-slate-300 focus:border-red-600 focus:ring-red-600'}`}
+                        type="email" value={form.email} onChange={set('email')} />
+                    </Field>
+                    {fieldErrors.email && <p className="text-red-500 text-xs mt-1 font-semibold">⚠ {fieldErrors.email}</p>}
+                  </div>
+                  {!isLoginMode && (
+                    <div>
+                      <Field label="Phone Number" icon={Phone} value={form.phone} alwaysFloat={true}>
+                        <input className={`peer w-full bg-white border rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:ring-1 transition-all font-medium ${fieldErrors.phone ? 'border-red-500 focus:border-red-600 focus:ring-red-600' : 'border-slate-300 focus:border-red-600 focus:ring-red-600'}`}
+                          type="tel"
+                          maxLength="10"
+                          placeholder="e.g. 9876543210"
+                          value={form.phone}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                            setForm(prev => ({...prev, phone: val}));
+                            if (fieldErrors.phone) setFieldErrors(prev => ({...prev, phone: ''}));
+                          }}
+                        />
+                      </Field>
+                      {fieldErrors.phone && <p className="text-red-500 text-xs mt-1 font-semibold">⚠ {fieldErrors.phone}</p>}
+                    </div>
+                  )}
+                  <div>
+                    <Field label="Department" icon={Briefcase} value={form.department} alwaysFloat={true}>
+                      <select className={`peer w-full bg-white border rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:ring-1 transition-all cursor-pointer font-medium ${fieldErrors.department ? 'border-red-500 focus:border-red-600 focus:ring-red-600' : 'border-slate-300 focus:border-red-600 focus:ring-red-600'}`}
+                        value={form.department}
+                        onChange={e => {
+                          const newDept = e.target.value;
+                          setForm({...form, department: newDept, job_role: ''});
+                          if (fieldErrors.department) setFieldErrors(prev => ({...prev, department: ''}));
+                        }}>
+                        <option value="" disabled className="text-slate-500">Select Department</option>
+                        {Object.keys(companyStructure).map((d) => <option key={d} value={d} className="bg-white text-slate-900">{d}</option>)}
+                      </select>
+                    </Field>
+                    {fieldErrors.department && <p className="text-red-500 text-xs mt-1 font-semibold">⚠ {fieldErrors.department}</p>}
+                  </div>
+                  <div>
+                    <Field label="Job Role" icon={Briefcase} value={form.job_role} alwaysFloat={true}>
+                      <select className={`peer w-full bg-white border rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:ring-1 transition-all cursor-pointer font-medium disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors.job_role ? 'border-red-500 focus:border-red-600 focus:ring-red-600' : 'border-slate-300 focus:border-red-600 focus:ring-red-600'}`}
+                        value={form.job_role} onChange={set('job_role')} disabled={!form.department}>
+                        <option value="" disabled className="text-slate-500">{form.department ? "Select Job Role" : "Select Department First"}</option>
+                        {(companyStructure[form.department] || []).map((r) => <option key={r} value={r} className="bg-white text-slate-900">{r}</option>)}
+                      </select>
+                    </Field>
+                    {fieldErrors.job_role && <p className="text-red-500 text-xs mt-1 font-semibold">⚠ {fieldErrors.job_role}</p>}
+                  </div>
                 </div>
 
                 <h3 className="text-lg font-bold mb-6 pb-4 border-b border-slate-200 text-slate-900 mt-8">
