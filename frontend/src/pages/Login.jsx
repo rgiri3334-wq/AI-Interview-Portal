@@ -88,6 +88,7 @@ export default function Login() {
         className="mt-8 sm:mx-auto sm:w-full sm:max-w-4xl flex flex-col md:flex-row gap-6 px-4 sm:px-0"
       >
         <div className="flex-1 bg-white py-10 px-6 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100 flex flex-col justify-center">
+          <h3 className="text-2xl font-extrabold mb-8 text-slate-900 tracking-tight text-center">Admin Login</h3>
           <form className="space-y-6" onSubmit={handleLogin}>
             <div>
               <label className="block text-sm font-semibold text-slate-700">
@@ -150,7 +151,7 @@ export default function Login() {
 
         {/* --- PROMINENT CANDIDATE SECTION --- */}
         <div className="flex-1 bg-white py-10 px-6 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100 text-center flex flex-col justify-center">
-          <h3 className="text-2xl font-extrabold mb-2 text-slate-900 tracking-tight">Are you a Candidate?</h3>
+          <h3 className="text-2xl font-extrabold mb-2 text-slate-900 tracking-tight">Candidate Login</h3>
           <p className="text-slate-500 text-sm font-medium mb-8">
             Access your AI interview portal directly with your email.
           </p>
