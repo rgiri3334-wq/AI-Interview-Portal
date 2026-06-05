@@ -19,7 +19,10 @@ export default function AdminManagement() {
   const fetchAdmins = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/admin/users`);
+      const token = sessionStorage.getItem('adminToken');
+      const res = await fetch(`${API_BASE}/admin/users`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       if (!res.ok) throw new Error('Failed to fetch admins');
       const data = await res.json();
       setAdmins(data);
@@ -41,10 +44,12 @@ export default function AdminManagement() {
     setIsSubmitting(true);
     
     try {
+      const token = sessionStorage.getItem('adminToken');
       const res = await fetch(`${API_BASE}/admin/users`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({ email: newEmail, password: newPassword })
       });
