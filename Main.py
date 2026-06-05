@@ -587,8 +587,8 @@ async def send_candidate_otp(
     raw_code = str(secrets.randbelow(900000) + 100000)  # Always 6 digits: 100000–999999
     otp_hash = _hash_otp(raw_code)
     expires_iso = datetime.fromtimestamp(
-        time.time() + 600, tz=timezone.utc
-    ).isoformat()  # 10 minutes from now
+        time.time() + 1800, tz=timezone.utc
+    ).isoformat()  # 30 minutes from now
 
     otp_id = generate_enterprise_id(db, "OTP")
     db.add(OTPStore(
@@ -607,7 +607,7 @@ async def send_candidate_otp(
 
     # Send via email service in the background to prevent API timeouts
     from services.email_service import send_otp_email
-    candidate_name = str(existing_candidate.name) if existing_candidate else str(data.name).strip() or "Candidate"
+    candidate_name = str(existing_candidate.name) if existing_candidate else data.name.strip() or "Candidate"
     background_tasks.add_task(
         send_otp_email,
         to_email=identifier,
@@ -650,7 +650,15 @@ async def verify_candidate_otp(
         )
 
     # ── Check expiry ──────────────────────────────────────────────────────
-    if otp_record.expires_at < now_iso:  # type: ignore
+    try:
+        expires_dt = datetime.fromisoformat(otp_record.expires_at)
+        now_dt = datetime.now(timezone.utc)
+        is_expired = expires_dt < now_dt
+    except Exception:
+        # Fallback to string comparison if parsing fails
+        is_expired = str(otp_record.expires_at) < now_iso
+
+    if is_expired:
         otp_record.is_used = True  # type: ignore
         db.commit()
         raise HTTPException(
