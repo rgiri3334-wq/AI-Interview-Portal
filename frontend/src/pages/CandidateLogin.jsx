@@ -30,7 +30,7 @@ export default function CandidateLogin() {
   // Auto-redirect if already logged in
   useEffect(() => {
     if (sessionStorage.getItem('candidateId')) {
-      navigate('/candidate');
+      navigate('/candidate-home');
     }
   }, [navigate]);
 
@@ -116,7 +116,7 @@ export default function CandidateLogin() {
       sessionStorage.setItem('isAuthenticated', 'true');
       sessionStorage.setItem('role', 'candidate');
       setSuccessMsg(`Welcome back, ${res.name}! Taking you to the portal...`);
-      setTimeout(() => navigate('/candidate'), 1800);
+      setTimeout(() => navigate('/candidate-home'), 1800);
     } catch (err) {
       const msg = err.message || '';
       setError(msg);

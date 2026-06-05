@@ -11,6 +11,7 @@ import CandidateRegister from './pages/CandidateRegister';
 import CandidateLogin from './pages/CandidateLogin';
 import SystemHealth from './pages/SystemHealth';
 import AdminManagement from './pages/AdminManagement';
+import CandidateLanding from './pages/CandidateLanding';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="/candidate-register" element={<CandidateRegister />} />
           <Route path="/candidate-login" element={<CandidateLogin />} />
           {/* ── Existing Protected Routes (unchanged) ── */}
+          <Route path="/candidate-home" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateLanding /></ProtectedRoute>} />
           <Route path="/home" element={<ProtectedRoute allowedRoles={['admin']}><Landing /></ProtectedRoute>} />
           <Route path="/candidate" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateDetails /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><Dashboard /></ProtectedRoute>} />

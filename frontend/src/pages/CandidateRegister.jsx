@@ -352,7 +352,7 @@ export default function CandidateRegister() {
       sessionStorage.setItem('isAuthenticated', 'true');
       sessionStorage.setItem('role', 'candidate');
       setSuccessMsg(`Welcome, ${res.name}! Redirecting you to the portal...`);
-      setTimeout(() => navigate('/candidate'), 1800);
+      setTimeout(() => navigate('/candidate-home'), 1800);
     } catch (err) {
       const msg = err.message || '';
       if (msg.includes('expired')) {
