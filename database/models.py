@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Float, ForeignKey, Text
+from sqlalchemy import Column, String, Integer, Float, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from database.database import Base
@@ -42,7 +42,10 @@ class Candidate(Base):
     name = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True, index=True)
     phone = Column(String, nullable=True)
-    password_hash = Column(String, nullable=False)
+    # password_hash is kept nullable for backward compatibility with existing records.
+    # New OTP-authenticated candidates will have this as None.
+    password_hash = Column(String, nullable=True)
+    is_verified = Column(Boolean, default=False)  # True after first OTP verification
     registration_date = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
     resumes = relationship("Resume", back_populates="candidate", cascade="all, delete-orphan")
@@ -227,6 +230,10 @@ class FinalReport(Base):
     weaknesses = Column(Text, default="[]")
     hiring_decision = Column(String, default="PENDING")
     report_generated_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    # Sprint 4: Integrity Engine fields (server_default ensures backward compat with existing rows)
+    integrity_score = Column(Integer, server_default="100", default=100)          # 0-100; 100 = clean
+    integrity_verdict = Column(String, server_default="CLEAN", default="CLEAN")  # CLEAN|BORDERLINE|FLAGGED|HIGH_RISK
+    integrity_signals = Column(Text, server_default="[]", default="[]")          # JSON array of signal log entries
 
     candidate = relationship("Candidate", back_populates="reports")
     interview = relationship("InterviewSession", back_populates="report")
@@ -244,3 +251,20 @@ class GlobalConfig(Base):
     key = Column(String, unique=True, nullable=False)
     value = Column(Text, nullable=False)
     updated_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class OTPStore(Base):
+    """
+    Temporary vault for one-time passwords.
+    OTPs are stored as SHA-256 hashes — raw codes are NEVER persisted.
+    Records should be cleaned up by a background job or on-demand when expired.
+    """
+    __tablename__ = "otp_store"
+    otp_id = Column(String, primary_key=True, index=True)      # e.g. OTP1
+    identifier = Column(String, nullable=False, index=True)    # email or phone number
+    otp_hash = Column(String, nullable=False)                  # SHA-256 hash of the 6-digit code
+    purpose = Column(String, nullable=False)                   # "registration" | "login"
+    expires_at = Column(String, nullable=False)                # UTC ISO timestamp
+    is_used = Column(Boolean, default=False)                   # True once verified or invalidated
+    attempts = Column(Integer, default=0)                      # Brute-force guard: max 5
+    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())

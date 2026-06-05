@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard';
 import LiveInterview from './pages/LiveInterview';
 import Report from './pages/Report';
 import AdminPanel from './pages/AdminPanel';
+import CandidateRegister from './pages/CandidateRegister';
+import CandidateLogin from './pages/CandidateLogin';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -46,6 +48,10 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login />} />
+          {/* ── Candidate OTP Auth Routes (Sprint 1) ── */}
+          <Route path="/candidate-register" element={<CandidateRegister />} />
+          <Route path="/candidate-login" element={<CandidateLogin />} />
+          {/* ── Existing Protected Routes (unchanged) ── */}
           <Route path="/home" element={<ProtectedRoute><Landing /></ProtectedRoute>} />
           <Route path="/candidate" element={<ProtectedRoute><CandidateDetails /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

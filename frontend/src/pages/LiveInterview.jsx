@@ -7,6 +7,7 @@ import { Editor } from '@monaco-editor/react';
 import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png'; // Fix #1: Use bundled asset, not absolute machine path
 import Avatar3D from '../components/Avatar3D';
+import PreFlightCheck from '../components/PreFlightCheck'; // Sprint 2
 
 import { useWebSocketSTT } from '../hooks/useWebSocketSTT';
 import { useAudioStream } from '../hooks/useAudioStream';
@@ -14,6 +15,7 @@ import { useHumanBehavior } from '../hooks/useHumanBehavior';
 import { useCodeWorkspace, SUPPORTED_LANGUAGES } from '../hooks/useCodeWorkspace';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { useVAD } from '../hooks/useVAD';
+import { useIntegrityEngine } from '../hooks/useIntegrityEngine'; // Sprint 3
 
 const MAX_QUESTIONS = 10;
 
@@ -42,7 +44,9 @@ export default function LiveInterview() {
   const experience    = localStorage.getItem('experience')     || 'Fresher (0 years)';
   const skills        = localStorage.getItem('skills')         || '';
 
-  const [phase, setPhase]       = useState('ready');
+  // Sprint 2: 'preflight' is the initial gate phase.
+  // Flow: preflight → ready → initializing → interviewing → ending
+  const [phase, setPhase]       = useState('preflight');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('Computing...');
@@ -101,6 +105,14 @@ export default function LiveInterview() {
 
   const { isRecording, startRecording, stopRecording, forceStopAllTracks } = useAudioRecorder();
 
+  // Sprint 3: Integrity Engine — collects signals throughout the interview
+  const {
+    integrityScore,
+    recordSignal: recordIntegritySignal,
+    checkBehavioral,
+    computeFinal: computeIntegrityFinal,
+  } = useIntegrityEngine();
+
   useEffect(() => {
     return () => { 
       isMounted.current = false; 
@@ -157,6 +169,7 @@ export default function LiveInterview() {
       const handleDefocus = () => {
         if (document.hidden || !document.hasFocus()) {
           addProctoringLog("Defocus/Tab Switch detected.");
+          recordIntegritySignal('tab_switch', { note: 'Tab switch / defocus event.' }); // Sprint 3
           setWarnings(w => {
             const newW = w + 1;
             setOverlayMsg(`PROCTORING WARNING (${newW}/3): Defocus Violation — Focus Must Remain on the Interview`);
@@ -609,6 +622,15 @@ export default function LiveInterview() {
     }
 
     try {
+      // Sprint 3: Run behavioral integrity checks before saving
+      const avgWpmAll = h.length ? h.reduce((s, x) => s + (x.wpm || 130), 0) / h.length : 130;
+      checkBehavioral({
+        avgWpm: avgWpmAll,
+        totalFillerWords: 0, // Filler word tracking is per-answer; 0 here = conservative
+        totalAnswers: h.length,
+      });
+      const integrityReport = computeIntegrityFinal();
+
       await apiClient.saveInterview({
         candidate_id:     candidateId,
         technical_score:  avgScore('score'),
@@ -627,13 +649,29 @@ export default function LiveInterview() {
         strengths:        aiReport.identified_strengths || ['Code logic', 'Structured responses'],
         weaknesses:       aiReport.optimization_areas  || [],
         proctoring_warnings: warnings,
-        proctoring_logs: proctoringLogsRef.current
+        proctoring_logs: proctoringLogsRef.current,
+        // Sprint 3: Integrity Engine fields
+        integrity_score: integrityReport.integrity_score,
+        integrity_data:  integrityReport,
       });
     } catch (e) {
       console.error('Failed to save final interview scores', e);
     }
     navigate('/report');
   };
+
+  // ── Sprint 2: Pre-Flight Check Gate ────────────────────────────────────
+  // Renders BEFORE the 'ready' screen. On pass, releases its own streams
+  // and transitions to 'ready'. LiveInterview then acquires fresh streams.
+  if (phase === 'preflight') {
+    return (
+      <PreFlightCheck
+        onPass={() => setPhase('ready')}
+        candidateName={candidateName}
+        jobRole={jobRole}
+      />
+    );
+  }
 
   // ── Pre-render avatar on ready screen so it's visible immediately ────────
   if (phase === 'ready' || phase === 'initializing') {

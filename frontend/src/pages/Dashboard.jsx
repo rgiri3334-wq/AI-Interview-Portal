@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3, Users, CheckCircle, TrendingUp, Activity, Zap,
   ArrowRight, Clock, Star, Trophy, Brain, Target, RefreshCw,
-  ChevronUp, ChevronDown, Minus, FileText, Medal
+  ChevronUp, ChevronDown, Minus, FileText, Medal, Shield, AlertTriangle, XCircle, CheckCircle2
 } from 'lucide-react';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
@@ -84,6 +84,192 @@ const StatCard = ({ icon: Icon, label, value, suffix = '', decimals = 0, colorHe
 
 const RANK_COLORS = ['#EAB308', '#94A3B8', '#D97706'];
 
+// ── Sprint 4: Integrity helpers ───────────────────────────────────────────
+const INTEGRITY_BANDS = {
+  CLEAN:      { min: 90, label: '✅ Clean',       color: 'text-emerald-700', bg: 'bg-emerald-50',  border: 'border-emerald-200', colBg: 'bg-emerald-50/60', colBorder: 'border-emerald-200', icon: CheckCircle2, iconColor: '#059669' },
+  BORDERLINE: { min: 70, label: '🟡 Borderline',  color: 'text-amber-700',   bg: 'bg-amber-50',    border: 'border-amber-200',   colBg: 'bg-amber-50/60',   colBorder: 'border-amber-200',   icon: Minus,         iconColor: '#D97706' },
+  FLAGGED:    { min: 50, label: '🟠 Flagged',     color: 'text-orange-700',  bg: 'bg-orange-50',   border: 'border-orange-200',  colBg: 'bg-orange-50/60',  colBorder: 'border-orange-200',  icon: AlertTriangle, iconColor: '#EA580C' },
+  HIGH_RISK:  { min: 0,  label: '🔴 High Risk',   color: 'text-red-700',     bg: 'bg-red-50',      border: 'border-red-200',     colBg: 'bg-red-50/60',     colBorder: 'border-red-200',     icon: XCircle,       iconColor: '#DC2626' },
+};
+
+function getIntegrityBand(score) {
+  if (score >= 90) return 'CLEAN';
+  if (score >= 70) return 'BORDERLINE';
+  if (score >= 50) return 'FLAGGED';
+  return 'HIGH_RISK';
+}
+
+function IntegrityBadge({ score }) {
+  const band = getIntegrityBand(score ?? 100);
+  const cfg = INTEGRITY_BANDS[band];
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${cfg.bg} ${cfg.border} ${cfg.color} inline-flex items-center gap-1`}>
+      <cfg.icon size={10} /> {score ?? 100}
+    </span>
+  );
+}
+
+// ── Sprint 4: Integrity Signal Modal ─────────────────────────────────────
+function IntegritySignalModal({ candidate, onClose }) {
+  if (!candidate) return null;
+  const integrityScore = candidate.integrity_score ?? 100;
+  const band = getIntegrityBand(integrityScore);
+  const cfg = INTEGRITY_BANDS[band];
+  const signalLog = candidate.integrity_data?.signal_log || [];
+  const significant = signalLog.filter(s => s.deduction > 0);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden border border-slate-200"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-sm font-bold text-slate-700">
+              {candidate.name?.[0]}
+            </div>
+            <div>
+              <p className="font-bold text-slate-900">{candidate.name}</p>
+              <p className="text-xs text-slate-500">{candidate.job_role}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors font-bold">✕</button>
+        </div>
+
+        {/* Integrity Score Hero */}
+        <div className={`px-6 py-5 border-b border-slate-100 ${cfg.colBg}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Integrity Score</p>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-5xl font-black ${cfg.color}`}>{integrityScore}</span>
+                <span className="text-slate-400 text-sm font-medium">/100</span>
+              </div>
+              <p className={`text-sm font-bold mt-1 ${cfg.color}`}>{cfg.label}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-500 mb-2">Signal breakdown</p>
+              <div className="flex gap-3 text-xs">
+                <div className="text-center"><p className="font-black text-slate-900 text-lg">{signalLog.length}</p><p className="text-slate-500">Total</p></div>
+                <div className="text-center"><p className="font-black text-red-600 text-lg">{significant.length}</p><p className="text-slate-500">Flagged</p></div>
+                <div className="text-center"><p className="font-black text-emerald-600 text-lg">{signalLog.length - significant.length}</p><p className="text-slate-500">Clear</p></div>
+              </div>
+            </div>
+          </div>
+          {/* Score bar */}
+          <div className="mt-4">
+            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${integrityScore}%` }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+                className={`h-full rounded-full ${
+                  band === 'CLEAN' ? 'bg-emerald-500' :
+                  band === 'BORDERLINE' ? 'bg-amber-500' :
+                  band === 'FLAGGED' ? 'bg-orange-500' : 'bg-red-500'
+                }`}
+              />
+            </div>
+          </div>
+          <p className={`mt-3 text-xs font-medium ${cfg.color} bg-white/70 rounded-lg px-3 py-2 border ${cfg.border}`}>
+            {band === 'CLEAN' && 'No integrity concerns detected. Candidate may proceed to next round.'}
+            {band === 'BORDERLINE' && 'Minor flags detected. Human review recommended before advancing.'}
+            {band === 'FLAGGED' && 'Multiple signals detected. Human review REQUIRED before advancing.'}
+            {band === 'HIGH_RISK' && 'Strong evidence of dishonesty. Recruiter must review all signals and make the final decision.'}
+          </p>
+        </div>
+
+        {/* Signal Audit Log */}
+        <div className="px-6 py-4 overflow-y-auto flex-1">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Signal Audit Log</p>
+          {signalLog.length === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle2 size={32} className="text-emerald-400 mx-auto mb-2" />
+              <p className="text-sm font-medium text-slate-500">No signals recorded — clean interview.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {signalLog.map((s, i) => (
+                <div key={i} className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-sm ${
+                  s.deduction > 0
+                    ? 'bg-red-50 border-red-200'
+                    : s.signal.endsWith('_cleared')
+                    ? 'bg-emerald-50 border-emerald-200'
+                    : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <span className={`mt-0.5 text-xs font-black px-1.5 py-0.5 rounded ${
+                    s.deduction > 0 ? 'bg-red-200 text-red-800' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {s.deduction > 0 ? `-${s.deduction}` : '0'}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-xs">{s.signal.replace(/_/g, ' ').toUpperCase()}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{s.note}</p>
+                  </div>
+                  <span className="text-[10px] text-slate-400 shrink-0">{s.timestamp?.slice(11, 19)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer — Human Override Note */}
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+          <p className="text-xs text-slate-500 text-center">
+            ⚠ The algorithm proposes — <strong>you decide.</strong> A high-risk score is not an automatic rejection.
+            Use your judgment and the signal log above to make the final call.
+          </p>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ── Sprint 4: Triage Candidate Card ──────────────────────────────────────
+function TriageCard({ candidate, onClick }) {
+  const score = candidate.integrity_score ?? 100;
+  const band = getIntegrityBand(score);
+  const cfg = INTEGRITY_BANDS[band];
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.015 }}
+      onClick={() => onClick(candidate)}
+      className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md hover:border-slate-300 transition-all"
+    >
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-sm font-bold text-slate-700 shrink-0">
+          {candidate.name?.[0]}
+        </div>
+        <div className="min-w-0">
+          <p className="font-bold text-sm text-slate-900 truncate">{candidate.name}</p>
+          <p className="text-[10px] text-slate-500 truncate">{candidate.job_role}</p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <IntegrityBadge score={score} />
+        <span className={`text-lg font-black ${candidate.global_score >= 75 ? 'text-emerald-600' : candidate.global_score >= 55 ? 'text-red-600' : 'text-slate-400'}`}>
+          {Number(candidate.global_score || 0).toFixed(0)}
+          <span className="text-xs font-normal text-slate-400">/100</span>
+        </span>
+      </div>
+      {candidate.proctoring_warnings > 0 && (
+        <p className="mt-2 text-[10px] text-orange-600 font-semibold flex items-center gap-1">
+          <AlertTriangle size={10} /> {candidate.proctoring_warnings} proctoring warning{candidate.proctoring_warnings > 1 ? 's' : ''}
+        </p>
+      )}
+      <p className="mt-2 text-[10px] text-slate-400 text-right">Click to view signal log →</p>
+    </motion.div>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [dashData, setDashData] = useState(null);
@@ -91,6 +277,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [modalFilter, setModalFilter] = useState(null);
+  const [triageCandidate, setTriageCandidate] = useState(null); // Sprint 4
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -223,8 +410,9 @@ export default function Dashboard() {
           {/* Tabs */}
           <div className="flex gap-2 mt-8 border-b border-slate-200 pb-0">
             {[
-              { key: 'overview', label: '📊 Overview', icon: BarChart3 },
+              { key: 'overview',    label: '📊 Overview',              icon: BarChart3 },
               { key: 'leaderboard', label: '🏆 Candidate Leaderboard', icon: Trophy },
+              { key: 'triage',      label: '🛡️ Integrity Triage',     icon: Shield },
             ].map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                 className={`px-5 py-3 text-sm font-bold transition-all border-b-2 ${activeTab === tab.key ? 'border-red-600 text-red-600 bg-white rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-900'}`}>
@@ -498,8 +686,99 @@ export default function Dashboard() {
               </motion.div>
             </motion.div>
           )}
+
+          {/* ── TRIAGE MATRIX TAB — Sprint 4 ── */}
+          {activeTab === 'triage' && (
+            <motion.div key="triage" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <div className="mb-6">
+                <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2 mb-1">
+                  <Shield size={20} className="text-red-600" /> Integrity Triage Matrix
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Candidates automatically bucketed by their integrity score. Click any card to view the full signal audit log.
+                  The algorithm flags — <strong>you decide.</strong>
+                </p>
+              </div>
+
+              {/* 4-Column Kanban */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+                {Object.entries(INTEGRITY_BANDS).map(([bandKey, cfg]) => {
+                  const bandCandidates = leaderboard.filter(c => getIntegrityBand(c.integrity_score ?? 100) === bandKey);
+                  const BandIcon = cfg.icon;
+                  return (
+                    <div key={bandKey} className={`rounded-2xl border-2 ${cfg.colBorder} ${cfg.colBg} p-4 min-h-[280px] flex flex-col`}>
+                      {/* Column Header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <BandIcon size={16} color={cfg.iconColor} />
+                          <span className={`text-xs font-extrabold uppercase tracking-widest ${cfg.color}`}>
+                            {bandKey.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${cfg.bg} border ${cfg.border} ${cfg.color}`}>
+                          {bandCandidates.length}
+                        </span>
+                      </div>
+
+                      {/* Score Range Label */}
+                      <p className="text-[10px] text-slate-400 mb-3 font-medium">
+                        {bandKey === 'CLEAN'      && 'Score ≥ 90 — Proceed to next round'}
+                        {bandKey === 'BORDERLINE' && 'Score 70–89 — Review recommended'}
+                        {bandKey === 'FLAGGED'    && 'Score 50–69 — Review required'}
+                        {bandKey === 'HIGH_RISK'  && 'Score < 50 — Strong evidence'}
+                      </p>
+
+                      {/* Cards */}
+                      <div className="flex flex-col gap-3 flex-1">
+                        {bandCandidates.length === 0 ? (
+                          <div className="flex-1 flex items-center justify-center">
+                            <p className="text-xs text-slate-400 font-medium">No candidates</p>
+                          </div>
+                        ) : (
+                          bandCandidates.map(c => (
+                            <TriageCard key={c.id} candidate={c} onClick={setTriageCandidate} />
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Summary bar */}
+              <div className="mt-6 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Pool Summary</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {Object.entries(INTEGRITY_BANDS).map(([bandKey, cfg]) => {
+                    const count = leaderboard.filter(c => getIntegrityBand(c.integrity_score ?? 100) === bandKey).length;
+                    const pct = leaderboard.length ? Math.round((count / leaderboard.length) * 100) : 0;
+                    return (
+                      <div key={bandKey} className={`rounded-xl p-4 border ${cfg.border} ${cfg.bg} text-center`}>
+                        <p className={`text-3xl font-black ${cfg.color}`}>{count}</p>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider mt-1 ${cfg.color}`}>{bandKey.replace('_', ' ')}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{pct}% of pool</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="mt-4 text-xs text-slate-400 text-center">
+                  ℹ Candidates with no completed interview default to <strong>CLEAN</strong> (integrity score = 100).
+                </p>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </main>
+
+      {/* ── Integrity Signal Modal — Sprint 4 ── */}
+      <AnimatePresence>
+        {triageCandidate && (
+          <IntegritySignalModal
+            candidate={triageCandidate}
+            onClose={() => setTriageCandidate(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── CUSTOM MODAL WINDOW FOR STAT CARDS ── */}
       <AnimatePresence>

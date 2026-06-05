@@ -117,6 +117,10 @@ export const apiClient = {
   registerCandidate: (data) => withRetry(() => api.post('/api/auth/register', data)),
   loginCandidate: (data) => withRetry(() => api.post('/api/auth/login', data)),
   adminLogin: (data) => withRetry(() => api.post('/api/auth/admin-login', data)),
+
+  // ── OTP Authentication (Sprint 1) ─────────────────────────────────────
+  sendCandidateOtp:   (data) => withRetry(() => api.post('/api/auth/candidate/send-otp', data)),
+  verifyCandidateOtp: (data) => withRetry(() => api.post('/api/auth/candidate/verify-otp', data)),
   applyForRole: (candidateId, data) => withRetry(() => api.post(`/api/candidates/${candidateId}/apply`, data)),
   getCandidate: (id) => api.get(`/api/candidates/${id}`),
 

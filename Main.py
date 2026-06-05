@@ -8,7 +8,7 @@ AI Layer:     services/sterling ai_service.py (context-aware, adaptive, memory-b
 =============================================================================
 """
 
-import os, re, json, time, uuid, logging, sqlite3, io, csv, hashlib
+import os, re, json, time, uuid, logging, sqlite3, io, csv, hashlib, secrets
 import bcrypt
 import jwt
 from collections import Counter
@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from database.database import Base, engine, get_db
-from database.models import Department, JobRole, Candidate, Resume, InterviewSession, QuestionBank, InterviewQuestionsLog, CandidateAnswer, KeywordEvaluation, QuestionEvaluation, ConversationHistory, FinalReport, StatusLookup, GlobalConfig
+from database.models import Department, JobRole, Candidate, Resume, InterviewSession, QuestionBank, InterviewQuestionsLog, CandidateAnswer, KeywordEvaluation, QuestionEvaluation, ConversationHistory, FinalReport, StatusLookup, GlobalConfig, OTPStore
 from database.db_utils import generate_enterprise_id
 
 # ── Service Layer ─────────────────────────────────────────────────────────
@@ -35,6 +35,7 @@ from services.interview_memory import get_or_create_session, get_session, clear_
 from services.prompt_engine import get_fallback_question, get_difficulty_label
 from services.resume_engine import parse_and_score_resume, score_to_status
 from services.ranking_engine import calculate_global_score, generate_hiring_decision, rank_candidates
+from services.integrity_engine import IntegrityEngine, extract_challenge_targets, build_challenge_prompt_injection, score_band  # Sprint 3
 from services.circuit_breaker import all_breaker_status
 from services.ai_orchestrator import get_orchestrator_stats
 from services.whisper_service import transcribe_audio, get_whisper_status, is_whisper_available
@@ -225,6 +226,19 @@ class CandidateLogin(BaseModel):
     email: str
     password: str
 
+# ── OTP Auth Schemas (Sprint 1) ───────────────────────────────────────────
+class SendOTPRequest(BaseModel):
+    identifier: str = Field(..., description="Candidate email or phone number")
+    purpose: str = Field(..., description="'registration' or 'login'")
+    name: str = Field(default="", description="Required only for registration")
+
+class VerifyOTPRequest(BaseModel):
+    identifier: str
+    otp_code: str = Field(..., min_length=6, max_length=6)
+    purpose: str  # "registration" | "login"
+    name: str = Field(default="", description="Required only for registration")
+    phone: str = Field(default="")
+
 class ApplicationCreate(BaseModel):
     job_role: str
     experience: str = Field(default="Fresher (0 years)")
@@ -315,6 +329,9 @@ class SaveInterviewRequest(BaseModel):
     readiness_score:         int   = Field(default=0, ge=0, le=100)
     proctoring_warnings:     int   = Field(default=0)
     proctoring_logs:         list[dict] = Field(default_factory=list)
+    # Sprint 3: Integrity Engine fields (optional — backend computes if not sent)
+    integrity_score:         int   = Field(default=100, ge=0, le=100, description="Integrity score 0-100 from client-side signal tracking")
+    integrity_data:          dict  = Field(default_factory=dict, description="Full signal log from IntegrityEngine.compute_final()")
 
 class AdminQuestion(BaseModel):
     department: str
@@ -478,6 +495,234 @@ async def admin_login(data: CandidateLogin):
         token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
         return {"status": "success", "token": token}
     raise HTTPException(status_code=401, detail="Invalid admin credentials")
+
+
+# ── OTP Authentication Endpoints (Sprint 1) ──────────────────────────────
+# These sit alongside the old password endpoints (backward compat).
+# Admin login is completely separate and unchanged above.
+
+_otp_rate_limit: dict[str, list[float]] = {}
+
+def _hash_otp(raw_code: str) -> str:
+    """SHA-256 hash of the raw OTP. Never store the raw 6-digit code."""
+    return hashlib.sha256(raw_code.encode()).hexdigest()
+
+def _mask_identifier(identifier: str) -> str:
+    """Mask email/phone for safe inclusion in API responses."""
+    if "@" in identifier:
+        parts = identifier.split("@")
+        return parts[0][:2] + "****@" + parts[1]
+    return identifier[:3] + "****" + identifier[-2:]
+
+def _invalidate_existing_otps(db: Session, identifier: str, purpose: str):
+    """Mark all existing unexpired OTPs for this identifier+purpose as used.
+    Ensures only one active OTP exists at any time."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    existing = db.query(OTPStore).filter(
+        OTPStore.identifier == identifier,
+        OTPStore.purpose == purpose,
+        OTPStore.is_used == False,
+        OTPStore.expires_at > now_iso
+    ).all()
+    for otp in existing:
+        otp.is_used = True  # type: ignore
+    db.commit()
+
+@app.post("/api/auth/candidate/send-otp", tags=["Candidate Auth"])
+async def send_candidate_otp(
+    request: Request,
+    data: SendOTPRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Step 1 of OTP flow: generate a 6-digit OTP, hash it, store it,
+    and send the raw code to the candidate's email.
+    """
+    ip = request.client.host if request.client else "127.0.0.1"
+    now = time.time()
+
+    # ── Rate limiting: max 5 OTP requests per IP per minute ──────────────
+    _otp_rate_limit.setdefault(ip, [])
+    _otp_rate_limit[ip] = [ts for ts in _otp_rate_limit[ip] if now - ts < 60]
+    if len(_otp_rate_limit[ip]) >= 5:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many OTP requests. Please wait a minute before trying again."
+        )
+    _otp_rate_limit[ip].append(now)
+
+    identifier = data.identifier.strip().lower()
+    purpose = data.purpose.strip()
+
+    if purpose not in ("registration", "login"):
+        raise HTTPException(status_code=400, detail="purpose must be 'registration' or 'login'")
+
+    # ── Guard: check candidate existence matches purpose ─────────────────
+    existing_candidate = db.query(Candidate).filter(
+        Candidate.email == identifier
+    ).first()
+
+    if purpose == "login" and not existing_candidate:
+        raise HTTPException(
+            status_code=404,
+            detail="No candidate found with this email. Please register first."
+        )
+    if purpose == "registration" and existing_candidate:
+        raise HTTPException(
+            status_code=409,
+            detail="This email is already registered. Please login instead."
+        )
+    if purpose == "registration" and not data.name.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Name is required for registration."
+        )
+
+    # ── Invalidate any existing active OTPs for this identifier ──────────
+    _invalidate_existing_otps(db, identifier, purpose)
+
+    # ── Generate and store the new OTP ───────────────────────────────────
+    raw_code = str(secrets.randbelow(900000) + 100000)  # Always 6 digits: 100000–999999
+    otp_hash = _hash_otp(raw_code)
+    expires_iso = datetime.fromtimestamp(
+        time.time() + 600, tz=timezone.utc
+    ).isoformat()  # 10 minutes from now
+
+    otp_id = generate_enterprise_id(db, "OTP")
+    db.add(OTPStore(
+        otp_id=otp_id,
+        identifier=identifier,
+        otp_hash=otp_hash,
+        purpose=purpose,
+        expires_at=expires_iso,
+        is_used=False,
+        attempts=0
+    ))
+    db.commit()
+
+    # ── Send OTP via email ────────────────────────────────────────────────
+    # NOTE: In production, integrate SendGrid / Resend API here.
+    # For development/prototype, we log the raw OTP to the server console.
+    # IMPORTANT: Remove the logger.info line below before going to production.
+    logger.info(f"[OTP] Code for {_mask_identifier(identifier)} ({purpose}): {raw_code}")
+
+    # TODO Sprint 1 Production: Send via email service
+    # send_otp_email(to=identifier, code=raw_code, purpose=purpose)
+
+    return {
+        "status": "sent",
+        "message": f"A 6-digit verification code has been sent to {_mask_identifier(identifier)}.",
+        "expires_in_seconds": 600
+    }
+
+
+@app.post("/api/auth/candidate/verify-otp", tags=["Candidate Auth"])
+async def verify_candidate_otp(
+    data: VerifyOTPRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Step 2 of OTP flow: validate the submitted OTP against the stored hash.
+    On success: creates or logs in the candidate and returns a session token.
+    """
+    identifier = data.identifier.strip().lower()
+    purpose = data.purpose.strip()
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # ── Find the most recent, active OTP for this identifier ─────────────
+    otp_record = db.query(OTPStore).filter(
+        OTPStore.identifier == identifier,
+        OTPStore.purpose == purpose,
+        OTPStore.is_used == False
+    ).order_by(OTPStore.created_at.desc()).first()
+
+    if not otp_record:
+        raise HTTPException(
+            status_code=404,
+            detail="No active OTP found. Please request a new code."
+        )
+
+    # ── Check expiry ──────────────────────────────────────────────────────
+    if otp_record.expires_at < now_iso:  # type: ignore
+        otp_record.is_used = True  # type: ignore
+        db.commit()
+        raise HTTPException(
+            status_code=410,
+            detail="This OTP has expired. Please request a new one."
+        )
+
+    # ── Brute-force guard: max 5 attempts ────────────────────────────────
+    otp_record.attempts += 1  # type: ignore
+    if otp_record.attempts > 5:  # type: ignore
+        otp_record.is_used = True  # type: ignore
+        db.commit()
+        raise HTTPException(
+            status_code=429,
+            detail="Too many failed attempts. This OTP has been invalidated. Please request a new code."
+        )
+
+    # ── Validate the OTP hash ─────────────────────────────────────────────
+    submitted_hash = _hash_otp(data.otp_code.strip())
+    if submitted_hash != otp_record.otp_hash:  # type: ignore
+        db.commit()  # Persist the incremented attempt count
+        remaining = 5 - int(otp_record.attempts)  # type: ignore
+        raise HTTPException(
+            status_code=401,
+            detail=f"Incorrect OTP. {remaining} attempt(s) remaining."
+        )
+
+    # ── OTP is valid. Mark as used immediately (prevents replay attacks). ─
+    otp_record.is_used = True  # type: ignore
+    db.commit()
+
+    # ── Handle registration vs login ──────────────────────────────────────
+    if purpose == "registration":
+        if not data.name.strip():
+            raise HTTPException(status_code=400, detail="Name is required for registration.")
+        # Double-check the candidate doesn't already exist (race condition guard)
+        existing = db.query(Candidate).filter(Candidate.email == identifier).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="This email is already registered. Please login.")
+
+        cid = generate_enterprise_id(db, "CAN")
+        candidate = Candidate(
+            candidate_id=cid,
+            name=data.name.strip(),
+            email=identifier,
+            phone=data.phone.strip() if data.phone else "",
+            password_hash=None,  # OTP-only candidate — no password
+            is_verified=True
+        )
+        db.add(candidate)
+        db.commit()
+    else:  # login
+        candidate = db.query(Candidate).filter(Candidate.email == identifier).first()
+        if not candidate:
+            raise HTTPException(status_code=404, detail="Candidate not found.")
+        if not candidate.is_verified:  # type: ignore
+            candidate.is_verified = True  # type: ignore
+            db.commit()
+
+    # ── Issue a candidate session token (7-day expiry) ────────────────────
+    payload = {
+        "sub": candidate.candidate_id,
+        "name": candidate.name,
+        "email": candidate.email,
+        "role": "candidate",
+        "exp": int(time.time()) + 604800  # 7 days
+    }
+    token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+
+    logger.info(f"[OTP Auth] Candidate {candidate.candidate_id} authenticated via OTP ({purpose}).")
+
+    return {
+        "status": "success",
+        "candidate_id": candidate.candidate_id,
+        "name": candidate.name,
+        "email": candidate.email,
+        "token": token
+    }
+
 
 @app.get("/api/candidates/{candidate_id}", tags=["Candidates"])
 async def get_candidate(candidate_id: str, db: Session = Depends(get_db)):
@@ -1014,6 +1259,12 @@ async def get_leaderboard(db: Session = Depends(get_db)):
             "hiring_decision": latest.recommendation if latest and latest.recommendation else "PENDING",
             "interview_status": "completed" if latest and latest.completed_at else "pending",
             "proctoring_warnings": getattr(latest, "proctoring_warnings", 0) if latest else 0,
+            # Sprint 4: Integrity fields for Triage Matrix
+            "integrity_score": int(getattr(latest.report, "integrity_score", 100)) if (latest and latest.report) else 100,
+            "integrity_verdict": getattr(latest.report, "integrity_verdict", "CLEAN") if (latest and latest.report) else "CLEAN",
+            "integrity_data": {
+                "signal_log": json.loads(getattr(latest.report, "integrity_signals", "[]") or "[]") if (latest and latest.report) else []
+            },
             "created_at": c.registration_date
         }
         
@@ -1272,6 +1523,20 @@ async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Ses
         weaknesses=json.dumps(req.weaknesses),
         hiring_decision=hiring.get("decision", "Neutral"),
         grade=grade,
+        # Sprint 4: Persist integrity verdict from IntegrityEngine
+        integrity_score=req.integrity_score,
+        integrity_verdict=score_band(req.integrity_score),
+        integrity_signals=json.dumps(req.integrity_data.get("signal_log", [])),
+    )
+    # Sprint 3: Attach integrity score to interview session for dashboard display
+    integrity_score = req.integrity_score
+    integrity_band = score_band(integrity_score)
+    if hasattr(iv, 'proctoring_warnings'):
+        iv.proctoring_warnings = req.proctoring_warnings  # type: ignore
+    logger.info(
+        f"[Integrity] Candidate={req.candidate_id} | "
+        f"IntegrityScore={integrity_score} | Band={integrity_band} | "
+        f"Signals={len(req.integrity_data.get('signal_log', []))}"
     )
     db.add(new_report)
     
