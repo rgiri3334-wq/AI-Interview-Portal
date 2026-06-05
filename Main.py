@@ -490,7 +490,7 @@ async def login_candidate(request: Request, data: CandidateLogin, db: Session = 
 @app.post("/api/auth/admin-login", tags=["Auth"])
 async def admin_login(data: CandidateLogin):
     # Hardcoded admin credentials for prototype
-    if data.email == "admin@sterling.com" and data.password == "admin":
+    if data.email == "sparkhire.terling@gmail.com" and data.password == "Betheonly@1":
         # Token expires in 2 hours
         payload = {"sub": "admin", "exp": int(time.time()) + 7200}
         token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")

@@ -82,7 +82,7 @@ export default function Sidebar() {
           </div>
           <div className="text-left flex-1 overflow-hidden">
             <p className="text-sm font-bold text-slate-900 truncate">HR Admin</p>
-            <p className="text-xs text-slate-500 truncate">admin@sterling.com</p>
+            <p className="text-xs text-slate-500 truncate">sparkhire.terling@gmail.com</p>
           </div>
         </div>
       </div>
