@@ -8,6 +8,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiClient } from '../api/apiClient';
+import Sidebar from '../components/Layout/Sidebar';
 import logoUrl from '../assets/sterling_logo.png';
 
 const OTP_LENGTH = 6;
@@ -390,15 +391,6 @@ export default function CandidateRegister() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
-      {/* ── Logo Header ── */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center">
-          <div className="w-20 h-20 bg-black rounded-3xl shadow-[0_0_30px_rgba(239,68,68,0.2)] border border-slate-800 flex items-center justify-center p-3">
-            <img src={logoUrl} alt="Sterling Logo" className="w-14 h-14 object-contain mix-blend-screen"
-              onError={(e) => { e.target.style.display = 'none'; }} />
-          </div>
-        </motion.div>
         <motion.h2 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
           className="mt-5 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
           Spark-<span className="text-[#EF4444]">Hire</span>
@@ -434,7 +426,7 @@ export default function CandidateRegister() {
                   <input
                     type="text" required value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Niraj Singh"
+                    placeholder="Aditya Singh"
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EF4444]/50 focus:border-[#EF4444] transition-all sm:text-sm font-medium text-slate-900"
                   />
                 </div>
@@ -498,7 +490,7 @@ export default function CandidateRegister() {
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9]/g, ''))}
                       placeholder="98765 43210"
-                      className="flex-1 px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EF4444]/50 focus:border-[#EF4444] transition-all sm:text-sm font-medium text-slate-900"
+                      className="flex-1 min-w-0 px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EF4444]/50 focus:border-[#EF4444] transition-all sm:text-sm font-medium text-slate-900"
                     />
                   </div>
                   {fullPhone && (
@@ -615,8 +607,9 @@ export default function CandidateRegister() {
               </motion.form>
             )}
           </AnimatePresence>
-        </div>
-      </motion.div>
+          </div>
+        </motion.div>
+      </main>
     </div>
   );
 }
