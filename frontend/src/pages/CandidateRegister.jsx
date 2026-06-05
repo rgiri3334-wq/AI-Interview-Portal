@@ -428,7 +428,7 @@ export default function CandidateRegister() {
 
                 <div>
                   <h3 className="text-lg font-bold text-slate-800 mb-1">Create Your Account</h3>
-                  <p className="text-sm text-slate-500">No password needed — we'll send a 6-digit code to your email.</p>
+                  <p className="text-sm text-slate-500">Enter your registered Email.</p>
                 </div>
 
                 {/* Full Name */}

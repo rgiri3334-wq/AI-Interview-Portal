@@ -173,7 +173,7 @@ export default function CandidateLogin() {
                 exit={{ opacity: 0, x: 20 }} onSubmit={handleSendOtp} className="space-y-5">
                 <div>
                   <h3 className="text-xl font-bold text-slate-800 mb-2 tracking-tight">Welcome Back</h3>
-                  <p className="text-sm text-slate-500">Enter your registered Email. We'll send a one-time code — no password needed.</p>
+                  <p className="text-sm text-slate-500">Enter your registered Email.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Email Address</label>
