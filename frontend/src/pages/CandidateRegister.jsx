@@ -349,6 +349,7 @@ export default function CandidateRegister() {
       sessionStorage.setItem('candidateToken', res.token);
       sessionStorage.setItem('candidateId', res.candidate_id);
       sessionStorage.setItem('candidateName', res.name);
+      sessionStorage.setItem('isAuthenticated', 'true');
       setSuccessMsg(`Welcome, ${res.name}! Redirecting you to the portal...`);
       setTimeout(() => navigate('/candidate'), 1800);
     } catch (err) {
