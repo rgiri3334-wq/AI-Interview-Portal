@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Layout/Sidebar';
-import { Users, UserPlus, Lock, Mail, Activity } from 'lucide-react';
+import { Users, UserPlus, Lock, Mail, Activity, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api`;
@@ -68,6 +68,25 @@ export default function AdminManagement() {
       setError(err.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRemoveAdmin = async (admin_id) => {
+    if (!window.confirm("Are you sure you want to remove this admin?")) return;
+    setError(null);
+    setSuccess(null);
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const res = await fetch(`${API_BASE}/admin/users/${admin_id}`, {
+        method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to remove admin');
+      setSuccess('Admin successfully removed!');
+      fetchAdmins();
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -194,6 +213,15 @@ export default function AdminManagement() {
                           </p>
                         </div>
                       </div>
+                      {admin.email !== "sparkhire.sterling@gmail.com" && (
+                        <button
+                          onClick={() => handleRemoveAdmin(admin.admin_id)}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                          title="Remove Admin"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                     </div>
                   ))
                 )}

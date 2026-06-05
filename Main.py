@@ -552,6 +552,20 @@ async def create_admin_user(data: AdminUserCreate, db: Session = Depends(get_db)
 async def get_admin_users(db: Session = Depends(get_db)):
     return db.query(AdminUser).all()
 
+@app.delete("/api/admin/users/{admin_id}", tags=["Admin"])
+async def delete_admin_user(admin_id: str, db: Session = Depends(get_db)):
+    admin = db.query(AdminUser).filter(AdminUser.admin_id == admin_id).first()
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin not found")
+    
+    # Prevent deleting the master admin
+    if admin.email == "sparkhire.sterling@gmail.com":
+        raise HTTPException(status_code=403, detail="Cannot delete the master admin")
+        
+    db.delete(admin)
+    db.commit()
+    return {"status": "success", "message": "Admin deleted"}
+
 # ── OTP Authentication Endpoints (Sprint 1) ──────────────────────────────
 # These sit alongside the old password endpoints (backward compat).
 # Admin login is completely separate and unchanged above.
