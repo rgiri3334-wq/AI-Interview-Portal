@@ -85,7 +85,7 @@ export default function Login() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="mt-8 sm:mx-auto sm:w-full sm:max-w-md"
+        className="mt-8 sm:mx-auto sm:w-full sm:max-w-md space-y-6"
       >
         <div className="bg-white py-10 px-6 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100">
           <form className="space-y-6" onSubmit={handleLogin}>
@@ -146,38 +146,29 @@ export default function Login() {
             </div>
           </form>
           
-          <div className="mt-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="px-3 bg-white text-slate-400 font-medium tracking-widest uppercase">For Candidates</span>
-              </div>
-            </div>
-            
-            <div className="mt-6 text-center space-y-3">
-              <p className="text-sm text-slate-600">
-                Are you taking an interview?
-              </p>
-              <div className="flex justify-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => navigate('/candidate-register')}
-                  className="text-[#EF4444] font-bold hover:underline text-sm"
-                >
-                  Register Here
-                </button>
-                <span className="text-slate-300">|</span>
-                <button
-                  type="button"
-                  onClick={() => navigate('/candidate-login')}
-                  className="text-[#EF4444] font-bold hover:underline text-sm"
-                >
-                  Login
-                </button>
-              </div>
-            </div>
+        </div>
+
+        {/* --- PROMINENT CANDIDATE SECTION --- */}
+        <div className="bg-slate-900 text-white py-8 px-6 shadow-xl sm:rounded-2xl sm:px-10 border border-slate-800 text-center">
+          <h3 className="text-xl font-bold mb-2 tracking-tight">Are you a Candidate?</h3>
+          <p className="text-slate-400 text-sm mb-6">
+            Access your AI interview portal directly with your email.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <button
+              type="button"
+              onClick={() => navigate('/candidate-login')}
+              className="w-full flex justify-center py-3 px-4 rounded-xl shadow-md text-sm font-bold text-slate-900 bg-white hover:bg-slate-100 transition-all"
+            >
+              Candidate Login
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/candidate-register')}
+              className="w-full flex justify-center py-3 px-4 border border-slate-600 rounded-xl shadow-sm text-sm font-bold text-white hover:bg-slate-800 transition-all"
+            >
+              Register Here
+            </button>
           </div>
         </div>
       </motion.div>
