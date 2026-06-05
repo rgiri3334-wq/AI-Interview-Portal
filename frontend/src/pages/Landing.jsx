@@ -104,7 +104,7 @@ export default function Landing() {
             <motion.button
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
               className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-lg text-lg transition-all shadow-xl shadow-red-600/30 flex items-center gap-3 uppercase tracking-wider"
-              onClick={() => navigate('/candidate')}
+              onClick={() => navigate('/candidate-register')}
             >
               Begin Interview <ArrowRight size={20} />
             </motion.button>

@@ -151,7 +151,30 @@ export default function Login() {
                 <div className="w-full border-t border-slate-200"></div>
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="px-3 bg-white text-slate-400 font-medium tracking-widest uppercase">Authorized Personnel Only</span>
+                <span className="px-3 bg-white text-slate-400 font-medium tracking-widest uppercase">For Candidates</span>
+              </div>
+            </div>
+            
+            <div className="mt-6 text-center space-y-3">
+              <p className="text-sm text-slate-600">
+                Are you taking an interview?
+              </p>
+              <div className="flex justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => navigate('/candidate-register')}
+                  className="text-[#EF4444] font-bold hover:underline text-sm"
+                >
+                  Register Here
+                </button>
+                <span className="text-slate-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/candidate-login')}
+                  className="text-[#EF4444] font-bold hover:underline text-sm"
+                >
+                  Login
+                </button>
               </div>
             </div>
           </div>
