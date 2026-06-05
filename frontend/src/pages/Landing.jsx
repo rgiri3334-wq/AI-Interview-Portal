@@ -73,7 +73,7 @@ export default function Landing() {
             <button className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors" onClick={() => navigate('/dashboard')}>
               Dashboard
             </button>
-            <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded text-sm transition-all shadow-md shadow-red-600/20" onClick={() => navigate('/candidate')}>
+            <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded text-sm transition-all shadow-md shadow-red-600/20" onClick={() => navigate('/candidate-register')}>
               Start Now
             </button>
           </div>
@@ -217,7 +217,7 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <button className="bg-white hover:bg-slate-50 text-red-700 font-black py-4 px-10 rounded-lg text-lg transition-all shadow-lg flex items-center gap-3 uppercase tracking-wider relative z-10" onClick={() => navigate('/candidate')}>
+          <button className="bg-white hover:bg-slate-50 text-red-700 font-black py-4 px-10 rounded-lg text-lg transition-all shadow-lg flex items-center gap-3 uppercase tracking-wider relative z-10" onClick={() => navigate('/candidate-register')}>
             Launch Interview <ArrowRight size={20} />
           </button>
         </motion.div>
