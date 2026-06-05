@@ -9,7 +9,6 @@ import logoUrl from '../../assets/sterling_logo.png';
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin', label: 'Admin Panel', icon: Database },
-  { path: '/candidate', label: 'Register', icon: User },
   { path: '/interview', label: 'Live Interview', icon: Mic },
   { path: '/report', label: 'Report', icon: FileText },
 ];
@@ -51,7 +50,7 @@ export default function Sidebar() {
           Navigation
         </div>
         {navItems.map((item) => {
-          const isActive = pathname === item.path;
+          const isActive = pathname === item.path || (item.path === '/candidate-register' && (pathname === '/candidate' || pathname === '/candidate-login' || pathname === '/candidate-register'));
           const Icon = item.icon;
           return (
             <button
