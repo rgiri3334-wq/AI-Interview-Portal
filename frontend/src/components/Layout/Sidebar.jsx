@@ -9,7 +9,7 @@ import logoUrl from '../../assets/sterling_logo.png';
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin', label: 'Admin Panel', icon: Database },
-  { path: '/interview', label: 'Live Interview', icon: Mic },
+  { path: '/system-health', label: 'System Health', icon: Activity },
   { path: '/report', label: 'Report', icon: FileText },
 ];
 

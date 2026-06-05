@@ -9,6 +9,7 @@ import Report from './pages/Report';
 import AdminPanel from './pages/AdminPanel';
 import CandidateRegister from './pages/CandidateRegister';
 import CandidateLogin from './pages/CandidateLogin';
+import SystemHealth from './pages/SystemHealth';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="/interview" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><LiveInterview /></ProtectedRoute>} />
           <Route path="/report" element={<ProtectedRoute allowedRoles={['admin']}><Report /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminPanel /></ProtectedRoute>} />
+          <Route path="/system-health" element={<ProtectedRoute allowedRoles={['admin']}><SystemHealth /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
