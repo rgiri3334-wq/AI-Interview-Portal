@@ -602,13 +602,12 @@ async def send_candidate_otp(
     db.commit()
 
     # ── Send OTP via email ────────────────────────────────────────────────
-    # NOTE: In production, integrate SendGrid / Resend API here.
-    # For development/prototype, we log the raw OTP to the server console.
-    # IMPORTANT: Remove the logger.info line below before going to production.
     logger.info(f"[OTP] Code for {_mask_identifier(identifier)} ({purpose}): {raw_code}")
 
-    # TODO Sprint 1 Production: Send via email service
-    # send_otp_email(to=identifier, code=raw_code, purpose=purpose)
+    # Send via email service
+    from services.email_service import send_otp_email
+    candidate_name = existing_candidate.name if existing_candidate else data.name.strip() or "Candidate"
+    send_otp_email(to_email=identifier, code=raw_code, purpose=purpose, candidate_name=candidate_name)
 
     return {
         "status": "sent",

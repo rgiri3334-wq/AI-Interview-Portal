@@ -471,14 +471,13 @@ export default function CandidateRegister() {
                   <label className="block text-sm font-semibold text-slate-700 mb-1">
                     Phone Number <span className="text-slate-400 font-normal">(optional)</span>
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-3">
                     {/* Country Code Dropdown */}
-                    <div className="relative flex-shrink-0">
+                    <div className="relative w-full">
                       <select
                         value={countryCode}
                         onChange={(e) => setCountryCode(e.target.value)}
-                        className="appearance-none h-full pl-3 pr-8 py-3 border border-slate-300 rounded-xl shadow-sm bg-white text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#EF4444]/50 focus:border-[#EF4444] transition-all cursor-pointer"
-                        style={{ minWidth: '110px' }}
+                        className="appearance-none w-full pl-3 pr-8 py-3 border border-slate-300 rounded-xl shadow-sm bg-white text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#EF4444]/50 focus:border-[#EF4444] transition-all cursor-pointer"
                       >
                         {COUNTRY_CODES.map((c, i) => (
                           <option key={`${c.code}-${c.name}-${i}`} value={c.code}>
@@ -499,7 +498,7 @@ export default function CandidateRegister() {
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9]/g, ''))}
                       placeholder="98765 43210"
-                      className="flex-1 min-w-0 px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EF4444]/50 focus:border-[#EF4444] transition-all sm:text-sm font-medium text-slate-900"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EF4444]/50 focus:border-[#EF4444] transition-all sm:text-sm font-medium text-slate-900"
                     />
                   </div>
                   {fullPhone && (
