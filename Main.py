@@ -533,6 +533,7 @@ def _invalidate_existing_otps(db: Session, identifier: str, purpose: str):
 async def send_candidate_otp(
     request: Request,
     data: SendOTPRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
@@ -604,10 +605,16 @@ async def send_candidate_otp(
     # ── Send OTP via email ────────────────────────────────────────────────
     logger.info(f"[OTP] Code for {_mask_identifier(identifier)} ({purpose}): {raw_code}")
 
-    # Send via email service
+    # Send via email service in the background to prevent API timeouts
     from services.email_service import send_otp_email
     candidate_name = existing_candidate.name if existing_candidate else data.name.strip() or "Candidate"
-    send_otp_email(to_email=identifier, code=raw_code, purpose=purpose, candidate_name=candidate_name)
+    background_tasks.add_task(
+        send_otp_email,
+        to_email=identifier,
+        code=raw_code,
+        purpose=purpose,
+        candidate_name=candidate_name
+    )
 
     return {
         "status": "sent",
