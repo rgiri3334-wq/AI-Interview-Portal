@@ -1,5 +1,7 @@
 import smtplib
 import os
+import json
+import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import logging
@@ -7,14 +9,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 # You can use ANY email provider to send these emails (Gmail, Yahoo, Outlook, AWS SES, etc)
+# Or use Brevo API to bypass Render's SMTP block!
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
 
 def send_otp_email(to_email: str, code: str, purpose: str, candidate_name: str = "Candidate"):
-    if not SMTP_USER or not SMTP_PASS:
-        logger.warning("SMTP credentials not configured in .env (SMTP_USER/SMTP_PASS). Skipping email send.")
+    if not SMTP_USER and not BREVO_API_KEY:
+        logger.warning("No Email Credentials configured. Skipping email send.")
         return False
 
     subject = f"{code} is your Spark-Hire OTP"
@@ -37,6 +41,32 @@ def send_otp_email(to_email: str, code: str, purpose: str, candidate_name: str =
     </html>
     """
 
+    # --- BREVO API (HTTPS) METHOD ---
+    # Bypasses Render's Free Tier SMTP blocks
+    if BREVO_API_KEY:
+        try:
+            url = "https://api.brevo.com/v3/smtp/email"
+            headers = {
+                "accept": "application/json",
+                "api-key": BREVO_API_KEY,
+                "content-type": "application/json"
+            }
+            data = {
+                "sender": {"name": "Spark-Hire OTP", "email": SMTP_USER},
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "htmlContent": html_content
+            }
+            req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response:
+                logger.info(f"Successfully sent OTP email via Brevo API to {to_email}")
+                return True
+        except Exception as e:
+            logger.error(f"Failed to send email via Brevo API to {to_email}: {str(e)}")
+            return False
+
+    # --- STANDARD SMTP METHOD ---
+    # Only works on paid Render tiers or local machines
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = f"Spark-Hire OTP <{SMTP_USER}>"
@@ -50,8 +80,8 @@ def send_otp_email(to_email: str, code: str, purpose: str, candidate_name: str =
         server.login(SMTP_USER, SMTP_PASS)
         server.sendmail(SMTP_USER, to_email, msg.as_string())
         server.quit()
-        logger.info(f"Successfully sent OTP email to {to_email}")
+        logger.info(f"Successfully sent OTP email via SMTP to {to_email}")
         return True
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {str(e)}")
+        logger.error(f"Failed to send email via SMTP to {to_email}: {str(e)}")
         return False
