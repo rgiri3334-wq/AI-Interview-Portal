@@ -9,15 +9,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 # You can use ANY email provider to send these emails (Gmail, Yahoo, Outlook, AWS SES, etc)
-# Or use Brevo API to bypass Render's SMTP block!
+# Or use Resend API to bypass Render's SMTP block!
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
-BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 
 def send_otp_email(to_email: str, code: str, purpose: str, candidate_name: str = "Candidate"):
-    if not SMTP_USER and not BREVO_API_KEY:
+    if not SMTP_USER and not RESEND_API_KEY:
         logger.warning("No Email Credentials configured. Skipping email send.")
         return False
 
@@ -41,28 +41,28 @@ def send_otp_email(to_email: str, code: str, purpose: str, candidate_name: str =
     </html>
     """
 
-    # --- BREVO API (HTTPS) METHOD ---
+    # --- RESEND API (HTTPS) METHOD ---
     # Bypasses Render's Free Tier SMTP blocks
-    if BREVO_API_KEY:
+    if RESEND_API_KEY:
         try:
-            url = "https://api.brevo.com/v3/smtp/email"
+            url = "https://api.resend.com/emails"
             headers = {
-                "accept": "application/json",
-                "api-key": BREVO_API_KEY,
-                "content-type": "application/json"
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json"
             }
             data = {
-                "sender": {"name": "Spark-Hire OTP", "email": SMTP_USER},
-                "to": [{"email": to_email}],
+                # Resend requires testing emails to come from onboarding@resend.dev unless a domain is verified
+                "from": "Spark-Hire OTP <onboarding@resend.dev>",
+                "to": [to_email],
                 "subject": subject,
-                "htmlContent": html_content
+                "html": html_content
             }
             req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers=headers, method='POST')
             with urllib.request.urlopen(req) as response:
-                logger.info(f"Successfully sent OTP email via Brevo API to {to_email}")
+                logger.info(f"Successfully sent OTP email via Resend API to {to_email}")
                 return True
         except Exception as e:
-            logger.error(f"Failed to send email via Brevo API to {to_email}: {str(e)}")
+            logger.error(f"Failed to send email via Resend API to {to_email}: {str(e)}")
             return False
 
     # --- STANDARD SMTP METHOD ---
