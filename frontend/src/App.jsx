@@ -37,9 +37,18 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, allowedRoles }) => {
   const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
-  return isAuthenticated ? children : <Navigate to="/" replace />;
+  const role = sessionStorage.getItem('role') || 'admin';
+
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    if (role === 'candidate') return <Navigate to="/candidate" replace />;
+    return <Navigate to="/home" replace />;
+  }
+
+  return children;
 };
 
 export default function App() {
@@ -52,12 +61,12 @@ export default function App() {
           <Route path="/candidate-register" element={<CandidateRegister />} />
           <Route path="/candidate-login" element={<CandidateLogin />} />
           {/* ── Existing Protected Routes (unchanged) ── */}
-          <Route path="/home" element={<ProtectedRoute><Landing /></ProtectedRoute>} />
-          <Route path="/candidate" element={<ProtectedRoute><CandidateDetails /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/interview" element={<ProtectedRoute><LiveInterview /></ProtectedRoute>} />
-          <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+          <Route path="/home" element={<ProtectedRoute allowedRoles={['admin']}><Landing /></ProtectedRoute>} />
+          <Route path="/candidate" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateDetails /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><Dashboard /></ProtectedRoute>} />
+          <Route path="/interview" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><LiveInterview /></ProtectedRoute>} />
+          <Route path="/report" element={<ProtectedRoute allowedRoles={['admin']}><Report /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminPanel /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

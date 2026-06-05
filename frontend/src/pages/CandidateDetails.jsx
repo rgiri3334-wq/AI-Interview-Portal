@@ -39,6 +39,7 @@ export default function CandidateDetails() {
   const [fieldErrors, setFieldErrors] = useState({});
 
   const candidateName = sessionStorage.getItem('candidateName') || localStorage.getItem('candidate_name') || 'Candidate';
+  const role = sessionStorage.getItem('role') || 'candidate'; // default to candidate if unsure
 
   useEffect(() => {
     let retries = 5;
@@ -118,11 +119,27 @@ export default function CandidateDetails() {
     }
   };
 
+  const handleLogout = () => {
+    sessionStorage.clear();
+    navigate('/');
+  };
+
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-      <Sidebar />
+      {role === 'admin' && <Sidebar />}
       <main className="flex-1 p-8 overflow-y-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          {role === 'candidate' && (
+            <div className="flex justify-between items-center mb-8 bg-white px-6 py-4 rounded-xl shadow-sm border border-slate-200">
+              <div className="font-bold text-slate-800 text-xl tracking-tight">Spark-<span className="text-red-600">Hire</span></div>
+              <button 
+                onClick={handleLogout}
+                className="px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200 hover:text-slate-800 transition-colors text-sm"
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
           <div className="mb-10">
             <h1 className="text-4xl font-extrabold mb-2 tracking-tight text-slate-900">
               Complete <span className="text-red-700">Application</span>
@@ -177,7 +194,7 @@ export default function CandidateDetails() {
                       {EXPERIENCE_LEVELS.map((l) => <option key={l} value={l} className="bg-white text-slate-900">{l}</option>)}
                     </select>
                   </Field>
-                  <Field label="Key Skills" icon={Code} value={form.skills}>
+                  <Field label="Key Skills" icon={Code} value={form.skills} alwaysFloat={true}>
                     <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
                       placeholder="e.g. React, Python, AWS"
                       value={form.skills} onChange={set('skills')} />

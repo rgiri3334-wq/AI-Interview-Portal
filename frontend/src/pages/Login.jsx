@@ -27,6 +27,7 @@ export default function Login() {
       const res = await apiClient.adminLogin({ email, password });
       if (res.status === 'success') {
         sessionStorage.setItem('isAuthenticated', 'true');
+        sessionStorage.setItem('role', 'admin');
         sessionStorage.setItem('adminToken', res.token);
         navigate('/home'); 
       }
