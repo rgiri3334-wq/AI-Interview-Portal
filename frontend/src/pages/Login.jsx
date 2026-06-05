@@ -149,23 +149,23 @@ export default function Login() {
         </div>
 
         {/* --- PROMINENT CANDIDATE SECTION --- */}
-        <div className="flex-1 bg-slate-900 text-white py-8 px-6 shadow-xl sm:rounded-2xl sm:px-10 border border-slate-800 text-center flex flex-col justify-center">
-          <h3 className="text-xl font-bold mb-2 tracking-tight">Are you a Candidate?</h3>
-          <p className="text-slate-400 text-sm mb-6">
+        <div className="flex-1 bg-white py-10 px-6 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100 text-center flex flex-col justify-center">
+          <h3 className="text-2xl font-extrabold mb-2 text-slate-900 tracking-tight">Are you a Candidate?</h3>
+          <p className="text-slate-500 text-sm font-medium mb-8">
             Access your AI interview portal directly with your email.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
+          <div className="flex flex-col gap-4">
             <button
               type="button"
               onClick={() => navigate('/candidate-login')}
-              className="w-full flex justify-center py-3 px-4 rounded-xl shadow-md text-sm font-bold text-slate-900 bg-white hover:bg-slate-100 transition-all"
+              className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md shadow-red-500/20 text-sm font-bold text-white bg-[#EF4444] hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#EF4444] transition-all"
             >
               Candidate Login
             </button>
             <button
               type="button"
               onClick={() => navigate('/candidate-register')}
-              className="w-full flex justify-center py-3 px-4 border border-slate-600 rounded-xl shadow-sm text-sm font-bold text-white hover:bg-slate-800 transition-all"
+              className="w-full flex justify-center py-3.5 px-4 border border-slate-300 rounded-xl shadow-sm text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 focus:outline-none transition-all"
             >
               Register Here
             </button>
