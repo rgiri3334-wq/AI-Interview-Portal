@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from database.database import Base, engine, get_db
-from database.models import Department, JobRole, Candidate, Resume, InterviewSession, QuestionBank, InterviewQuestionsLog, CandidateAnswer, KeywordEvaluation, QuestionEvaluation, ConversationHistory, FinalReport, StatusLookup, GlobalConfig, OTPStore
+from database.models import Department, JobRole, Candidate, Resume, InterviewSession, QuestionBank, InterviewQuestionsLog, CandidateAnswer, KeywordEvaluation, QuestionEvaluation, ConversationHistory, FinalReport, StatusLookup, GlobalConfig, OTPStore, AdminUser
 from database.db_utils import generate_enterprise_id
 
 # ── Service Layer ─────────────────────────────────────────────────────────
@@ -107,7 +107,19 @@ def init_db():
                 db.add(JobRole(role_id=role_id, department_id=dept.department_id, role_name=role_name))
                 db.commit()
                 
-    logger.info("Database synchronized (SQLAlchemy 13-table schema).")
+    # Seed Master Admin
+    master_admin_email = "sparkhire.sterling@gmail.com".lower()
+    master_admin = db.query(AdminUser).filter_by(email=master_admin_email).first()
+    if not master_admin:
+        hashed = bcrypt.hashpw("Betheonly@1".encode(), bcrypt.gensalt()).decode()
+        db.add(AdminUser(
+            admin_id=f"ADMIN-{uuid.uuid4().hex[:8].upper()}",
+            email=master_admin_email,
+            password_hash=hashed
+        ))
+        db.commit()
+
+    logger.info("Database synchronized (SQLAlchemy 14-table schema).")
 
 # ── Lifespan ──────────────────────────────────────────────────────────────
 @asynccontextmanager
@@ -297,6 +309,26 @@ class AssessResponse(BaseModel):
     final_verdict:           str   = Field(default="")
     model_used:              str   = Field(default="sterling ai")
 
+class SaveInterviewRequest(BaseModel):
+    interview_data: list[dict]
+    overall_score: float
+
+class AdminUserCreate(BaseModel):
+    email: str
+    password: str
+
+class AdminUserResponse(BaseModel):
+    admin_id: str
+    email: str
+    created_at: str
+
+class AdminQuestion(BaseModel):
+    department: str
+    role: str
+    question: str
+    keywords: str
+    difficulty: str = Field(default="Medium")
+
 class GlobalConfigSet(BaseModel):
     key: str
     value: str
@@ -445,7 +477,7 @@ async def register_candidate(request: Request, data: CandidateRegister, db: Sess
         
     _register_rate_limit[ip].append(now)
 
-    existing = db.query(Candidate).filter(Candidate.email == data.email).first()
+    existing = db.query(Candidate).filter(Candidate.email == data.email.lower()).first()
     if existing:
         raise HTTPException(status_code=400, detail="An account with this email already exists. Please login.")
     
@@ -455,7 +487,7 @@ async def register_candidate(request: Request, data: CandidateRegister, db: Sess
     new_cand = Candidate(
         candidate_id=cid,
         name=data.name,
-        email=data.email,
+        email=data.email.lower(),
         phone=data.phone,
         password_hash=pwd_hash
     )
@@ -481,22 +513,44 @@ async def login_candidate(request: Request, data: CandidateLogin, db: Session = 
         
     _login_rate_limit[ip].append(now)
 
-    cand = db.query(Candidate).filter(Candidate.email == data.email).first()
+    cand = db.query(Candidate).filter(Candidate.email == data.email.lower()).first()
     if not cand or not bcrypt.checkpw(data.password.encode(), cand.password_hash.encode('utf-8')):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     return {"status": "success", "candidate_id": cand.candidate_id, "name": cand.name}
 
 @app.post("/api/auth/admin-login", tags=["Auth"])
-async def admin_login(data: CandidateLogin):
-    # Hardcoded admin credentials for prototype
-    if data.email == "sparkhire.terling@gmail.com" and data.password == "Betheonly@1":
+async def admin_login(data: CandidateLogin, db: Session = Depends(get_db)):
+    admin = db.query(AdminUser).filter(AdminUser.email == data.email.lower()).first()
+    
+    if admin and bcrypt.checkpw(data.password.encode(), admin.password_hash.encode('utf-8')):
         # Token expires in 2 hours
-        payload = {"sub": "admin", "exp": int(time.time()) + 7200}
+        payload = {"sub": "admin", "email": admin.email, "exp": int(time.time()) + 7200}
         token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
-        return {"status": "success", "token": token}
+        return {"status": "success", "token": token, "email": admin.email}
+        
     raise HTTPException(status_code=401, detail="Invalid admin credentials")
 
+@app.post("/api/admin/users", response_model=AdminUserResponse, tags=["Admin"])
+async def create_admin_user(data: AdminUserCreate, db: Session = Depends(get_db)):
+    email_lower = data.email.lower()
+    if db.query(AdminUser).filter(AdminUser.email == email_lower).first():
+        raise HTTPException(status_code=400, detail="Admin with this email already exists")
+    
+    hashed = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
+    new_admin = AdminUser(
+        admin_id=f"ADMIN-{uuid.uuid4().hex[:8].upper()}",
+        email=email_lower,
+        password_hash=hashed
+    )
+    db.add(new_admin)
+    db.commit()
+    db.refresh(new_admin)
+    return new_admin
+
+@app.get("/api/admin/users", response_model=list[AdminUserResponse], tags=["Admin"])
+async def get_admin_users(db: Session = Depends(get_db)):
+    return db.query(AdminUser).all()
 
 # ── OTP Authentication Endpoints (Sprint 1) ──────────────────────────────
 # These sit alongside the old password endpoints (backward compat).

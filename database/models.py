@@ -268,3 +268,10 @@ class OTPStore(Base):
     is_used = Column(Boolean, default=False)                   # True once verified or invalidated
     attempts = Column(Integer, default=0)                      # Brute-force guard: max 5
     created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+class AdminUser(Base):
+    __tablename__ = "admin_users"
+    admin_id = Column(String, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+

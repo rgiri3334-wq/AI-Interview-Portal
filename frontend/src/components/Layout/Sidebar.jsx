@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, User, Mic, FileText,
-  ChevronRight, Activity, Database
+  ChevronRight, Activity, Database, Users
 } from 'lucide-react';
 import logoUrl from '../../assets/sterling_logo.png';
 
@@ -10,6 +10,7 @@ const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin', label: 'Admin Panel', icon: Database },
   { path: '/system-health', label: 'System Health', icon: Activity },
+  { path: '/admin-management', label: 'Admin Management', icon: Users },
   { path: '/report', label: 'Report', icon: FileText },
 ];
 
@@ -82,7 +83,7 @@ export default function Sidebar() {
           </div>
           <div className="text-left flex-1 overflow-hidden">
             <p className="text-sm font-bold text-slate-900 truncate">HR Admin</p>
-            <p className="text-xs text-slate-500 truncate">sparkhire.terling@gmail.com</p>
+            <p className="text-xs text-slate-500 truncate">{sessionStorage.getItem('adminEmail') || 'Admin'}</p>
           </div>
         </div>
       </div>

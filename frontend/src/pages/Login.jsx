@@ -29,6 +29,9 @@ export default function Login() {
         sessionStorage.setItem('isAuthenticated', 'true');
         sessionStorage.setItem('role', 'admin');
         sessionStorage.setItem('adminToken', res.token);
+        if (res.email) {
+          sessionStorage.setItem('adminEmail', res.email);
+        }
         navigate('/home'); 
       }
     } catch (err) {
@@ -101,7 +104,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full px-4 py-3.5 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EF4444]/50 focus:border-[#EF4444] transition-all sm:text-sm font-medium text-slate-900"
-                  placeholder="sparkhire.terling@gmail.com"
+                  placeholder="sparkhire.sterling@gmail.com"
                 />
               </div>
             </div>
