@@ -391,6 +391,15 @@ export default function CandidateRegister() {
   };
 
   return (
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
+      {/* ── Logo Header ── */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center">
+          <div className="w-20 h-20 bg-black rounded-3xl shadow-[0_0_30px_rgba(239,68,68,0.2)] border border-slate-800 flex items-center justify-center p-3">
+            <img src={logoUrl} alt="Sterling Logo" className="w-14 h-14 object-contain mix-blend-screen"
+              onError={(e) => { e.target.style.display = 'none'; }} />
+          </div>
+        </motion.div>
         <motion.h2 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
           className="mt-5 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
           Spark-<span className="text-[#EF4444]">Hire</span>
@@ -609,7 +618,6 @@ export default function CandidateRegister() {
           </AnimatePresence>
           </div>
         </motion.div>
-      </main>
     </div>
   );
 }
