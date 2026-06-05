@@ -607,7 +607,7 @@ async def send_candidate_otp(
 
     # Send via email service in the background to prevent API timeouts
     from services.email_service import send_otp_email
-    candidate_name = existing_candidate.name if existing_candidate else data.name.strip() or "Candidate"
+    candidate_name = str(existing_candidate.name) if existing_candidate else str(data.name).strip() or "Candidate"
     background_tasks.add_task(
         send_otp_email,
         to_email=identifier,
