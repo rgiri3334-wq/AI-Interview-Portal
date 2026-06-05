@@ -116,7 +116,8 @@ export default function CandidateLogin() {
       setSuccessMsg(`Welcome back, ${res.name}! Taking you to the portal...`);
       setTimeout(() => navigate('/candidate'), 1800);
     } catch (err) {
-      setError(err.message || 'Incorrect OTP. Please try again.');
+      const msg = err.message || '';
+      setError(msg);
       setOtpDigits(Array(OTP_LENGTH).fill(''));
       setTimeout(() => inputRefs.current[0]?.focus(), 50);
     } finally {

@@ -650,8 +650,10 @@ async def verify_candidate_otp(
         )
 
     # ── Check expiry ──────────────────────────────────────────────────────
+    expires_dt = None
+    now_dt = None
     try:
-        expires_dt = datetime.fromisoformat(otp_record.expires_at)
+        expires_dt = datetime.fromisoformat(str(otp_record.expires_at))
         now_dt = datetime.now(timezone.utc)
         is_expired = expires_dt < now_dt
     except Exception:
@@ -663,7 +665,7 @@ async def verify_candidate_otp(
         db.commit()
         raise HTTPException(
             status_code=410,
-            detail="This OTP has expired. Please request a new one."
+            detail=f"This OTP has expired. exp={otp_record.expires_at}, now={now_iso}, e_dt={expires_dt}, n_dt={now_dt}"
         )
 
     # ── Brute-force guard: max 5 attempts ────────────────────────────────

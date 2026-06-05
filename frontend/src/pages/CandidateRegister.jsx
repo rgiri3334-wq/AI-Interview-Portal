@@ -354,7 +354,7 @@ export default function CandidateRegister() {
     } catch (err) {
       const msg = err.message || '';
       if (msg.includes('expired')) {
-        setError('Your code has expired. Please request a new one using the Resend button.');
+        setError(msg);
       } else if (msg.includes('Too many')) {
         setError('Too many incorrect attempts. This code has been invalidated. Please request a new one.');
       } else if (msg.includes('Incorrect')) {
