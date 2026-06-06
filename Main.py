@@ -1353,9 +1353,43 @@ async def get_system_health():
         })
         session_telemetry.append({
             "time": time_label,
-            "active": random.randint(2, 15),
-            "waiting": random.randint(0, 3)
+            "active": random.randint(10, 30),
+            "waiting": random.randint(0, 5)
         })
+
+    # Extra Simulated Data for Command Center
+    live_sessions_data = [
+        {"id": "CAN0021", "name": "Sarah Jenkins", "role": "Frontend Developer", "stage": "Answering Q3 (React)", "duration": "14m 20s", "status": "Live"},
+        {"id": "CAN0022", "name": "Michael Chen", "role": "Backend Engineer", "stage": "Analyzing Resume", "duration": "2m 10s", "status": "Live"},
+        {"id": "CAN0023", "name": "Emily Davis", "role": "Product Manager", "stage": "Answering Q1 (Strategy)", "duration": "08m 45s", "status": "Live"},
+        {"id": "CAN0024", "name": "David Wilson", "role": "Data Scientist", "stage": "Generating Feedback", "duration": "25m 15s", "status": "Wrapping Up"},
+        {"id": "CAN0025", "name": "Jessica Taylor", "role": "DevOps Engineer", "stage": "Answering Q5 (Kubernetes)", "duration": "18m 30s", "status": "Live"},
+    ]
+
+    security_telemetry = [
+        {"time": "08:00", "failed_logins": 2, "api_blocks": 5},
+        {"time": "10:00", "failed_logins": 5, "api_blocks": 12},
+        {"time": "12:00", "failed_logins": 1, "api_blocks": 3},
+        {"time": "14:00", "failed_logins": 8, "api_blocks": 25},
+        {"time": "16:00", "failed_logins": 3, "api_blocks": 8},
+        {"time": "18:00", "failed_logins": 12, "api_blocks": 40},
+    ]
+
+    ai_radar_telemetry = [
+        {"metric": "Inference Speed", "score": 95, "fullMark": 100},
+        {"metric": "Context Memory", "score": 88, "fullMark": 100},
+        {"metric": "Hallucination Res", "score": 98, "fullMark": 100},
+        {"metric": "Token Generation", "score": 92, "fullMark": 100},
+        {"metric": "Latency", "score": 85, "fullMark": 100},
+    ]
+
+    role_distribution = [
+        {"name": "Frontend", "value": 35},
+        {"name": "Backend", "value": 25},
+        {"name": "Data Science", "value": 20},
+        {"name": "DevOps", "value": 15},
+        {"name": "Product", "value": 5},
+    ]
 
     return {
         "api_status": "Operational",
@@ -1369,7 +1403,11 @@ async def get_system_health():
             "api": api_telemetry,
             "database": db_telemetry,
             "ai": ai_telemetry,
-            "sessions": session_telemetry
+            "sessions": session_telemetry,
+            "security": security_telemetry,
+            "ai_radar": ai_radar_telemetry,
+            "role_distribution": role_distribution,
+            "live_streams": live_sessions_data
         }
     }
 
