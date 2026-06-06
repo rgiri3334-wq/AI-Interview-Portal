@@ -273,6 +273,7 @@ class AdminUser(Base):
     admin_id = Column(String, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
+    role = Column(String, server_default="sub_admin", default="sub_admin")
     created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
 class SystemTelemetryLog(Base):

@@ -18,7 +18,19 @@ export default function AdminManagement() {
   // Form State
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newRole, setNewRole] = useState('sub_admin');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const currentUserRole = React.useMemo(() => {
+    const token = sessionStorage.getItem('adminToken');
+    if (!token) return 'sub_admin';
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.role || 'sub_admin';
+    } catch(e) {
+      return 'sub_admin';
+    }
+  }, []);
 
   const fetchAdmins = async () => {
     try {
@@ -71,7 +83,7 @@ export default function AdminManagement() {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ email: newEmail, password: newPassword })
+        body: JSON.stringify({ email: newEmail, password: newPassword, role: newRole })
       });
       
       const data = await res.json();
@@ -83,6 +95,7 @@ export default function AdminManagement() {
       setSuccess('Admin successfully added!');
       setNewEmail('');
       setNewPassword('');
+      setNewRole('sub_admin');
       fetchAdmins();
     } catch (err) {
       setError(err.message);
@@ -173,6 +186,25 @@ export default function AdminManagement() {
               </div>
             </div>
 
+            {currentUserRole === 'master_admin' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Admin Level</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Shield className="text-slate-400 group-focus-within:text-red-500 transition-colors" size={18} />
+                  </div>
+                  <select
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl pl-11 pr-4 py-3 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50 transition-all font-medium appearance-none cursor-pointer"
+                  >
+                    <option value="sub_admin">Sub Admin</option>
+                    <option value="master_admin">Master Admin</option>
+                  </select>
+                </div>
+              </div>
+            )}
+            
             <button
               type="submit"
               disabled={isSubmitting}

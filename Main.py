@@ -368,10 +368,12 @@ class SaveInterviewRequest(BaseModel):
 class AdminUserCreate(BaseModel):
     email: str
     password: str
+    role: str = "sub_admin"
 
 class AdminUserResponse(BaseModel):
     admin_id: str
     email: str
+    role: str
     created_at: str
 
 class AdminQuestion(BaseModel):
@@ -577,12 +579,12 @@ async def admin_login(data: CandidateLogin, db: Session = Depends(get_db)):
     
     if admin and bcrypt.checkpw(data.password.encode(), admin.password_hash.encode('utf-8')):
         # Token expires in 2 hours
-        payload = {"sub": "admin", "email": admin.email, "exp": int(time.time()) + 7200}
+        payload = {"sub": "admin", "email": admin.email, "role": admin.role, "exp": int(time.time()) + 7200}
         token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
         
         db.add(AdminActivityLog(admin_email=admin.email, action_type="LOGIN", target="Admin Portal"))
         db.commit()
-        return {"status": "success", "token": token, "email": admin.email}
+        return {"status": "success", "token": token, "email": admin.email, "role": admin.role}
         
     db.add(SecurityEventLog(event_type="FAILED_LOGIN", target_email=data.email))
     db.commit()
@@ -593,11 +595,13 @@ async def create_admin_user(data: AdminUserCreate, req: Request, db: Session = D
     # Simple auth extraction if present
     auth_header = req.headers.get("Authorization")
     actor_email = "SYSTEM"
+    actor_role = "sub_admin"
     if auth_header and auth_header.startswith("Bearer "):
         try:
             token = auth_header.split(" ")[1]
             payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
             actor_email = payload.get("email", "SYSTEM")
+            actor_role = payload.get("role", "sub_admin")
         except:
             pass
 
@@ -605,11 +609,21 @@ async def create_admin_user(data: AdminUserCreate, req: Request, db: Session = D
     if db.query(AdminUser).filter(AdminUser.email == email_lower).first():
         raise HTTPException(status_code=400, detail="Admin with this email already exists")
     
+    # Force role to sub_admin if creator is not a master_admin
+    new_role = "sub_admin"
+    if actor_role == "master_admin" and data.role == "master_admin":
+        new_role = "master_admin"
+        
+    # Give the first ever created user master_admin access automatically
+    if db.query(AdminUser).count() == 0:
+        new_role = "master_admin"
+
     hashed = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
     new_admin = AdminUser(
         admin_id=f"ADMIN-{uuid.uuid4().hex[:8].upper()}",
         email=email_lower,
-        password_hash=hashed
+        password_hash=hashed,
+        role=new_role
     )
     db.add(new_admin)
     db.add(AdminActivityLog(admin_email=actor_email, action_type="GRANT_ACCESS", target=email_lower))
