@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Layout/Sidebar';
-import { Users, UserPlus, Lock, Mail, Activity, Trash2, Shield, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Users, UserPlus, Lock, Mail, Activity, Trash2, Shield, Clock, CheckCircle, XCircle, Key, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api`;
@@ -113,251 +113,351 @@ export default function AdminManagement() {
   const renderAccessTab = () => (
     <motion.div 
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-      className="grid grid-cols-1 md:grid-cols-2 gap-8"
+      className="grid grid-cols-1 lg:grid-cols-3 gap-8"
     >
-      {/* Add New Admin Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-slate-50 text-slate-700 rounded-lg border border-slate-200">
-            <UserPlus size={20} />
+      {/* Grant Access Form - Sticky Side Panel style */}
+      <div className="lg:col-span-1">
+        <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 sticky top-8">
+          <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-red-100">
+            <UserPlus size={24} />
           </div>
-          <h2 className="text-lg font-bold text-slate-900">Grant Admin Access</h2>
-        </div>
-        
-        <form onSubmit={handleAddAdmin} className="space-y-4">
-          {error && (
-            <div className="bg-red-50 text-red-600 text-sm font-medium p-3 rounded-xl border border-red-100 flex items-center gap-2">
-              <Activity size={16} /> {error}
-            </div>
-          )}
-          {success && (
-            <div className="bg-green-50 text-green-600 text-sm font-medium p-3 rounded-xl border border-green-100">
-              {success}
-            </div>
-          )}
+          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-2">Grant Access</h2>
+          <p className="text-slate-500 text-sm mb-8 font-medium leading-relaxed">
+            Invite a new administrator to the platform. They will have full access to view reports and manage settings.
+          </p>
           
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
-                type="email"
-                required
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm font-medium text-slate-900"
-                placeholder="admin@example.com"
-              />
+          <form onSubmit={handleAddAdmin} className="space-y-5">
+            {error && (
+              <div className="bg-red-50 text-red-600 text-sm font-bold px-4 py-3 rounded-2xl border border-red-100 flex items-center gap-2">
+                <Activity size={16} /> {error}
+              </div>
+            )}
+            {success && (
+              <div className="bg-emerald-50 text-emerald-600 text-sm font-bold px-4 py-3 rounded-2xl border border-emerald-100 flex items-center gap-2">
+                <CheckCircle size={16} /> {success}
+              </div>
+            )}
+            
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Email Address</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail className="text-slate-400 group-focus-within:text-red-500 transition-colors" size={18} />
+                </div>
+                <input
+                  type="email"
+                  required
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-500 transition-all text-sm font-bold text-slate-900 placeholder:font-medium"
+                  placeholder="admin@sterling.com"
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm font-medium text-slate-900"
-                placeholder="••••••••"
-              />
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Secure Password</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="text-slate-400 group-focus-within:text-red-500 transition-colors" size={18} />
+                </div>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-500 transition-all text-sm font-bold text-slate-900 placeholder:font-medium"
+                  placeholder="••••••••"
+                />
+              </div>
             </div>
-            <p className="text-xs text-slate-500 mt-2 font-medium">Password must be at least 8 characters</p>
-          </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isSubmitting ? 'Processing...' : 'Grant Access'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-4 rounded-2xl transition-all shadow-[0_4px_14px_0_rgb(220,38,38,0.39)] hover:shadow-[0_6px_20px_rgba(220,38,38,0.23)] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? 'Provisioning...' : 'Authorize Admin'}
+            </button>
+          </form>
+        </div>
       </div>
 
-      {/* List of Current Admins */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-slate-50 text-slate-700 rounded-lg border border-slate-200">
-              <Users size={20} />
-            </div>
-            <h2 className="text-lg font-bold text-slate-900">Current Admins</h2>
+      {/* List of Current Admins - Grid Layout */}
+      <div className="lg:col-span-2 space-y-6">
+        <div className="flex items-end justify-between px-2">
+          <div>
+            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Active Administrators</h2>
+            <p className="text-slate-500 text-sm font-medium mt-1">Manage personnel with system access.</p>
           </div>
-          <div className="bg-slate-100 text-slate-600 text-xs font-bold px-2.5 py-1 rounded-lg">
+          <div className="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1.5 rounded-full border border-slate-200">
             {admins.length} Users
           </div>
         </div>
         
-        <div className="flex-1 overflow-auto pr-2 space-y-3">
-          {loading ? (
-            <div className="text-center py-8 text-slate-500 font-medium text-sm animate-pulse">Loading admins...</div>
-          ) : admins.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 font-medium text-sm">No admins found</div>
-          ) : (
-            admins.map((admin) => (
-              <div key={admin.admin_id} className="p-4 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between group hover:border-slate-200 transition-all">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-red-600 font-bold text-sm shrink-0 shadow-sm">
-                    {admin.email.charAt(0).toUpperCase()}
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-pulse">
+            {[1,2,3,4].map(i => <div key={i} className="h-28 bg-white rounded-3xl border border-slate-100 shadow-sm" />)}
+          </div>
+        ) : admins.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <Users className="mx-auto text-slate-300 mb-4" size={48} />
+            <p className="text-slate-500 font-bold">No administrators found.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {admins.map((admin) => (
+              <div key={admin.admin_id} className="relative bg-white p-5 rounded-3xl border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all group overflow-hidden flex flex-col justify-between min-h-[140px]">
+                {/* Background decorative blob */}
+                <div className="absolute -right-8 -top-8 w-24 h-24 bg-red-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                
+                <div className="relative z-10 flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 flex items-center justify-center text-red-600 font-black text-lg shadow-sm">
+                      {admin.email.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <span className="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded border border-slate-200">
+                        {admin.email === "sparkhire.sterling@gmail.com" ? "Master" : "Admin"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="truncate">
-                    <p className="text-sm font-bold text-slate-900 truncate">{admin.email}</p>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5 tracking-wide">
-                      Added: {new Date(admin.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
+                  
+                  {admin.email !== "sparkhire.sterling@gmail.com" && (
+                    <button
+                      onClick={() => handleRemoveAdmin(admin.admin_id)}
+                      className="p-2 text-slate-400 hover:text-white hover:bg-red-500 rounded-xl transition-all opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0"
+                      title="Revoke Access"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
-                {admin.email !== "sparkhire.sterling@gmail.com" && (
-                  <button
-                    onClick={() => handleRemoveAdmin(admin.admin_id)}
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                    title="Remove Admin"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                )}
+                
+                <div className="relative z-10 mt-4">
+                  <p className="text-sm font-bold text-slate-900 truncate" title={admin.email}>{admin.email}</p>
+                  <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mt-1">
+                    Added • {new Date(admin.created_at).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})}
+                  </p>
+                </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </motion.div>
   );
 
   const renderPermissionsTab = () => (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-200 bg-slate-50">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <Shield size={20} className="text-blue-500"/> Role Permissions Matrix
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">Review system capabilities assigned to different administrative tiers.</p>
-        </div>
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-white">
-              <th className="p-4 w-1/2">Capability</th>
-              <th className="p-4 text-center">Master Admin</th>
-              <th className="p-4 text-center">Sub-Admin</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="max-w-4xl mx-auto">
+      <div className="text-center mb-10">
+        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Role Capabilities</h2>
+        <p className="text-slate-500 mt-2 font-medium">Compare access levels across the platform tiers.</p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+        {/* Sub-Admin Tier */}
+        <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden flex flex-col">
+          <div className="mb-8 relative z-10">
+            <span className="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1 rounded-full border border-slate-200">Standard Tier</span>
+            <h3 className="text-3xl font-black text-slate-900 mt-4">Sub-Admin</h3>
+            <p className="text-sm text-slate-500 mt-2 font-medium">Perfect for daily recruiters and interview reviewers.</p>
+          </div>
+          
+          <div className="space-y-4 flex-1 relative z-10">
             {[
-              { cap: "View Dashboard & Metrics", master: true, sub: true },
-              { cap: "View Candidate Reports", master: true, sub: true },
-              { cap: "Export System Telemetry", master: true, sub: true },
-              { cap: "Create/Edit Job Roles", master: true, sub: false },
-              { cap: "Grant/Revoke Admin Access", master: true, sub: false },
-              { cap: "System Purge & Reset", master: true, sub: false },
-            ].map((row, i) => (
-              <tr key={i} className="hover:bg-slate-50 transition-colors">
-                <td className="p-4 text-sm font-semibold text-slate-700">{row.cap}</td>
-                <td className="p-4 text-center">
-                  {row.master ? <CheckCircle className="mx-auto text-green-500" size={18}/> : <XCircle className="mx-auto text-red-500" size={18}/>}
-                </td>
-                <td className="p-4 text-center">
-                  {row.sub ? <CheckCircle className="mx-auto text-green-500" size={18}/> : <XCircle className="mx-auto text-slate-300" size={18}/>}
-                </td>
-              </tr>
+              { cap: "View Dashboard & Metrics", has: true },
+              { cap: "View Candidate Reports", has: true },
+              { cap: "Export System Telemetry", has: true },
+              { cap: "Create/Edit Job Roles", has: false },
+              { cap: "Grant/Revoke Admin Access", has: false },
+              { cap: "System Purge & Reset", has: false },
+            ].map((item, i) => (
+              <div key={i} className={`flex items-center gap-3 ${!item.has && 'opacity-50'}`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${item.has ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                  {item.has ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                </div>
+                <span className={`text-sm font-bold ${item.has ? 'text-slate-700' : 'text-slate-400'}`}>{item.cap}</span>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </div>
+
+        {/* Master Admin Tier */}
+        <div className="bg-slate-900 rounded-[2rem] p-8 border border-slate-800 shadow-[0_20px_40px_rgb(0,0,0,0.2)] relative overflow-hidden flex flex-col transform md:-translate-y-4">
+          <div className="absolute top-0 right-0 p-32 bg-red-600/20 rounded-full blur-[80px]" />
+          
+          <div className="mb-8 relative z-10">
+            <span className="bg-red-500/20 text-red-400 text-xs font-bold px-3 py-1 rounded-full border border-red-500/20">God Mode</span>
+            <h3 className="text-3xl font-black text-white mt-4">Master Admin</h3>
+            <p className="text-sm text-slate-400 mt-2 font-medium">Full unhindered access to platform controls and security.</p>
+          </div>
+          
+          <div className="space-y-4 flex-1 relative z-10">
+            {[
+              { cap: "View Dashboard & Metrics", has: true },
+              { cap: "View Candidate Reports", has: true },
+              { cap: "Export System Telemetry", has: true },
+              { cap: "Create/Edit Job Roles", has: true },
+              { cap: "Grant/Revoke Admin Access", has: true },
+              { cap: "System Purge & Reset", has: true },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-red-500/20 text-red-400">
+                  <CheckCircle size={14} />
+                </div>
+                <span className="text-sm font-bold text-slate-200">{item.cap}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </motion.div>
   );
+
+  const getActionIcon = (type) => {
+    if (type.includes('GRANT')) return <UserPlus size={16} className="text-emerald-600" />;
+    if (type.includes('REVOKE')) return <Trash2 size={16} className="text-red-600" />;
+    if (type.includes('LOGIN')) return <Key size={16} className="text-blue-600" />;
+    return <ShieldAlert size={16} className="text-purple-600" />;
+  };
+
+  const getActionColor = (type) => {
+    if (type.includes('GRANT')) return 'bg-emerald-100 border-emerald-200';
+    if (type.includes('REVOKE')) return 'bg-red-100 border-red-200';
+    if (type.includes('LOGIN')) return 'bg-blue-100 border-blue-200';
+    return 'bg-purple-100 border-purple-200';
+  };
+
+  const formatRelativeTime = (isoString) => {
+    const date = new Date(isoString.replace('Z', '+00:00'));
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return date.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+  };
 
   const renderAuditTab = () => (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Clock size={20} className="text-purple-500"/> Admin Activity Log
-            </h2>
-            <p className="text-sm text-slate-500 mt-1">Recent administrative actions performed on the platform.</p>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="max-w-3xl mx-auto">
+      <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden">
+        <div className="p-8 border-b border-slate-100 flex justify-between items-end relative overflow-hidden">
+          <div className="absolute -right-20 -top-20 w-48 h-48 bg-purple-50 rounded-full blur-3xl" />
+          <div className="relative z-10">
+            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Security Timeline</h2>
+            <p className="text-sm text-slate-500 mt-1 font-medium">A chronological feed of administrative events.</p>
           </div>
-          <span className="text-xs font-bold bg-purple-50 text-purple-600 px-3 py-1 rounded-full border border-purple-100">Tracking Active</span>
+          <div className="relative z-10 hidden sm:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
+            <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Live Feed</span>
+          </div>
         </div>
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-white">
-              <th className="p-4">Timestamp</th>
-              <th className="p-4">Admin</th>
-              <th className="p-4">Action</th>
-              <th className="p-4">Target</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
+
+        <div className="p-8 relative">
+          {/* Vertical Timeline Line */}
+          <div className="absolute left-[51px] top-8 bottom-8 w-px bg-slate-200" />
+          
+          <div className="space-y-8 relative z-10">
             {auditLogs.length === 0 ? (
-              <tr><td colSpan="4" className="p-8 text-center text-slate-500 font-medium text-sm">No activity recorded yet.</td></tr>
+              <div className="text-center py-10 text-slate-500 font-bold">No activity recorded yet.</div>
             ) : (
               auditLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-4 text-sm text-slate-500 font-medium">{log.timestamp}</td>
-                  <td className="p-4 text-sm font-bold text-slate-800">{log.admin_email}</td>
-                  <td className="p-4">
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${
-                      log.action_type.includes('GRANT') ? 'text-green-600 bg-green-50' :
-                      log.action_type.includes('REVOKE') ? 'text-red-600 bg-red-50' :
-                      log.action_type.includes('LOGIN') ? 'text-blue-600 bg-blue-50' :
-                      'text-purple-600 bg-purple-50'
-                    }`}>
-                      {log.action_type}
-                    </span>
-                  </td>
-                  <td className="p-4 text-sm text-slate-500">{log.target || "-"}</td>
-                </tr>
+                <div key={log.id} className="flex gap-6 group">
+                  {/* Icon Badge */}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border shadow-sm z-10 ${getActionColor(log.action_type)} transition-transform group-hover:scale-110`}>
+                    {getActionIcon(log.action_type)}
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl p-5 shadow-sm group-hover:shadow-md group-hover:border-slate-200 transition-all">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900">{log.admin_email}</span>
+                        <span className="text-slate-400 font-medium text-sm">performed</span>
+                        <span className="bg-white px-2 py-0.5 rounded border border-slate-200 text-xs font-bold text-slate-700 shadow-sm">
+                          {log.action_type.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-slate-400 bg-white px-2 py-1 rounded-md border border-slate-100">
+                        {formatRelativeTime(log.timestamp)}
+                      </span>
+                    </div>
+                    {log.target && (
+                      <div className="text-sm text-slate-600 font-medium">
+                        Target: <span className="font-bold text-slate-800">{log.target}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               ))
             )}
-          </tbody>
-        </table>
+          </div>
+        </div>
       </div>
     </motion.div>
   );
 
+  const tabs = [
+    { id: 'access', label: 'User Access', icon: Users },
+    { id: 'permissions', label: 'Role Permissions', icon: Lock },
+    { id: 'audit', label: 'Audit Timeline', icon: Activity }
+  ];
+
   return (
-    <div className="flex h-screen bg-slate-50 font-sans">
+    <div className="flex h-screen bg-[#fafafa] font-sans relative overflow-hidden">
+      {/* Absolute Ambient Background Gradients */}
+      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-slate-100/80 to-transparent pointer-events-none" />
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-red-100 rounded-full blur-[100px] opacity-60 pointer-events-none" />
+      
       <Sidebar />
-      <main className="flex-1 p-8 overflow-auto">
-        <div className="max-w-5xl mx-auto space-y-8">
+      <main className="flex-1 p-8 md:p-12 overflow-y-auto z-10">
+        <div className="max-w-6xl mx-auto space-y-10">
           
-          <div className="flex items-center gap-4 border-b border-slate-200 pb-6">
-            <div className="p-3 bg-red-50 text-red-600 rounded-xl">
-              <Shield size={28} />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Admin Management</h1>
-              <p className="text-slate-500 mt-1 font-medium text-sm">Manage system administrators, roles, and review audit logs</p>
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-slate-200/60">
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-700 text-white rounded-2xl flex items-center justify-center shadow-[0_8px_30px_rgb(220,38,38,0.3)]">
+                <Shield size={32} />
+              </div>
+              <div>
+                <h1 className="text-4xl font-black text-slate-900 tracking-tight">Admin <span className="text-red-600">Management</span></h1>
+                <p className="text-slate-500 mt-1 font-medium text-sm">Control platform personnel, permissions, and monitor security events.</p>
+              </div>
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex gap-2 p-1 bg-white rounded-xl border border-slate-200 shadow-sm w-max">
-            <button 
-              onClick={() => setActiveTab('access')} 
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'access' ? 'bg-red-50 text-red-600' : 'text-slate-500 hover:text-slate-800'}`}
-            >
-              <Users size={16}/> User Access
-            </button>
-            <button 
-              onClick={() => setActiveTab('permissions')} 
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'permissions' ? 'bg-red-50 text-red-600' : 'text-slate-500 hover:text-slate-800'}`}
-            >
-              <Lock size={16}/> Role Permissions
-            </button>
-            <button 
-              onClick={() => setActiveTab('audit')} 
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'audit' ? 'bg-red-50 text-red-600' : 'text-slate-500 hover:text-slate-800'}`}
-            >
-              <Activity size={16}/> Audit Logs
-            </button>
+          {/* iOS-Style Segmented Tabs using Framer Motion */}
+          <div className="flex p-1.5 bg-slate-200/50 rounded-2xl w-max backdrop-blur-xl border border-slate-200 shadow-inner">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`relative flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-colors z-10 ${
+                    isActive ? 'text-red-700' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="admin-active-tab"
+                      className="absolute inset-0 bg-white rounded-xl shadow-[0_2px_10px_rgb(0,0,0,0.06)] border border-slate-100"
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                  <span className="relative z-20 flex items-center gap-2">
+                    <Icon size={16} className={isActive ? "text-red-500" : ""} /> {tab.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Content Area */}
+          {/* Dynamic Content Area */}
           <AnimatePresence mode="wait">
             {activeTab === 'access' && renderAccessTab()}
             {activeTab === 'permissions' && renderPermissionsTab()}
