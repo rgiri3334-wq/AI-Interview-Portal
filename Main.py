@@ -1324,14 +1324,53 @@ async def upload_resume(
 @app.get("/api/admin/system/health", tags=["Admin"])
 async def get_system_health():
     import random
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    
+    api_telemetry = []
+    db_telemetry = []
+    ai_telemetry = []
+    session_telemetry = []
+
+    for i in range(20, -1, -1):
+        time_label = (now - timedelta(minutes=i)).strftime("%H:%M")
+        
+        api_telemetry.append({
+            "time": time_label,
+            "requests": random.randint(50, 150),
+            "latency": random.randint(100, 300)
+        })
+        db_telemetry.append({
+            "time": time_label,
+            "queries": random.randint(200, 500),
+            "latency": random.randint(5, 25)
+        })
+        ai_telemetry.append({
+            "time": time_label,
+            "tokens": random.randint(1000, 5000),
+            "latency": random.randint(800, 2000)
+        })
+        session_telemetry.append({
+            "time": time_label,
+            "active": random.randint(2, 15),
+            "waiting": random.randint(0, 3)
+        })
+
     return {
         "api_status": "Operational",
         "uptime": "99.99%",
         "db_status": "Connected",
-        "db_latency": f"{random.randint(10, 25)}ms",
+        "db_latency": f"{db_telemetry[-1]['latency']}ms",
         "ai_engine": "Online",
         "ai_load": "Normal",
-        "active_sessions": random.randint(2, 10),
+        "active_sessions": session_telemetry[-1]['active'],
+        "telemetry": {
+            "api": api_telemetry,
+            "database": db_telemetry,
+            "ai": ai_telemetry,
+            "sessions": session_telemetry
+        }
     }
 
 # ── Candidate Leaderboard ───────────────────────────────────────────────────────
