@@ -1471,7 +1471,7 @@ async def get_system_health(db: Session = Depends(get_db)):
     points_needed = 20 - len(telemetry_logs)
     for i in range(points_needed, 0, -1):
         t_label = (now - timedelta(minutes=i*5)).strftime("%H:%M")
-        api_telemetry.append({"time": t_label, "requests": 0, "latency": 0})
+        api_telemetry.append({"time": t_label, "requests": 0, "latency": 0, "sessions": 0})
         ai_telemetry.append({"time": t_label, "tokens": 0})
         
     for log in telemetry_logs:
@@ -1482,7 +1482,8 @@ async def get_system_health(db: Session = Depends(get_db)):
         api_telemetry.append({
             "time": t,
             "requests": log.api_requests_count,
-            "latency": log.db_latency_ms
+            "latency": log.db_latency_ms,
+            "sessions": log.active_sessions
         })
         ai_telemetry.append({
             "time": t,

@@ -23,7 +23,8 @@ export default function SystemHealth() {
   const [healthData, setHealthData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeCategory, setActiveCategory] = useState('global'); // global, ai, live, security
+  const [activeCategory, setActiveCategory] = useState('global');
+  const [activeMetric, setActiveMetric] = useState('requests'); // global, ai, live, security
 
   const fetchHealth = async (isManualRefresh = false) => {
     if (isManualRefresh) setRefreshing(true);
@@ -52,43 +53,49 @@ export default function SystemHealth() {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div onClick={() => setActiveMetric('requests')} className={`bg-white p-6 rounded-2xl border cursor-pointer transition-all ${activeMetric === 'requests' ? 'border-blue-500 ring-2 ring-blue-100 shadow-md' : 'border-slate-200 shadow-sm hover:border-blue-300'}`}>
             <div className="flex items-center gap-3 mb-2"><Server className="text-blue-600" size={20}/><h3 className="font-bold text-slate-700">API Status</h3></div>
             <p className="text-2xl font-black text-slate-900">{healthData?.api_status || 'Online'}</p>
             <p className="text-xs text-slate-500">Uptime: {healthData?.uptime}</p>
           </div>
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div onClick={() => setActiveMetric('latency')} className={`bg-white p-6 rounded-2xl border cursor-pointer transition-all ${activeMetric === 'latency' ? 'border-emerald-500 ring-2 ring-emerald-100 shadow-md' : 'border-slate-200 shadow-sm hover:border-emerald-300'}`}>
             <div className="flex items-center gap-3 mb-2"><Database className="text-emerald-600" size={20}/><h3 className="font-bold text-slate-700">Database</h3></div>
             <p className="text-2xl font-black text-slate-900">{healthData?.db_status || 'Connected'}</p>
             <p className="text-xs text-slate-500">Latency: {healthData?.db_latency}</p>
           </div>
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div onClick={() => setActiveCategory('ai')} className={`bg-white p-6 rounded-2xl border cursor-pointer transition-all border-slate-200 shadow-sm hover:border-purple-300`}>
             <div className="flex items-center gap-3 mb-2"><Cpu className="text-purple-600" size={20}/><h3 className="font-bold text-slate-700">AI Engine</h3></div>
             <p className="text-2xl font-black text-slate-900">{healthData?.ai_engine}</p>
             <p className="text-xs text-slate-500">Load: {healthData?.ai_load}</p>
           </div>
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div onClick={() => setActiveMetric('sessions')} className={`bg-white p-6 rounded-2xl border cursor-pointer transition-all ${activeMetric === 'sessions' ? 'border-amber-500 ring-2 ring-amber-100 shadow-md' : 'border-slate-200 shadow-sm hover:border-amber-300'}`}>
             <div className="flex items-center gap-3 mb-2"><Activity className="text-amber-600" size={20}/><h3 className="font-bold text-slate-700">Active Sessions</h3></div>
             <p className="text-2xl font-black text-slate-900">{healthData?.active_sessions}</p>
             <p className="text-xs text-slate-500">Candidates currently online</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">Platform Traffic (Interviews vs Candidates)</h3>
+          <h3 className="text-lg font-bold text-slate-800 mb-4">
+            {activeMetric === 'requests' && 'Platform Traffic (API Requests)'}
+            {activeMetric === 'latency' && 'Database Ping (Latency in ms)'}
+            {activeMetric === 'sessions' && 'Active Interview Sessions'}
+          </h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorReq" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient>
-                  <linearGradient id="colorLat" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#93c5fd" stopOpacity={0.3}/><stop offset="95%" stopColor="#93c5fd" stopOpacity={0}/></linearGradient>
+                  <linearGradient id="colorLat" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
+                  <linearGradient id="colorSes" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/><stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/></linearGradient>
                 </defs>
                 <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Legend />
-                <Area type="monotone" dataKey="requests" name="Platform Traffic" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorReq)" />
-                <Area type="monotone" dataKey="latency" name="DB Ping (ms)" stroke="#93c5fd" strokeWidth={3} fillOpacity={1} fill="url(#colorLat)" />
+                
+                {activeMetric === 'requests' && <Area type="monotone" dataKey="requests" name="API Requests" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorReq)" />}
+                {activeMetric === 'latency' && <Area type="monotone" dataKey="latency" name="DB Ping (ms)" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorLat)" />}
+                {activeMetric === 'sessions' && <Area type="monotone" dataKey="sessions" name="Active Sessions" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorSes)" />}
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -123,7 +130,7 @@ export default function SystemHealth() {
           <h3 className="text-lg font-bold text-slate-800 mb-2">Average Interview Scores</h3>
           <div className="flex-1 w-full min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+              <RadarChart cx="50%" cy="50%" outerRadius="55%" data={radarData}>
                 <PolarGrid stroke="#e2e8f0" />
                 <PolarAngleAxis dataKey="metric" tick={{fill: '#64748b', fontSize: 11}} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
