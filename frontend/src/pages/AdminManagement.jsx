@@ -269,10 +269,10 @@ export default function AdminManagement() {
             {[
               { cap: "View Dashboard & Metrics", has: true },
               { cap: "View Candidate Reports", has: true },
-              { cap: "Export System Telemetry", has: true },
-              { cap: "Create/Edit Job Roles", has: false },
-              { cap: "Grant/Revoke Admin Access", has: false },
-              { cap: "System Purge & Reset", has: false },
+              { cap: "Create/Edit Job Roles & Questions", has: true },
+              { cap: "System Purge & Reset", has: true },
+              { cap: "Add/Remove Sub-Admins", has: true },
+              { cap: "Add/Remove Master Admins", has: false },
             ].map((item, i) => (
               <div key={i} className={`flex items-center gap-3 ${!item.has && 'opacity-50'}`}>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${item.has ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
@@ -298,10 +298,10 @@ export default function AdminManagement() {
             {[
               { cap: "View Dashboard & Metrics", has: true },
               { cap: "View Candidate Reports", has: true },
-              { cap: "Export System Telemetry", has: true },
-              { cap: "Create/Edit Job Roles", has: true },
-              { cap: "Grant/Revoke Admin Access", has: true },
+              { cap: "Create/Edit Job Roles & Questions", has: true },
               { cap: "System Purge & Reset", has: true },
+              { cap: "Add/Remove Sub-Admins", has: true },
+              { cap: "Add/Remove Master Admins", has: true },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-red-500/20 text-red-400">
