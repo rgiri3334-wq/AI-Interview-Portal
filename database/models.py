@@ -275,3 +275,27 @@ class AdminUser(Base):
     password_hash = Column(String, nullable=False)
     created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
+class SystemTelemetryLog(Base):
+    __tablename__ = "system_telemetry_logs"
+    telemetry_id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    api_requests_count = Column(Integer, default=0)
+    db_latency_ms = Column(Integer, default=0)
+    active_sessions = Column(Integer, default=0)
+    ai_tokens_generated = Column(Integer, default=0)
+
+class AdminActivityLog(Base):
+    __tablename__ = "admin_activity_logs"
+    log_id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    admin_email = Column(String, nullable=False)
+    action_type = Column(String, nullable=False) # e.g. VIEW_TELEMETRY, GRANT_ACCESS
+    target = Column(String, nullable=True) # e.g. "new.hr@example.com"
+
+class SecurityEventLog(Base):
+    __tablename__ = "security_event_logs"
+    event_id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    event_type = Column(String, nullable=False) # e.g. FAILED_LOGIN, RATE_LIMIT_BLOCK
+    ip_address = Column(String, nullable=True)
+    target_email = Column(String, nullable=True)

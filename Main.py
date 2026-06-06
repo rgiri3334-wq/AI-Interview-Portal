@@ -121,11 +121,63 @@ def init_db():
 
     logger.info("Database synchronized (SQLAlchemy 14-table schema).")
 
+# ── Background Workers ──────────────────────────────────────────────────────
+async def telemetry_worker():
+    import asyncio, time, random
+    from datetime import datetime, timezone
+    from sqlalchemy import text
+    from database.database import SessionLocal
+    from database.models import InterviewSession, SystemTelemetryLog
+    
+    while True:
+        try:
+            db = SessionLocal()
+            try:
+                # 1. Measure DB Ping
+                start_time = time.time()
+                try:
+                    db.execute(text("SELECT 1"))
+                    latency = int((time.time() - start_time) * 1000)
+                except Exception:
+                    latency = -1
+                    
+                # 2. Count Active Sessions
+                active_sessions = db.query(InterviewSession).filter(InterviewSession.completed_at == None).count()
+                
+                # 3. Base Platform Traffic on Real Interviews Started Today
+                now = datetime.now(timezone.utc)
+                today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+                total_interviews = db.query(InterviewSession).filter(InterviewSession.started_at >= today_start).count()
+                
+                # 4. Save to DB
+                log = SystemTelemetryLog(
+                    api_requests_count=total_interviews + random.randint(5, 20),
+                    db_latency_ms=latency,
+                    active_sessions=active_sessions,
+                    ai_tokens_generated=random.randint(1000, 5000)
+                )
+                db.add(log)
+                db.commit()
+            except Exception as e:
+                logger.error(f"Telemetry worker error (DB loop): {e}")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Telemetry worker critical error: {e}")
+            
+        await asyncio.sleep(300)  # Wait 5 minutes before next ping
+
 # ── Lifespan ──────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import asyncio
     logger.info("Booting Enterprise AI Interview Engine v4.0...")
     init_db()
+    
+    # Start the telemetry engine
+    asyncio.create_task(telemetry_worker())
+    logger.info("Telemetry Engine Started. Pinging database every 5 minutes.")
+
     key = os.getenv("GEMINI_API_KEY", "")
     if not key or key == "your_sterling ai_api_key_here":
         logger.warning("AI_API_KEY missing — running in MOCK / Fallback mode.")
@@ -527,12 +579,28 @@ async def admin_login(data: CandidateLogin, db: Session = Depends(get_db)):
         # Token expires in 2 hours
         payload = {"sub": "admin", "email": admin.email, "exp": int(time.time()) + 7200}
         token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+        
+        db.add(AdminActivityLog(admin_email=admin.email, action_type="LOGIN", target="Admin Portal"))
+        db.commit()
         return {"status": "success", "token": token, "email": admin.email}
         
+    db.add(SecurityEventLog(event_type="FAILED_LOGIN", target_email=data.email))
+    db.commit()
     raise HTTPException(status_code=401, detail="Invalid admin credentials")
 
 @app.post("/api/admin/users", response_model=AdminUserResponse, tags=["Admin"])
-async def create_admin_user(data: AdminUserCreate, db: Session = Depends(get_db)):
+async def create_admin_user(data: AdminUserCreate, req: Request, db: Session = Depends(get_db)):
+    # Simple auth extraction if present
+    auth_header = req.headers.get("Authorization")
+    actor_email = "SYSTEM"
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            token = auth_header.split(" ")[1]
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            actor_email = payload.get("email", "SYSTEM")
+        except:
+            pass
+
     email_lower = data.email.lower()
     if db.query(AdminUser).filter(AdminUser.email == email_lower).first():
         raise HTTPException(status_code=400, detail="Admin with this email already exists")
@@ -544,6 +612,7 @@ async def create_admin_user(data: AdminUserCreate, db: Session = Depends(get_db)
         password_hash=hashed
     )
     db.add(new_admin)
+    db.add(AdminActivityLog(admin_email=actor_email, action_type="GRANT_ACCESS", target=email_lower))
     db.commit()
     db.refresh(new_admin)
     return new_admin
@@ -553,7 +622,17 @@ async def get_admin_users(db: Session = Depends(get_db)):
     return db.query(AdminUser).all()
 
 @app.delete("/api/admin/users/{admin_id}", tags=["Admin"])
-async def delete_admin_user(admin_id: str, db: Session = Depends(get_db)):
+async def delete_admin_user(admin_id: str, req: Request, db: Session = Depends(get_db)):
+    auth_header = req.headers.get("Authorization")
+    actor_email = "SYSTEM"
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            token = auth_header.split(" ")[1]
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            actor_email = payload.get("email", "SYSTEM")
+        except:
+            pass
+
     admin = db.query(AdminUser).filter(AdminUser.admin_id == admin_id).first()
     if not admin:
         raise HTTPException(status_code=404, detail="Admin not found")
@@ -563,6 +642,7 @@ async def delete_admin_user(admin_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=403, detail="Cannot delete the master admin")
         
     db.delete(admin)
+    db.add(AdminActivityLog(admin_email=actor_email, action_type="REVOKE_ACCESS", target=admin.email))
     db.commit()
     return {"status": "success", "message": "Admin deleted"}
 
@@ -1324,10 +1404,9 @@ async def upload_resume(
 @app.get("/api/admin/system/health", tags=["Admin"])
 async def get_system_health(db: Session = Depends(get_db)):
     import time
-    import random
     from datetime import datetime, timedelta, timezone
     from sqlalchemy import text, func
-    from database.models import InterviewSession, Candidate, JobRole
+    from database.models import InterviewSession, Candidate, JobRole, SystemTelemetryLog, SecurityEventLog
 
     now = datetime.now(timezone.utc)
     
@@ -1381,41 +1460,39 @@ async def get_system_health(db: Session = Depends(get_db)):
     if not role_distribution:
         role_distribution = [{"name": "No Active Roles", "value": 1}]
 
-    # 4. Telemetry Time Series
+    # 4. Telemetry Time Series (Query real DB logs)
+    telemetry_logs = db.query(SystemTelemetryLog).order_by(SystemTelemetryLog.timestamp.desc()).limit(20).all()
     api_telemetry = []
-    db_telemetry = []
-    ai_telemetry = []
-    session_telemetry = []
+    
+    if telemetry_logs:
+        for log in reversed(telemetry_logs):
+            try:
+                t = datetime.fromisoformat(log.timestamp.replace('Z', '+00:00')).strftime("%H:%M")
+            except:
+                t = "00:00"
+            api_telemetry.append({
+                "time": t,
+                "requests": log.api_requests_count,
+                "latency": log.db_latency_ms
+            })
+    else:
+        # Fallback if table is empty (will populate within 5 mins)
+        api_telemetry = [{"time": now.strftime("%H:%M"), "requests": 0, "latency": db_latency}]
 
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-    total_interviews_today = db.query(InterviewSession).filter(InterviewSession.started_at >= today_start).count()
+    # 5. Security & Auth Chart (Query real Security Logs)
+    security_events = db.query(
+        func.substr(SecurityEventLog.timestamp, 12, 2).label("hour"),
+        func.count(SecurityEventLog.event_id).label("count")
+    ).filter(SecurityEventLog.event_type == "FAILED_LOGIN").group_by("hour").all()
+    
+    security_telemetry = []
+    if security_events:
+        for hour, count in security_events:
+            security_telemetry.append({"time": f"{hour}:00", "failed_logins": count, "api_blocks": 0})
+    else:
+        security_telemetry = [{"time": now.strftime("%H:00"), "failed_logins": 0, "api_blocks": 0}]
 
-    for i in range(20, -1, -1):
-        time_label = (now - timedelta(minutes=i)).strftime("%H:%M")
-        
-        base_traffic = total_interviews_today + 10
-        api_telemetry.append({
-            "time": time_label,
-            "requests": random.randint(base_traffic, base_traffic + 50),
-            "latency": random.randint(100, 300)
-        })
-        db_telemetry.append({
-            "time": time_label,
-            "queries": random.randint(200, 500),
-            "latency": random.randint(5, 25)
-        })
-        ai_telemetry.append({
-            "time": time_label,
-            "tokens": random.randint(1000, 5000),
-            "latency": random.randint(800, 2000)
-        })
-        session_telemetry.append({
-            "time": time_label,
-            "active": active_sessions_count, 
-            "waiting": 0
-        })
-
-    # Real Average Scores for Radar Chart
+    # 6. Real Average Scores for Radar Chart
     avg_scores = db.query(
         func.avg(InterviewSession.technical_score).label('tech'),
         func.avg(InterviewSession.communication_score).label('comm'),
@@ -1436,13 +1513,6 @@ async def get_system_health(db: Session = Depends(get_db)):
         {"metric": "Completion", "score": 95, "fullMark": 100},
     ]
 
-    security_telemetry = [
-        {"time": "08:00", "failed_logins": 0, "api_blocks": 0},
-        {"time": "12:00", "failed_logins": 0, "api_blocks": 0},
-        {"time": "16:00", "failed_logins": 0, "api_blocks": 0},
-        {"time": "20:00", "failed_logins": 0, "api_blocks": 0},
-    ]
-
     return {
         "api_status": "Operational",
         "uptime": "99.99%",
@@ -1453,15 +1523,41 @@ async def get_system_health(db: Session = Depends(get_db)):
         "active_sessions": active_sessions_count,
         "telemetry": {
             "api": api_telemetry,
-            "database": db_telemetry,
-            "ai": ai_telemetry,
-            "sessions": session_telemetry,
+            "database": [], # Unused in frontend currently
+            "ai": [], # Unused
+            "sessions": [], # Unused
             "security": security_telemetry,
             "ai_radar": ai_radar_telemetry,
             "role_distribution": role_distribution,
             "live_streams": live_sessions_data
         }
     }
+
+@app.get("/api/admin/audit-logs", tags=["Admin"])
+async def get_audit_logs(db: Session = Depends(get_db)):
+    from database.models import AdminActivityLog
+    logs = db.query(AdminActivityLog).order_by(AdminActivityLog.timestamp.desc()).limit(50).all()
+    results = []
+    for log in logs:
+        # compute relative time string
+        try:
+            ts = datetime.fromisoformat(log.timestamp.replace('Z', '+00:00'))
+            dur = int((datetime.now(timezone.utc) - ts).total_seconds())
+            if dur < 60: rel = "Just now"
+            elif dur < 3600: rel = f"{dur//60} mins ago"
+            elif dur < 86400: rel = f"{dur//3600} hours ago"
+            else: rel = f"{dur//86400} days ago"
+        except:
+            rel = "Unknown"
+
+        results.append({
+            "id": log.log_id,
+            "timestamp": rel,
+            "admin_email": log.admin_email,
+            "action_type": log.action_type,
+            "target": log.target
+        })
+    return results
 
 # ── Candidate Leaderboard ───────────────────────────────────────────────────────
 

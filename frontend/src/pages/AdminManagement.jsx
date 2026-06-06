@@ -7,6 +7,7 @@ const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api
 
 export default function AdminManagement() {
   const [admins, setAdmins] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -36,8 +37,24 @@ export default function AdminManagement() {
     }
   };
 
+  const fetchAuditLogs = async () => {
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const res = await fetch(`${API_BASE}/admin/audit-logs`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAuditLogs(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchAdmins();
+    fetchAuditLogs();
   }, []);
 
   const handleAddAdmin = async (e) => {
@@ -275,24 +292,27 @@ export default function AdminManagement() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            <tr className="hover:bg-slate-50 transition-colors">
-              <td className="p-4 text-sm text-slate-500 font-medium">Just now</td>
-              <td className="p-4 text-sm font-bold text-slate-800">sparkhire.sterling@gmail.com</td>
-              <td className="p-4"><span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md">VIEW_TELEMETRY</span></td>
-              <td className="p-4 text-sm text-slate-500">System Health Dashboard</td>
-            </tr>
-            <tr className="hover:bg-slate-50 transition-colors">
-              <td className="p-4 text-sm text-slate-500 font-medium">2 hours ago</td>
-              <td className="p-4 text-sm font-bold text-slate-800">sparkhire.sterling@gmail.com</td>
-              <td className="p-4"><span className="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-md">GRANT_ACCESS</span></td>
-              <td className="p-4 text-sm text-slate-500">new.hr@example.com</td>
-            </tr>
-            <tr className="hover:bg-slate-50 transition-colors">
-              <td className="p-4 text-sm text-slate-500 font-medium">1 day ago</td>
-              <td className="p-4 text-sm font-bold text-slate-800">sparkhire.sterling@gmail.com</td>
-              <td className="p-4"><span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-md">GENERATE_REPORT</span></td>
-              <td className="p-4 text-sm text-slate-500">Candidate CAN0021</td>
-            </tr>
+            {auditLogs.length === 0 ? (
+              <tr><td colSpan="4" className="p-8 text-center text-slate-500 font-medium text-sm">No activity recorded yet.</td></tr>
+            ) : (
+              auditLogs.map((log) => (
+                <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="p-4 text-sm text-slate-500 font-medium">{log.timestamp}</td>
+                  <td className="p-4 text-sm font-bold text-slate-800">{log.admin_email}</td>
+                  <td className="p-4">
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${
+                      log.action_type.includes('GRANT') ? 'text-green-600 bg-green-50' :
+                      log.action_type.includes('REVOKE') ? 'text-red-600 bg-red-50' :
+                      log.action_type.includes('LOGIN') ? 'text-blue-600 bg-blue-50' :
+                      'text-purple-600 bg-purple-50'
+                    }`}>
+                      {log.action_type}
+                    </span>
+                  </td>
+                  <td className="p-4 text-sm text-slate-500">{log.target || "-"}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
