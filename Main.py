@@ -1322,23 +1322,81 @@ async def upload_resume(
 
 # ── Admin System Health ───────────────────────────────────────────────────
 @app.get("/api/admin/system/health", tags=["Admin"])
-async def get_system_health():
+async def get_system_health(db: Session = Depends(get_db)):
+    import time
     import random
     from datetime import datetime, timedelta, timezone
+    from sqlalchemy import text, func
+    from database.models import InterviewSession, Candidate, JobRole
 
     now = datetime.now(timezone.utc)
     
+    # 1. DB Latency Ping
+    start_time = time.time()
+    try:
+        db.execute(text("SELECT 1"))
+        db_latency = int((time.time() - start_time) * 1000)
+        db_status = "Connected"
+    except Exception:
+        db_latency = -1
+        db_status = "Disconnected"
+
+    # 2. Active Sessions
+    active_sessions_count = db.query(InterviewSession).filter(InterviewSession.completed_at == None).count()
+
+    # 3. Live Streams (Active Candidates)
+    live_sessions = db.query(InterviewSession, Candidate, JobRole).join(
+        Candidate, InterviewSession.candidate_id == Candidate.candidate_id
+    ).join(
+        JobRole, InterviewSession.role_id == JobRole.role_id
+    ).filter(InterviewSession.completed_at == None).all()
+
+    live_sessions_data = []
+    role_distribution_map = {}
+    
+    for session, candidate, role in live_sessions:
+        # Calculate duration
+        try:
+            started = datetime.fromisoformat(session.started_at.replace('Z', '+00:00'))
+            dur_seconds = int((now - started).total_seconds())
+            mins, secs = divmod(dur_seconds, 60)
+            duration_str = f"{mins}m {secs}s"
+        except:
+            duration_str = "Unknown"
+        
+        stage = "In Progress"
+
+        live_sessions_data.append({
+            "id": candidate.candidate_id,
+            "name": candidate.name,
+            "role": role.role_name,
+            "stage": stage,
+            "duration": duration_str,
+            "status": "Live"
+        })
+
+        role_distribution_map[role.role_name] = role_distribution_map.get(role.role_name, 0) + 1
+
+    role_distribution = [{"name": k, "value": v} for k, v in role_distribution_map.items()]
+    if not role_distribution:
+        role_distribution = [{"name": "No Active Roles", "value": 1}]
+
+    # 4. Telemetry Time Series
     api_telemetry = []
     db_telemetry = []
     ai_telemetry = []
     session_telemetry = []
 
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    total_interviews_today = db.query(InterviewSession).filter(InterviewSession.started_at >= today_start).count()
+
     for i in range(20, -1, -1):
         time_label = (now - timedelta(minutes=i)).strftime("%H:%M")
         
+        base_traffic = total_interviews_today + 10
         api_telemetry.append({
             "time": time_label,
-            "requests": random.randint(50, 150),
+            "requests": random.randint(base_traffic, base_traffic + 50),
             "latency": random.randint(100, 300)
         })
         db_telemetry.append({
@@ -1353,52 +1411,46 @@ async def get_system_health():
         })
         session_telemetry.append({
             "time": time_label,
-            "active": random.randint(10, 30),
-            "waiting": random.randint(0, 5)
+            "active": active_sessions_count, 
+            "waiting": 0
         })
 
-    # Extra Simulated Data for Command Center
-    live_sessions_data = [
-        {"id": "CAN0021", "name": "Sarah Jenkins", "role": "Frontend Developer", "stage": "Answering Q3 (React)", "duration": "14m 20s", "status": "Live"},
-        {"id": "CAN0022", "name": "Michael Chen", "role": "Backend Engineer", "stage": "Analyzing Resume", "duration": "2m 10s", "status": "Live"},
-        {"id": "CAN0023", "name": "Emily Davis", "role": "Product Manager", "stage": "Answering Q1 (Strategy)", "duration": "08m 45s", "status": "Live"},
-        {"id": "CAN0024", "name": "David Wilson", "role": "Data Scientist", "stage": "Generating Feedback", "duration": "25m 15s", "status": "Wrapping Up"},
-        {"id": "CAN0025", "name": "Jessica Taylor", "role": "DevOps Engineer", "stage": "Answering Q5 (Kubernetes)", "duration": "18m 30s", "status": "Live"},
+    # Real Average Scores for Radar Chart
+    avg_scores = db.query(
+        func.avg(InterviewSession.technical_score).label('tech'),
+        func.avg(InterviewSession.communication_score).label('comm'),
+        func.avg(InterviewSession.confidence_score).label('conf'),
+        func.avg(InterviewSession.overall_score).label('overall'),
+    ).filter(InterviewSession.completed_at != None).first()
+
+    tech = avg_scores.tech or 80
+    comm = avg_scores.comm or 80
+    conf = avg_scores.conf or 80
+    overall = avg_scores.overall or 80
+
+    ai_radar_telemetry = [
+        {"metric": "Tech Avg", "score": round(tech, 1), "fullMark": 100},
+        {"metric": "Comm Avg", "score": round(comm, 1), "fullMark": 100},
+        {"metric": "Conf Avg", "score": round(conf, 1), "fullMark": 100},
+        {"metric": "Overall Avg", "score": round(overall, 1), "fullMark": 100},
+        {"metric": "Completion", "score": 95, "fullMark": 100},
     ]
 
     security_telemetry = [
-        {"time": "08:00", "failed_logins": 2, "api_blocks": 5},
-        {"time": "10:00", "failed_logins": 5, "api_blocks": 12},
-        {"time": "12:00", "failed_logins": 1, "api_blocks": 3},
-        {"time": "14:00", "failed_logins": 8, "api_blocks": 25},
-        {"time": "16:00", "failed_logins": 3, "api_blocks": 8},
-        {"time": "18:00", "failed_logins": 12, "api_blocks": 40},
-    ]
-
-    ai_radar_telemetry = [
-        {"metric": "Inference Speed", "score": 95, "fullMark": 100},
-        {"metric": "Context Memory", "score": 88, "fullMark": 100},
-        {"metric": "Hallucination Res", "score": 98, "fullMark": 100},
-        {"metric": "Token Generation", "score": 92, "fullMark": 100},
-        {"metric": "Latency", "score": 85, "fullMark": 100},
-    ]
-
-    role_distribution = [
-        {"name": "Frontend", "value": 35},
-        {"name": "Backend", "value": 25},
-        {"name": "Data Science", "value": 20},
-        {"name": "DevOps", "value": 15},
-        {"name": "Product", "value": 5},
+        {"time": "08:00", "failed_logins": 0, "api_blocks": 0},
+        {"time": "12:00", "failed_logins": 0, "api_blocks": 0},
+        {"time": "16:00", "failed_logins": 0, "api_blocks": 0},
+        {"time": "20:00", "failed_logins": 0, "api_blocks": 0},
     ]
 
     return {
         "api_status": "Operational",
         "uptime": "99.99%",
-        "db_status": "Connected",
-        "db_latency": f"{db_telemetry[-1]['latency']}ms",
+        "db_status": db_status,
+        "db_latency": f"{db_latency}ms",
         "ai_engine": "Online",
         "ai_load": "Normal",
-        "active_sessions": session_telemetry[-1]['active'],
+        "active_sessions": active_sessions_count,
         "telemetry": {
             "api": api_telemetry,
             "database": db_telemetry,

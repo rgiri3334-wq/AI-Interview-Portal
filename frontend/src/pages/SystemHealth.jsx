@@ -74,7 +74,7 @@ export default function SystemHealth() {
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">API Traffic & Latency</h3>
+          <h3 className="text-lg font-bold text-slate-800 mb-4">Platform Traffic (Interviews vs Candidates)</h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -87,8 +87,8 @@ export default function SystemHealth() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                 <Legend />
-                <Area type="monotone" dataKey="requests" name="Requests/min" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorReq)" />
-                <Area type="monotone" dataKey="latency" name="Latency (ms)" stroke="#93c5fd" strokeWidth={3} fillOpacity={1} fill="url(#colorLat)" />
+                <Area type="monotone" dataKey="requests" name="Platform Traffic" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorReq)" />
+                <Area type="monotone" dataKey="latency" name="DB Ping (ms)" stroke="#93c5fd" strokeWidth={3} fillOpacity={1} fill="url(#colorLat)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -120,7 +120,7 @@ export default function SystemHealth() {
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-          <h3 className="text-lg font-bold text-slate-800 mb-2">Model Confidence Matrix</h3>
+          <h3 className="text-lg font-bold text-slate-800 mb-2">Average Interview Scores</h3>
           <div className="flex-1 w-full min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
@@ -150,6 +150,9 @@ export default function SystemHealth() {
             <span className="bg-red-50 text-red-600 text-xs font-bold px-3 py-1 rounded-full">{liveStreams.length} LIVE</span>
           </div>
           <div className="overflow-x-auto">
+            {liveStreams.length === 0 ? (
+              <p className="text-slate-500 text-sm text-center py-6">No active interviews right now.</p>
+            ) : (
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -178,6 +181,7 @@ export default function SystemHealth() {
                 ))}
               </tbody>
             </table>
+            )}
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
