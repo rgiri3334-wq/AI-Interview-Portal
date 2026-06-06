@@ -834,6 +834,17 @@ async def get_candidate(candidate_id: str, db: Session = Depends(get_db)):
         "interviews": interviews
     }
 
+@app.delete("/api/candidates/{candidate_id}", tags=["Candidates"])
+async def delete_candidate(candidate_id: str, db: Session = Depends(get_db)):
+    cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
+    if not cand:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    # SQLAlchemy will handle cascade deletes if configured, otherwise we delete the candidate
+    db.delete(cand)
+    db.commit()
+    return {"status": "success", "message": "Candidate deleted successfully"}
+
 @app.post("/api/candidates/{candidate_id}/apply", tags=["Candidates"])
 async def apply_for_role(candidate_id: str, data: ApplicationCreate, db: Session = Depends(get_db)):
     cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
