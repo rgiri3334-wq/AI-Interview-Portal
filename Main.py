@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from database.database import Base, engine, get_db
-from database.models import Department, JobRole, Candidate, Resume, InterviewSession, QuestionBank, InterviewQuestionsLog, CandidateAnswer, KeywordEvaluation, QuestionEvaluation, ConversationHistory, FinalReport, StatusLookup, GlobalConfig, OTPStore, AdminUser
+from database.models import Department, JobRole, Candidate, Resume, InterviewSession, QuestionBank, InterviewQuestionsLog, CandidateAnswer, KeywordEvaluation, QuestionEvaluation, ConversationHistory, FinalReport, StatusLookup, GlobalConfig, OTPStore, AdminUser, SystemTelemetryLog, AdminActivityLog, SecurityEventLog
 from database.db_utils import generate_enterprise_id
 
 # ── Service Layer ─────────────────────────────────────────────────────────
@@ -1500,10 +1500,10 @@ async def get_system_health(db: Session = Depends(get_db)):
         func.avg(InterviewSession.overall_score).label('overall'),
     ).filter(InterviewSession.completed_at != None).first()
 
-    tech = avg_scores.tech or 80
-    comm = avg_scores.comm or 80
-    conf = avg_scores.conf or 80
-    overall = avg_scores.overall or 80
+    tech = avg_scores.tech if avg_scores and avg_scores.tech is not None else 80
+    comm = avg_scores.comm if avg_scores and avg_scores.comm is not None else 80
+    conf = avg_scores.conf if avg_scores and avg_scores.conf is not None else 80
+    overall = avg_scores.overall if avg_scores and avg_scores.overall is not None else 80
 
     ai_radar_telemetry = [
         {"metric": "Tech Avg", "score": round(tech, 1), "fullMark": 100},

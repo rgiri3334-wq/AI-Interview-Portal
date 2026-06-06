@@ -378,7 +378,7 @@ def _local_score_resume(resume_text: str, job_role: str) -> dict:
         project_score   * 0.15 +
         quality_score   * 0.10
     )
-    final_score = int(round(final_score))
+    final_score = round(final_score)
     final_score = max(10, min(98, final_score))  # Clamp: 10–98
 
     # ── Recommendation Logic ────────────────────────────────────────────
