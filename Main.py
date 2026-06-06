@@ -1462,22 +1462,32 @@ async def get_system_health(db: Session = Depends(get_db)):
 
     # 4. Telemetry Time Series (Query real DB logs)
     telemetry_logs = db.query(SystemTelemetryLog).order_by(SystemTelemetryLog.timestamp.desc()).limit(20).all()
-    api_telemetry = []
+    telemetry_logs.reverse() # Chronological order
     
-    if telemetry_logs:
-        for log in reversed(telemetry_logs):
-            try:
-                t = datetime.fromisoformat(log.timestamp.replace('Z', '+00:00')).strftime("%H:%M")
-            except:
-                t = "00:00"
-            api_telemetry.append({
-                "time": t,
-                "requests": log.api_requests_count,
-                "latency": log.db_latency_ms
-            })
-    else:
-        # Fallback if table is empty (will populate within 5 mins)
-        api_telemetry = [{"time": now.strftime("%H:%M"), "requests": 0, "latency": db_latency}]
+    api_telemetry = []
+    ai_telemetry = []
+    
+    # Pad with empty data if we have less than 20 points so the chart renders correctly
+    points_needed = 20 - len(telemetry_logs)
+    for i in range(points_needed, 0, -1):
+        t_label = (now - timedelta(minutes=i*5)).strftime("%H:%M")
+        api_telemetry.append({"time": t_label, "requests": 0, "latency": 0})
+        ai_telemetry.append({"time": t_label, "tokens": 0})
+        
+    for log in telemetry_logs:
+        try:
+            t = datetime.fromisoformat(log.timestamp.replace('Z', '+00:00')).strftime("%H:%M")
+        except:
+            t = "00:00"
+        api_telemetry.append({
+            "time": t,
+            "requests": log.api_requests_count,
+            "latency": log.db_latency_ms
+        })
+        ai_telemetry.append({
+            "time": t,
+            "tokens": log.ai_tokens_generated
+        })
 
     # 5. Security & Auth Chart (Query real Security Logs)
     security_events = db.query(
@@ -1486,11 +1496,16 @@ async def get_system_health(db: Session = Depends(get_db)):
     ).filter(SecurityEventLog.event_type == "FAILED_LOGIN").group_by("hour").all()
     
     security_telemetry = []
-    if security_events:
-        for hour, count in security_events:
-            security_telemetry.append({"time": f"{hour}:00", "failed_logins": count, "api_blocks": 0})
-    else:
-        security_telemetry = [{"time": now.strftime("%H:00"), "failed_logins": 0, "api_blocks": 0}]
+    sec_map = {hour: count for hour, count in security_events}
+    
+    # Pad last 4 hours
+    for i in range(3, -1, -1):
+        h = (now - timedelta(hours=i)).strftime("%H")
+        security_telemetry.append({
+            "time": f"{h}:00",
+            "failed_logins": sec_map.get(h, 0),
+            "api_blocks": 0
+        })
 
     # 6. Real Average Scores for Radar Chart
     avg_scores = db.query(
@@ -1524,7 +1539,7 @@ async def get_system_health(db: Session = Depends(get_db)):
         "telemetry": {
             "api": api_telemetry,
             "database": [], # Unused in frontend currently
-            "ai": [], # Unused
+            "ai": ai_telemetry,
             "sessions": [], # Unused
             "security": security_telemetry,
             "ai_radar": ai_radar_telemetry,
