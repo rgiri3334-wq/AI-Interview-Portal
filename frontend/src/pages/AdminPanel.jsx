@@ -188,8 +188,6 @@ export default function AdminPanel() {
       }
     } catch (e) {
       console.error(e);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -213,10 +211,13 @@ export default function AdminPanel() {
     const initData = async () => {
       try {
         await Promise.all([fetchQuestions(), fetchConfigs(), fetchPipeline()]);
+        setLoading(false);
       } catch (err) {
         if (retries > 0) {
           retries -= 1;
           setTimeout(initData, 1000);
+        } else {
+          setLoading(false);
         }
       }
     };
