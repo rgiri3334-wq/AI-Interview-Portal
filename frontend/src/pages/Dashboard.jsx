@@ -256,9 +256,9 @@ function CandidateListModal({ filter, leaderboard, onClose, onNavigate }) {
   if (filter === 'INTERVIEWED') {
     filtered = leaderboard.filter(c => c.interview_status === 'completed' || c.global_score > 0);
     title = "Interviews Done";
-  } else if (filter === 'HIRED') {
-    filtered = leaderboard.filter(c => c.hiring_decision === 'HIRED');
-    title = "Offers Extended";
+  } else if (filter === 'PENDING') {
+    filtered = leaderboard.filter(c => c.interview_status === 'completed' && (!c.hiring_decision || c.hiring_decision === 'PENDING'));
+    title = "Pending Review";
   } else if (filter === 'SHORTLISTED') {
     filtered = leaderboard.filter(c => c.hiring_decision === 'SHORTLISTED');
     title = "Shortlisted Candidates";
@@ -422,7 +422,7 @@ export default function Dashboard() {
   }
 
   const d = dashData || {};
-  const hired = leaderboard.filter(c => c?.hiring_decision === 'HIRED').length;
+  const pendingReview = leaderboard.filter(c => c?.interview_status === 'completed' && (!c?.hiring_decision || c?.hiring_decision === 'PENDING')).length;
   const shortlisted = leaderboard.filter(c => c?.hiring_decision === 'SHORTLISTED').length;
 
   const avg = (key) => {
@@ -514,7 +514,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   <StatCard icon={Users} label="Total Candidates" value={d.total_candidates || 0} colorHex="#475569" delay={0} onClick={() => setModalFilter('ALL')} />
                   <StatCard icon={CheckCircle} label="Interviews Done" value={d.interviews_completed || 0} colorHex="#ef4444" delay={0.05} onClick={() => setModalFilter('INTERVIEWED')} />
-                  <StatCard icon={Trophy} label="Offers Extended" value={hired} colorHex="#dc2626" delay={0.10} onClick={() => setModalFilter('HIRED')} />
+                  <StatCard icon={Clock} label="Pending Review" value={pendingReview} colorHex="#d97706" delay={0.10} onClick={() => setModalFilter('PENDING')} />
                   <StatCard icon={Target} label="Shortlisted" value={shortlisted} colorHex="#991b1b" delay={0.15} onClick={() => setModalFilter('SHORTLISTED')} />
                 </div>
 
