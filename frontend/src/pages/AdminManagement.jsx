@@ -368,13 +368,11 @@ export default function AdminManagement() {
     let date = new Date(dateString);
     
     if (isNaN(date.getTime())) {
-      // Fallback manual parsing: strictly extract YYYY-MM-DDTHH:mm:ss and force UTC 'Z'
-      // This bypasses Safari/older browser bugs with microseconds or '+00:00' offsets
       const cleanDate = String(dateString).replace(' ', 'T').substring(0, 19) + 'Z';
       date = new Date(cleanDate);
     }
     
-    if (isNaN(date.getTime())) return 'Invalid Date';
+    if (isNaN(date.getTime())) return `Invalid: ${dateString}`;
 
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
