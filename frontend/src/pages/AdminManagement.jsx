@@ -362,26 +362,7 @@ export default function AdminManagement() {
     return 'bg-purple-100 border-purple-200';
   };
 
-  const formatRelativeTime = (dateString) => {
-    if (!dateString) return 'Unknown Date';
-    
-    let date = new Date(dateString);
-    
-    if (isNaN(date.getTime())) {
-      const cleanDate = String(dateString).replace(' ', 'T').substring(0, 19) + 'Z';
-      date = new Date(cleanDate);
-    }
-    
-    if (isNaN(date.getTime())) return `Invalid: ${dateString}`;
 
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
-    
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    return date.toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'});
-  };
 
   const renderAuditTab = () => (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="max-w-3xl mx-auto">
@@ -424,7 +405,7 @@ export default function AdminManagement() {
                         </span>
                       </div>
                       <span className="text-xs font-bold text-slate-400 bg-white px-2 py-1 rounded-md border border-slate-100">
-                        {formatRelativeTime(log.timestamp)}
+                        {log.timestamp}
                       </span>
                     </div>
                     {log.target && (
