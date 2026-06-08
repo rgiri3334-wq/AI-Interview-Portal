@@ -366,7 +366,11 @@ export default function AdminManagement() {
     if (!dateString) return 'Unknown Date';
     // Standardize sqlite datetime strings by replacing space with T if missing
     let normalizedDate = dateString.includes('T') ? dateString : dateString.replace(' ', 'T');
-    if (!normalizedDate.endsWith('Z') && !normalizedDate.includes('+')) {
+    
+    // Truncate microseconds to milliseconds to prevent Invalid Date in some JS engines
+    normalizedDate = normalizedDate.replace(/(\.\d{3})\d+/, '$1');
+
+    if (!normalizedDate.endsWith('Z') && !normalizedDate.includes('+') && !normalizedDate.includes('-')) {
       normalizedDate += 'Z'; // Assume UTC if not specified
     }
     const date = new Date(normalizedDate);
