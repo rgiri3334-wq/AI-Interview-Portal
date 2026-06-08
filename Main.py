@@ -1649,6 +1649,22 @@ async def get_leaderboard(db: Session = Depends(get_db)):
     ranked = rank_candidates(candidates)
     return {"total": len(ranked), "candidates": ranked}
 
+@app.delete("/api/candidates/{candidate_id}", tags=["Admin"])
+async def delete_candidate(candidate_id: str, db: Session = Depends(get_db)):
+    c = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    # Due to cascade delete settings in models, deleting the candidate will 
+    # automatically delete all associated records (resumes, interviews, reports, etc.)
+    try:
+        db.delete(c)
+        db.commit()
+        return {"status": "success", "message": f"Candidate {candidate_id} deleted."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ── AI Engine: Smart Question Generation ─────────────────────────────────
 
 @app.post("/generate-question", response_model=QuestionResponse, tags=["AI Engine"])

@@ -509,10 +509,10 @@ export default function AdminPanel() {
             </div>
             
             <button 
-              onClick={() => navigate('/system-health')}
+              onClick={() => { setLoading(true); fetchPipeline().then(() => setLoading(false)); }}
               className="px-6 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] active:scale-95"
             >
-              System Health <ArrowRight size={18} />
+              Refresh <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
             </button>
           </div>
 
@@ -885,12 +885,12 @@ export default function AdminPanel() {
                                 <span className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-widest">{c.job_role}</span>
                               </td>
                               <td className="p-5">
-                                <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase border ${c.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                                  {c.status}
+                                <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase border ${c.interview_status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                  {c.interview_status === 'completed' ? 'COMPLETED' : 'PENDING'}
                                 </span>
                               </td>
                               <td className="p-5">
-                                {c.status === 'COMPLETED' ? (
+                                {c.interview_status === 'completed' ? (
                                   <span className={`w-8 h-8 flex items-center justify-center rounded-xl border font-black text-sm shadow-sm ${g.color}`}>
                                     {g.letter}
                                   </span>
@@ -899,7 +899,7 @@ export default function AdminPanel() {
                                 )}
                               </td>
                               <td className="p-5">
-                                {c.status === 'COMPLETED' ? (
+                                {c.interview_status === 'completed' ? (
                                   <div className="flex items-center gap-3">
                                     <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
                                       <div className={`h-full ${g.color.split(' ')[0]} ${g.color.split(' ')[1].replace('text-', 'bg-')}`} style={{width: `${c.global_score}%`}} />
@@ -914,8 +914,8 @@ export default function AdminPanel() {
                                 <div className="flex items-center justify-end gap-2">
                                   <button 
                                     onClick={() => handleViewDossier(c.id)}
-                                    disabled={c.status !== 'COMPLETED'}
-                                    className={`px-4 py-2.5 flex items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider ${c.status === 'COMPLETED' ? 'bg-white border border-slate-200 hover:border-red-300 text-slate-700 hover:text-red-600' : 'bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed'}`}
+                                    disabled={c.interview_status !== 'completed'}
+                                    className={`px-4 py-2.5 flex items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider ${c.interview_status === 'completed' ? 'bg-white border border-slate-200 hover:border-red-300 text-slate-700 hover:text-red-600' : 'bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed'}`}
                                   >
                                     <FileText size={14} /> Dossier
                                   </button>
