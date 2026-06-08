@@ -364,16 +364,16 @@ export default function AdminManagement() {
 
   const formatRelativeTime = (dateString) => {
     if (!dateString) return 'Unknown Date';
-    // Standardize sqlite datetime strings by replacing space with T if missing
-    let normalizedDate = dateString.includes('T') ? dateString : dateString.replace(' ', 'T');
     
-    // Truncate microseconds to milliseconds to prevent Invalid Date in some JS engines
-    normalizedDate = normalizedDate.replace(/(\.\d{3})\d+/, '$1');
-
-    if (!normalizedDate.endsWith('Z') && !normalizedDate.includes('+') && !normalizedDate.includes('-')) {
-      normalizedDate += 'Z'; // Assume UTC if not specified
+    let date = new Date(dateString);
+    
+    if (isNaN(date.getTime())) {
+      // Fallback manual parsing: strictly extract YYYY-MM-DDTHH:mm:ss and force UTC 'Z'
+      // This bypasses Safari/older browser bugs with microseconds or '+00:00' offsets
+      const cleanDate = String(dateString).replace(' ', 'T').substring(0, 19) + 'Z';
+      date = new Date(cleanDate);
     }
-    const date = new Date(normalizedDate);
+    
     if (isNaN(date.getTime())) return 'Invalid Date';
 
     const now = new Date();
