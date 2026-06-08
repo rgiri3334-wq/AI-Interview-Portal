@@ -195,12 +195,17 @@ export default function AdminPanel() {
 
   const fetchPipeline = async () => {
     try {
-      const res = await customFetch(`${API_BASE}/admin/pipeline`);
+      const res = await customFetch(`${API_BASE}/leaderboard`);
       if (res.ok) {
         const data = await res.json();
-        setPipeline(data);
+        // The leaderboard endpoint returns { total, candidates }
+        setPipeline(data.candidates || []);
+      } else {
+        console.error("Failed to fetch pipeline, status:", res.status);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error fetching pipeline:", e);
+    }
   };
 
   useEffect(() => {
