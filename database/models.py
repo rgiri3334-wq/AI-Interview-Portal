@@ -46,7 +46,7 @@ class Candidate(Base):
     # New OTP-authenticated candidates will have this as None.
     password_hash = Column(String, nullable=True)
     is_verified = Column(Boolean, default=False)  # True after first OTP verification
-    registration_date = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    registration_date = Column(String, index=True, default=lambda: datetime.now(timezone.utc).isoformat())
 
     resumes = relationship("Resume", back_populates="candidate", cascade="all, delete-orphan")
     interviews = relationship("InterviewSession", back_populates="candidate", cascade="all, delete-orphan")
