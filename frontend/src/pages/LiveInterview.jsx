@@ -694,7 +694,7 @@ export default function LiveInterview() {
             </div>
             <div className="text-center">
               <p className="text-sm font-bold text-slate-700">Your AI Interviewer</p>
-              <p className="text-xs text-slate-500 mt-0.5">Sterling AI · HR Excellence Division</p>
+              <p className="text-xs text-slate-500 mt-0.5">Sterling E Mobility · HR Excellence Division</p>
             </div>
           </div>
 
@@ -708,7 +708,7 @@ export default function LiveInterview() {
                 <div className="hidden w-7 h-7 bg-red-600 text-white items-center justify-center font-bold text-xs">Sterling</div>
               </div>
               <div>
-                <div className="text-xs font-bold tracking-widest text-slate-500 uppercase">Sterling AI</div>
+                <div className="text-xs font-bold tracking-widest text-slate-500 uppercase">Sterling E Mobility</div>
                 <div className="text-xs text-slate-400">AI Interview Platform</div>
               </div>
             </div>
@@ -719,7 +719,7 @@ export default function LiveInterview() {
             <p className="text-slate-500 text-sm mb-6">
               {phase === 'ready'
                 ? `Role: ${jobRole} · Your interviewer is ready and waiting.`
-                : 'Initializing Sterling AI models and behavioral telemetry...'}
+                : 'Initializing Sterling E Mobility models and behavioral telemetry...'}
             </p>
 
             {/* Readiness checklist */}
