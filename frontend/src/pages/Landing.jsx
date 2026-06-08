@@ -73,8 +73,8 @@ export default function Landing() {
             <button className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors" onClick={() => navigate('/dashboard')}>
               Dashboard
             </button>
-            <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded text-sm transition-all shadow-md shadow-red-600/20" onClick={() => navigate('/candidate-register')}>
-              Start Now
+            <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded text-sm transition-all shadow-md shadow-red-600/20" onClick={() => navigate('/admin')}>
+              Control Panel
             </button>
           </div>
         </div>
@@ -104,16 +104,23 @@ export default function Landing() {
             <motion.button
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
               className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-lg text-lg transition-all shadow-xl shadow-red-600/30 flex items-center gap-3 uppercase tracking-wider"
-              onClick={() => navigate('/candidate-register')}
+              onClick={() => navigate('/admin')}
             >
-              Begin Interview <ArrowRight size={20} />
+              Control Panel <ArrowRight size={20} />
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
               className="bg-white hover:bg-slate-50 text-slate-900 font-bold py-4 px-10 rounded-lg text-lg transition-all border border-slate-200 shadow-sm flex items-center gap-3 uppercase tracking-wider"
               onClick={() => navigate('/dashboard')}
             >
-              View Dashboard
+              HR Dashboard
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+              className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-10 rounded-lg text-lg transition-all shadow-xl shadow-slate-900/30 flex items-center gap-3 uppercase tracking-wider"
+              onClick={() => navigate('/system-health')}
+            >
+              System Health
             </motion.button>
           </div>
 
@@ -205,20 +212,20 @@ export default function Landing() {
           
           <Zap size={48} className="text-white mb-6 relative z-10" />
           <h2 className="text-3xl md:text-4xl font-extrabold mb-4 tracking-tight relative z-10 text-white">
-            Ready to Transform Hiring?
+            Ready to Manage Operations?
           </h2>
           <p className="text-red-100 text-lg mb-8 max-w-lg relative z-10">
-            Start your first AI interview in under 60 seconds. No setup required.
+            Access enterprise root controls, manage candidate pipelines, and review system telemetry in real-time.
           </p>
           <div className="flex flex-wrap justify-center gap-6 mb-10 relative z-10">
-            {['Technical Scoring', 'Emotion Analysis', 'Voice Analytics'].map((f) => (
+            {['Pipeline Control', 'System Telemetry', 'Role Configurator'].map((f) => (
               <div key={f} className="flex items-center gap-2 text-sm text-red-50 font-bold tracking-wide">
                 <CheckCircle size={16} className="text-white" /> {f}
               </div>
             ))}
           </div>
-          <button className="bg-white hover:bg-slate-50 text-red-700 font-black py-4 px-10 rounded-lg text-lg transition-all shadow-lg flex items-center gap-3 uppercase tracking-wider relative z-10" onClick={() => navigate('/candidate-register')}>
-            Launch Interview <ArrowRight size={20} />
+          <button className="bg-white hover:bg-slate-50 text-red-700 font-black py-4 px-10 rounded-lg text-lg transition-all shadow-lg flex items-center gap-3 uppercase tracking-wider relative z-10" onClick={() => navigate('/admin')}>
+            Open Control Panel <ArrowRight size={20} />
           </button>
         </motion.div>
       </section>

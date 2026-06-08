@@ -509,10 +509,10 @@ export default function AdminPanel() {
             </div>
             
             <button 
-              onClick={() => navigate('/candidate')}
+              onClick={() => navigate('/system-health')}
               className="px-6 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] active:scale-95"
             >
-              Candidate View <ArrowRight size={18} />
+              System Health <ArrowRight size={18} />
             </button>
           </div>
 
