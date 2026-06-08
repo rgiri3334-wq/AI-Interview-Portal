@@ -47,16 +47,16 @@ const ManageableSelect = ({ label, options, value, onChange, onAdd, onDelete }) 
     <div>
       <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{label}</label>
       <div className="flex gap-2 mb-2">
-        <select value={value} onChange={onChange} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50 transition-all shadow-sm appearance-none cursor-pointer font-medium">
+        <select value={value} onChange={onChange} className="flex-1 h-[48px] bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm text-slate-900 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50 transition-all shadow-sm appearance-none cursor-pointer font-medium">
           {options.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
-        <button type="button" onClick={() => onDelete(value)} className="px-4 py-3 bg-white text-red-600 hover:bg-red-50 rounded-xl border border-slate-200 hover:border-red-200 transition-colors shadow-sm" title="Delete Selected">
+        <button type="button" onClick={() => onDelete(value)} className="px-4 h-[48px] bg-white text-red-600 hover:bg-red-50 rounded-xl border border-slate-200 hover:border-red-200 transition-colors shadow-sm" title="Delete Selected">
           <Trash2 size={18} />
         </button>
       </div>
       <div className="flex gap-2">
-        <input value={newVal} onChange={e => setNewVal(e.target.value)} placeholder={`New ${label}...`} className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50 transition-all shadow-sm font-medium" />
-        <button type="button" onClick={() => { if(newVal.trim()) { onAdd(newVal.trim()); setNewVal(''); } }} className="px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-bold transition-all shadow-sm whitespace-nowrap">
+        <input value={newVal} onChange={e => setNewVal(e.target.value)} placeholder={`New ${label}...`} className="flex-1 h-[48px] bg-white border border-slate-200 rounded-xl px-4 text-sm text-slate-900 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50 transition-all shadow-sm font-medium" />
+        <button type="button" onClick={() => { if(newVal.trim()) { onAdd(newVal.trim()); setNewVal(''); } }} className="px-6 h-[48px] bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-bold transition-all shadow-sm whitespace-nowrap">
           Add
         </button>
       </div>

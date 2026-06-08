@@ -362,15 +362,23 @@ export default function AdminManagement() {
     return 'bg-purple-100 border-purple-200';
   };
 
-  const formatRelativeTime = (isoString) => {
-    const date = new Date(isoString.replace('Z', '+00:00'));
+  const formatRelativeTime = (dateString) => {
+    if (!dateString) return 'Unknown Date';
+    // Standardize sqlite datetime strings by replacing space with T if missing
+    let normalizedDate = dateString.includes('T') ? dateString : dateString.replace(' ', 'T');
+    if (!normalizedDate.endsWith('Z') && !normalizedDate.includes('+')) {
+      normalizedDate += 'Z'; // Assume UTC if not specified
+    }
+    const date = new Date(normalizedDate);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
     
     if (diffInSeconds < 60) return 'Just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    return date.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+    return date.toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'});
   };
 
   const renderAuditTab = () => (
