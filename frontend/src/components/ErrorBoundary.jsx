@@ -88,7 +88,7 @@ export default class ErrorBoundary extends React.Component {
 
           {/* Footer */}
           <p className="mt-8 text-[11px] text-slate-500 flex items-center justify-center gap-2 font-medium tracking-wide uppercase">
-            <Brain size={12} /> Powered by Sterling E-Mobility Engine
+            <Brain size={12} /> Powered by Sterling AI Engine
           </p>
         </div>
       </div>

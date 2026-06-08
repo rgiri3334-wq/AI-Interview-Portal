@@ -57,18 +57,6 @@ JWT_SECRET = "STERLING_SECURE_JWT_SECRET_KEY_2026"
 # ── Database ──────────────────────────────────────────────────────────────
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
 
-
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-security = HTTPBearer()
-
-def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
-        return payload
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid JWT Token: {str(e)}")
-
-
 def init_db():
     Base.metadata.create_all(bind=engine)
     
@@ -423,7 +411,6 @@ class SaveInterviewRequest(BaseModel):
     summary:                 str   = Field(default="Interview completed.")
     strengths:               list[str] = Field(default_factory=list)
     weaknesses:              list[str] = Field(default_factory=list)
-    timeline_data:           list[dict] = Field(default_factory=list)
     overall_rating:          str   = Field(default="Average")
     hiring_recommendation:   str   = Field(default="Neutral")
     readiness_score:         int   = Field(default=0, ge=0, le=100)
@@ -563,22 +550,22 @@ async def register_candidate(request: Request, data: CandidateRegister, db: Sess
     
     return CandidateResponse(id=cid, name=data.name, email=data.email, phone=data.phone, created_at=str(new_cand.registration_date))
 
-
-_rate_limits = {}
-def check_rate_limit(ip: str, limit: int = 10, window: int = 60):
-    now = time.time()
-    if ip not in _rate_limits:
-        _rate_limits[ip] = []
-    _rate_limits[ip] = [ts for ts in _rate_limits[ip] if now - ts < window]
-    if len(_rate_limits[ip]) >= limit:
-        raise HTTPException(status_code=429, detail="Too many attempts. Please wait a minute.")
-    _rate_limits[ip].append(now)
-
+_login_rate_limit = {}
 
 @app.post("/api/auth/login", tags=["Auth"])
 async def login_candidate(request: Request, data: CandidateLogin, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else "127.0.0.1"
-    check_rate_limit(ip, limit=5, window=60)
+    now = time.time()
+    
+    if ip in _login_rate_limit:
+        _login_rate_limit[ip] = [ts for ts in _login_rate_limit[ip] if now - ts < 60]
+    else:
+        _login_rate_limit[ip] = []
+        
+    if len(_login_rate_limit[ip]) >= 100:
+        raise HTTPException(status_code=429, detail="Too many login attempts. Please wait a minute.")
+        
+    _login_rate_limit[ip].append(now)
 
     cand = db.query(Candidate).filter(Candidate.email == data.email.lower()).first()
     if not cand or not bcrypt.checkpw(data.password.encode(), cand.password_hash.encode('utf-8')):
@@ -587,9 +574,7 @@ async def login_candidate(request: Request, data: CandidateLogin, db: Session = 
     return {"status": "success", "candidate_id": cand.candidate_id, "name": cand.name}
 
 @app.post("/api/auth/admin-login", tags=["Auth"])
-async def admin_login(request: Request, data: CandidateLogin, db: Session = Depends(get_db)):
-    ip = request.client.host if request.client else "127.0.0.1"
-    check_rate_limit(ip, limit=5, window=60)
+async def admin_login(data: CandidateLogin, db: Session = Depends(get_db)):
     admin = db.query(AdminUser).filter(AdminUser.email == data.email.lower()).first()
     
     if admin and bcrypt.checkpw(data.password.encode(), admin.password_hash.encode('utf-8')):
@@ -606,7 +591,7 @@ async def admin_login(request: Request, data: CandidateLogin, db: Session = Depe
     raise HTTPException(status_code=401, detail="Invalid admin credentials")
 
 @app.post("/api/admin/users", response_model=AdminUserResponse, tags=["Admin"])
-async def create_admin_user(data: AdminUserCreate, req: Request, db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def create_admin_user(data: AdminUserCreate, req: Request, db: Session = Depends(get_db)):
     # Simple auth extraction if present
     auth_header = req.headers.get("Authorization")
     actor_email = "SYSTEM"
@@ -647,11 +632,11 @@ async def create_admin_user(data: AdminUserCreate, req: Request, db: Session = D
     return new_admin
 
 @app.get("/api/admin/users", response_model=list[AdminUserResponse], tags=["Admin"])
-async def get_admin_users(db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def get_admin_users(db: Session = Depends(get_db)):
     return db.query(AdminUser).all()
 
 @app.delete("/api/admin/users/{admin_id}", tags=["Admin"])
-async def delete_admin_user(admin_id: str, req: Request, db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def delete_admin_user(admin_id: str, req: Request, db: Session = Depends(get_db)):
     auth_header = req.headers.get("Authorization")
     actor_email = "SYSTEM"
     if auth_header and auth_header.startswith("Bearer "):
@@ -944,7 +929,7 @@ async def get_candidate(candidate_id: str, db: Session = Depends(get_db)):
     }
 
 @app.delete("/api/candidates/{candidate_id}", tags=["Candidates"])
-async def delete_candidate(candidate_id: str, db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def delete_candidate(candidate_id: str, db: Session = Depends(get_db)):
     cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
     if not cand:
         raise HTTPException(status_code=404, detail="Candidate not found")
@@ -990,7 +975,7 @@ async def apply_for_role(candidate_id: str, data: ApplicationCreate, db: Session
 # ── Admin Panel ───────────────────────────────────────────────────────────
 
 @app.get("/api/admin/questions", tags=["Admin"])
-async def get_admin_questions(db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def get_admin_questions(db: Session = Depends(get_db)):
     """Fetch all admin-defined questions."""
     rows = db.query(QuestionBank).all()
     return [{
@@ -1004,7 +989,7 @@ async def get_admin_questions(db: Session = Depends(get_db), current_admin: dict
     } for r in rows]
 
 @app.post("/api/admin/questions", tags=["Admin"])
-async def add_admin_question(data: AdminQuestion, db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def add_admin_question(data: AdminQuestion, db: Session = Depends(get_db)):
     """Add a new question to the admin question bank."""
     dept = db.query(Department).filter(Department.department_name == data.department).first()
     role = db.query(JobRole).filter(JobRole.role_name == data.role).first()
@@ -1139,7 +1124,7 @@ async def add_admin_questions_bulk(file: UploadFile = File(...), db: Session = D
     }
 
 @app.delete("/api/admin/questions/{q_id}", tags=["Admin"])
-async def delete_admin_question(q_id: str, db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def delete_admin_question(q_id: str, db: Session = Depends(get_db)):
     """Delete a question from the admin question bank."""
     q = db.query(QuestionBank).filter_by(question_id=q_id).first()
     if q:
@@ -1148,7 +1133,7 @@ async def delete_admin_question(q_id: str, db: Session = Depends(get_db), curren
     return {"status": "success"}
 
 @app.post("/api/admin/seed", tags=["Admin"])
-async def seed_admin_questions(db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def seed_admin_questions(db: Session = Depends(get_db)):
     """Seed the database with Sterling AI default roles and questions."""
     seed_data = [
         # EV Engineering
@@ -1270,12 +1255,12 @@ async def seed_admin_questions(db: Session = Depends(get_db), current_admin: dic
 # ── Admin Config ──────────────────────────────────────────────────────────
 
 @app.get("/api/admin/config/global/{key}", tags=["Admin"])
-async def get_global_config(key: str, db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def get_global_config(key: str, db: Session = Depends(get_db)):
     row = db.query(GlobalConfig).filter_by(key=key).first()
     return {"value": row.value if row else ""}
 
 @app.post("/api/admin/config/global", tags=["Admin"])
-async def set_global_config(req: GlobalConfigSet, db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def set_global_config(req: GlobalConfigSet, db: Session = Depends(get_db)):
     ts = datetime.now(timezone.utc).isoformat()
     row = db.query(GlobalConfig).filter_by(key=req.key).first()
     if row:
@@ -1287,7 +1272,7 @@ async def set_global_config(req: GlobalConfigSet, db: Session = Depends(get_db),
     return {"status": "success"}
 
 @app.get("/api/admin/config/role/{job_role:path}", tags=["Admin"])
-async def get_role_config(job_role: str, db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def get_role_config(job_role: str, db: Session = Depends(get_db)):
     row = db.query(JobRole).filter_by(role_name=job_role).first()
     if not row:
         return {
@@ -1305,7 +1290,7 @@ async def get_role_config(job_role: str, db: Session = Depends(get_db), current_
     }
 
 @app.post("/api/admin/config/role", tags=["Admin"])
-async def set_role_config(req: RoleConfigSet, db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def set_role_config(req: RoleConfigSet, db: Session = Depends(get_db)):
     row = db.query(JobRole).filter_by(role_name=req.job_role).first()
     if row:
         row.persona = req.persona  # type: ignore
@@ -1431,7 +1416,7 @@ async def upload_resume(
 
 # ── Admin System Health ───────────────────────────────────────────────────
 @app.get("/api/admin/system/health", tags=["Admin"])
-async def get_system_health(db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def get_system_health(db: Session = Depends(get_db)):
     import time
     from datetime import datetime, timedelta, timezone
     from sqlalchemy import text, func
@@ -1579,7 +1564,7 @@ async def get_system_health(db: Session = Depends(get_db), current_admin: dict =
     }
 
 @app.get("/api/admin/audit-logs", tags=["Admin"])
-async def get_audit_logs(db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def get_audit_logs(db: Session = Depends(get_db)):
     from database.models import AdminActivityLog
     logs = db.query(AdminActivityLog).order_by(AdminActivityLog.timestamp.desc()).limit(50).all()
     results = []
@@ -1607,7 +1592,7 @@ async def get_audit_logs(db: Session = Depends(get_db), current_admin: dict = De
 # ── Candidate Leaderboard ───────────────────────────────────────────────────────
 
 @app.get("/api/leaderboard", tags=["Recruiter"])
-async def get_leaderboard(db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def get_leaderboard(db: Session = Depends(get_db)):
     """Return all candidates ranked by global score. The recruiter's shortlist view."""
     cands = db.query(Candidate).order_by(Candidate.registration_date.desc()).all()
     candidates = []
@@ -1665,7 +1650,7 @@ async def get_leaderboard(db: Session = Depends(get_db), current_admin: dict = D
     return {"total": len(ranked), "candidates": ranked}
 
 @app.delete("/api/candidates/{candidate_id}", tags=["Admin"])
-async def delete_candidate(candidate_id: str, db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+async def delete_candidate(candidate_id: str, db: Session = Depends(get_db)):
     c = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Candidate not found")
@@ -1893,7 +1878,6 @@ async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Ses
     iv.technical_score = req.technical_score  # type: ignore
     iv.communication_score = req.communication  # type: ignore
     iv.behavioral_score = req.behavioral_score  # type: ignore
-    iv.eq_score = req.eq_score  # type: ignore
     iv.confidence_score = req.confidence  # type: ignore
     iv.problem_solving_score = req.problem_solving_score  # type: ignore
     iv.role_alignment_score = req.role_alignment_score  # type: ignore
@@ -1916,10 +1900,8 @@ async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Ses
         interview_id=iv.interview_id,
         overall_score=round(global_score, 1),
         recommendation=req.hiring_recommendation,
-        summary=req.summary,
         strengths=json.dumps(req.strengths),
         weaknesses=json.dumps(req.weaknesses),
-        timeline_data=json.dumps(req.timeline_data),
         hiring_decision=hiring.get("decision", "Neutral"),
         grade=grade,
         # Sprint 4: Persist integrity verdict from IntegrityEngine
@@ -1993,14 +1975,12 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
             "learning_potential": getattr(latest, "learning_potential_score", 0),
             "behavioral_score": latest.behavioral_score,
             "fluency_score": getattr(latest, "fluency_score", 0),
-            "summary": report.summary if report and report.summary else "Interview completed.", 
+            "summary": "Interview completed.", 
             "strengths": _safe_json_list(report.strengths if report else None), 
             "weaknesses": _safe_json_list(report.weaknesses if report else None),
-            "timeline": _safe_json_list(report.timeline_data if report else None),
             "overall_rating": "N/A", "hiring_recommendation": report.recommendation if report else "N/A", "readiness_score": 0,
             "proctoring_warnings": getattr(latest, "proctoring_warnings", 0), 
-            "proctoring_logs": [],
-            "timeline": [{"q": f"Q{i+1}", "score": round(q.technical_score / 10)} for i, q in enumerate(latest.question_evals)] if getattr(latest, "question_evals", None) else []
+            "proctoring_logs": []
         }
     else:
         iv = {
@@ -2035,8 +2015,7 @@ async def get_dashboard_data(db: Session = Depends(get_db)):
             "name": r.name,
             "job_role": (r_latest.role.role_name if (r_latest and r_latest.role) else ""),
             "email": r.email,
-            "created_at": r.registration_date,
-            "status": "Interview Done" if (r_latest and getattr(r_latest, "completed_at", None)) else "Pending"
+            "created_at": r.registration_date
         })
         
     return DashboardData(
@@ -2102,7 +2081,7 @@ async def websocket_interview(websocket: WebSocket, candidate_id: str):
                 emotion  = msg.get("emotion", "Neutral")
                 fillers  = detect_filler_words(answer)
                 wpm      = msg.get("wpm", 0)
-                await websocket.send_json({"type": "assessing", "message": "Sterling E-Mobility is evaluating your answer..."})
+                await websocket.send_json({"type": "assessing", "message": "Sterling AI is evaluating your answer..."})
                 try:
                     result = await assess_answer(
                         candidate_id=candidate_id,

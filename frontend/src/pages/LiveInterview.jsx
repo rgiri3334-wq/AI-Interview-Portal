@@ -95,26 +95,7 @@ export default function LiveInterview() {
   // Telemetry is now handled internally by Avatar3D to prevent 60FPS React re-renders on the main thread.
 
   const sendTelemetry = (metrics) => {
-    // console.debug("[Telemetry]", metrics);
-    if (phaseRef.current === 'interviewing') {
-      if (metrics.posture_violation) {
-        addProctoringLog("Posture violation detected: Unnecessary movement.");
-        recordIntegritySignal('posture_violation', { note: 'Candidate looking away or unauthorized posture movement.' });
-        setWarnings(w => {
-          const newW = w + 1;
-          setOverlayMsg(`PROCTORING WARNING (${newW}/3): STRICT POSTURE ENFORCEMENT. Please maintain correct posture.`);
-          if (newW >= 3) doEndInterview(historyRef.current);
-          return newW;
-        });
-      }
-      
-      if (metrics.eye_violation) {
-        addProctoringLog("Eye movement violation detected.");
-        recordIntegritySignal('eye_violation', { note: 'Suspicious eye movement detected.' });
-        // We don't necessarily increment warnings for eye movement immediately to give leniency, 
-        // but it still deducts marks in the Integrity Matrix.
-      }
-    }
+    console.debug("[Telemetry]", metrics);
   };
   const { getMetrics, stop: stopHuman } = useHumanBehavior(videoRef, sendTelemetry, { enabled: phase === 'interviewing' });
 
@@ -667,7 +648,6 @@ export default function LiveInterview() {
         summary: aiReport.synthesis || `Interview complete. ${h.length} questions answered.`,
         strengths: aiReport.identified_strengths || ['Code logic', 'Structured responses'],
         weaknesses: aiReport.optimization_areas || [],
-        timeline_data: h.map((entry, i) => ({ q: `Q${i+1}`, score: Math.round((entry.score || 0) / 10) })),
         proctoring_warnings: warnings,
         proctoring_logs: proctoringLogsRef.current,
         // Sprint 3: Integrity Engine fields
@@ -714,7 +694,7 @@ export default function LiveInterview() {
             </div>
             <div className="text-center">
               <p className="text-sm font-bold text-slate-700">Your AI Interviewer</p>
-              <p className="text-xs text-slate-500 mt-0.5">Sterling E-Mobility · HR Excellence Division</p>
+              <p className="text-xs text-slate-500 mt-0.5">Sterling AI · HR Excellence Division</p>
             </div>
           </div>
 
@@ -728,7 +708,7 @@ export default function LiveInterview() {
                 <div className="hidden w-7 h-7 bg-red-600 text-white items-center justify-center font-bold text-xs">Sterling</div>
               </div>
               <div>
-                <div className="text-xs font-bold tracking-widest text-slate-500 uppercase">Sterling E-Mobility</div>
+                <div className="text-xs font-bold tracking-widest text-slate-500 uppercase">Sterling AI</div>
                 <div className="text-xs text-slate-400">AI Interview Platform</div>
               </div>
             </div>
@@ -739,7 +719,7 @@ export default function LiveInterview() {
             <p className="text-slate-500 text-sm mb-6">
               {phase === 'ready'
                 ? `Role: ${jobRole} · Your interviewer is ready and waiting.`
-                : 'Initializing Sterling E-Mobility AI models and behavioral telemetry...'}
+                : 'Initializing Sterling AI models and behavioral telemetry...'}
             </p>
 
             {/* Readiness checklist */}

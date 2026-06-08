@@ -46,7 +46,7 @@ class Candidate(Base):
     # New OTP-authenticated candidates will have this as None.
     password_hash = Column(String, nullable=True)
     is_verified = Column(Boolean, default=False)  # True after first OTP verification
-    registration_date = Column(String, index=True, default=lambda: datetime.now(timezone.utc).isoformat())
+    registration_date = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
     resumes = relationship("Resume", back_populates="candidate", cascade="all, delete-orphan")
     interviews = relationship("InterviewSession", back_populates="candidate", cascade="all, delete-orphan")
@@ -93,7 +93,6 @@ class InterviewSession(Base):
     learning_potential_score = Column(Float, default=0.0)
     fluency_score = Column(Float, default=0.0)
     behavioral_score = Column(Float, default=0.0)
-    eq_score = Column(Float, default=0.0)
     recommendation = Column(String, nullable=True)
 
     candidate = relationship("Candidate", back_populates="interviews")
@@ -227,10 +226,8 @@ class FinalReport(Base):
     overall_score = Column(Float, default=0.0)
     grade = Column(String, nullable=True) # e.g., A, B, C
     recommendation = Column(String, nullable=True)
-    summary = Column(Text, nullable=True)
     strengths = Column(Text, default="[]")
     weaknesses = Column(Text, default="[]")
-    timeline_data = Column(Text, default="[]")
     hiring_decision = Column(String, default="PENDING")
     report_generated_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
     # Sprint 4: Integrity Engine fields (server_default ensures backward compat with existing rows)
