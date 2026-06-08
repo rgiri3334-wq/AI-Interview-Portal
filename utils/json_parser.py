@@ -57,6 +57,7 @@ def safe_parse_assessment_response(text: str) -> dict:
     if data and isinstance(data, dict):
         def clamp(v, lo, hi, default):
             try:
+                if v is None: return default
                 return max(lo, min(hi, int(v)))
             except (TypeError, ValueError):
                 return default
@@ -64,6 +65,12 @@ def safe_parse_assessment_response(text: str) -> dict:
             "technical_score":      clamp(data.get("technical_score"), 0, 10, 5),
             "communication_score":  clamp(data.get("communication_score"), 0, 100, 60),
             "confidence_score":     clamp(data.get("confidence_score"), 0, 100, 60),
+            "problem_solving_score": clamp(data.get("problem_solving_score"), 0, 100, 60),
+            "role_alignment_score":  clamp(data.get("role_alignment_score"), 0, 100, 60),
+            "professionalism_score": clamp(data.get("professionalism_score"), 0, 100, 60),
+            "learning_potential_score": clamp(data.get("learning_potential_score"), 0, 100, 60),
+            "behavioral_score":     clamp(data.get("behavioral_score") or data.get("eq_score"), 0, 100, 60),
+            "fluency_score":        clamp(data.get("fluency_score"), 0, 100, 60),
             "eq_feedback":          str(data.get("eq_feedback") or data.get("feedback") or "Assessment complete."),
             "strengths":            list(data.get("strengths") or []),
             "weaknesses":           list(data.get("weaknesses") or []),
@@ -78,6 +85,8 @@ def safe_parse_assessment_response(text: str) -> dict:
     return {
         "action": "skip",
         "technical_score": 0, "communication_score": 0, "confidence_score": 0,
+        "problem_solving_score": 0, "role_alignment_score": 0, "professionalism_score": 0,
+        "learning_potential_score": 0, "behavioral_score": 0, "fluency_score": 0,
         "eq_feedback": "I had trouble processing that response. Let's move on.",
         "strengths": [], "weaknesses": ["Answer depth could not be fully evaluated due to a processing error."],
         "repeated_words": [], "follow_up_question": "",

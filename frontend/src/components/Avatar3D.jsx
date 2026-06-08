@@ -191,7 +191,7 @@ export default function Avatar3D({
       {/* ── Name plate ─────────────────────────────────────────────── */}
       <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
         <div className="bg-slate-900/80 backdrop-blur-sm text-white text-[9px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-md shadow-lg">
-          Sterling AI Interviewer
+          Sterling E-Mobility Interviewer
         </div>
       </div>
     </div>

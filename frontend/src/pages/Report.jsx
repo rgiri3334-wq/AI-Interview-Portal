@@ -57,7 +57,7 @@ const radarFromReport = (r) => [
   { axis: 'EQ', value: r.eq_score || 88 },
 ];
 
-const barData = [
+const defaultBarData = [
   { q: 'Q1', score: 8 }, { q: 'Q2', score: 9 },
   { q: 'Q3', score: 10 }, { q: 'Q4', score: 9 },
   { q: 'Q5', score: 10 },
@@ -129,6 +129,7 @@ export default function Report() {
 
   const grade = overall >= 90 ? 'S' : overall >= 80 ? 'A' : overall >= 70 ? 'B' : overall >= 60 ? 'C' : 'F';
   const gradeColor = overall >= 80 ? '#10B981' : overall >= 60 ? '#DC2626' : '#991B1B';
+  const barData = (iv.timeline && iv.timeline.length > 0) ? iv.timeline : defaultBarData;
 
   const handleExport = () => {
     const dossierContent = `STERLING E-MOBILITY - ENTERPRISE AI DOSSIER
@@ -200,7 +201,7 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
             <h1 className="text-4xl font-extrabold tracking-tight mb-2 text-slate-900">
               Candidate <span className="text-red-700">Intelligence Report</span>
             </h1>
-            <p className="text-slate-500 font-medium">Advanced metrics and Sterling AI evaluation for {c.name}</p>
+            <p className="text-slate-500 font-medium">Advanced metrics and Sterling E-Mobility evaluation for {c.name}</p>
           </div>
           <div className="flex gap-4">
             <button onClick={() => { localStorage.removeItem('candidate_id'); navigate('/dashboard'); }} className="px-5 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors text-slate-800 shadow-sm">
@@ -286,7 +287,7 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
         {/* AI Synthesis */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white border border-slate-200 rounded-2xl p-8 mb-8 shadow-sm border-t-4 border-t-red-600">
           <h3 className="text-sm font-bold mb-4 text-slate-900 flex items-center uppercase tracking-widest">
-            <MessageSquare size={16} className="text-red-600 mr-3" /> Sterling AI Synthesis
+            <MessageSquare size={16} className="text-red-600 mr-3" /> Sterling E-Mobility Synthesis
           </h3>
           <p className="text-slate-600 leading-relaxed text-lg font-medium">{iv.summary}</p>
         </motion.div>

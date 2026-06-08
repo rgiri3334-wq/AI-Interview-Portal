@@ -411,6 +411,7 @@ class SaveInterviewRequest(BaseModel):
     summary:                 str   = Field(default="Interview completed.")
     strengths:               list[str] = Field(default_factory=list)
     weaknesses:              list[str] = Field(default_factory=list)
+    timeline_data:           list[dict] = Field(default_factory=list)
     overall_rating:          str   = Field(default="Average")
     hiring_recommendation:   str   = Field(default="Neutral")
     readiness_score:         int   = Field(default=0, ge=0, le=100)
@@ -1878,6 +1879,7 @@ async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Ses
     iv.technical_score = req.technical_score  # type: ignore
     iv.communication_score = req.communication  # type: ignore
     iv.behavioral_score = req.behavioral_score  # type: ignore
+    iv.eq_score = req.eq_score  # type: ignore
     iv.confidence_score = req.confidence  # type: ignore
     iv.problem_solving_score = req.problem_solving_score  # type: ignore
     iv.role_alignment_score = req.role_alignment_score  # type: ignore
@@ -1900,8 +1902,10 @@ async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Ses
         interview_id=iv.interview_id,
         overall_score=round(global_score, 1),
         recommendation=req.hiring_recommendation,
+        summary=req.summary,
         strengths=json.dumps(req.strengths),
         weaknesses=json.dumps(req.weaknesses),
+        timeline_data=json.dumps(req.timeline_data),
         hiring_decision=hiring.get("decision", "Neutral"),
         grade=grade,
         # Sprint 4: Persist integrity verdict from IntegrityEngine
@@ -1975,12 +1979,14 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
             "learning_potential": getattr(latest, "learning_potential_score", 0),
             "behavioral_score": latest.behavioral_score,
             "fluency_score": getattr(latest, "fluency_score", 0),
-            "summary": "Interview completed.", 
+            "summary": report.summary if report and report.summary else "Interview completed.", 
             "strengths": _safe_json_list(report.strengths if report else None), 
             "weaknesses": _safe_json_list(report.weaknesses if report else None),
+            "timeline": _safe_json_list(report.timeline_data if report else None),
             "overall_rating": "N/A", "hiring_recommendation": report.recommendation if report else "N/A", "readiness_score": 0,
             "proctoring_warnings": getattr(latest, "proctoring_warnings", 0), 
-            "proctoring_logs": []
+            "proctoring_logs": [],
+            "timeline": [{"q": f"Q{i+1}", "score": round(q.technical_score / 10)} for i, q in enumerate(latest.question_evals)] if getattr(latest, "question_evals", None) else []
         }
     else:
         iv = {
@@ -2015,7 +2021,8 @@ async def get_dashboard_data(db: Session = Depends(get_db)):
             "name": r.name,
             "job_role": (r_latest.role.role_name if (r_latest and r_latest.role) else ""),
             "email": r.email,
-            "created_at": r.registration_date
+            "created_at": r.registration_date,
+            "status": "Interview Done" if (r_latest and getattr(r_latest, "completed_at", None)) else "Pending"
         })
         
     return DashboardData(
@@ -2081,7 +2088,7 @@ async def websocket_interview(websocket: WebSocket, candidate_id: str):
                 emotion  = msg.get("emotion", "Neutral")
                 fillers  = detect_filler_words(answer)
                 wpm      = msg.get("wpm", 0)
-                await websocket.send_json({"type": "assessing", "message": "Sterling AI is evaluating your answer..."})
+                await websocket.send_json({"type": "assessing", "message": "Sterling E-Mobility is evaluating your answer..."})
                 try:
                     result = await assess_answer(
                         candidate_id=candidate_id,

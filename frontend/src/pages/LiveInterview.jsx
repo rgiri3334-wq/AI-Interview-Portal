@@ -38,21 +38,21 @@ function useTypewriter(text, speed = 30) {
 export default function LiveInterview() {
   const navigate = useNavigate();
 
-  const candidateId   = localStorage.getItem('candidate_id')   || 'DEMO-001';
+  const candidateId = localStorage.getItem('candidate_id') || 'DEMO-001';
   const candidateName = localStorage.getItem('candidate_name') || 'Candidate';
-  const jobRole       = localStorage.getItem('job_role')       || 'Software Engineer';
-  const experience    = localStorage.getItem('experience')     || 'Fresher (0 years)';
-  const skills        = localStorage.getItem('skills')         || '';
+  const jobRole = localStorage.getItem('job_role') || 'Software Engineer';
+  const experience = localStorage.getItem('experience') || 'Fresher (0 years)';
+  const skills = localStorage.getItem('skills') || '';
 
   // Sprint 2: 'preflight' is the initial gate phase.
   // Flow: preflight → ready → initializing → interviewing → ending
-  const [phase, setPhase]       = useState('preflight');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [phase, setPhase] = useState('preflight');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('Computing...');
   const [warnings, setWarnings] = useState(0);
   const [textFallback, setTextFallback] = useState('');
-  
+
   const proctoringLogsRef = useRef([]);
   const [fullscreenLock, setFullscreenLock] = useState(false);
   const [focusLock, setFocusLock] = useState(false);
@@ -65,24 +65,24 @@ export default function LiveInterview() {
     proctoringLogsRef.current.push(logEntry);
     console.warn(`[Proctoring] ${eventDescription}`);
   }, []);
-  
+
   const [question, setQuestion] = useState('System Initializing...');
   const [overlayMsg, setOverlayMsg] = useState('');
-  const displayedQuestion       = useTypewriter(question, 10);
-  const [qIndex, setQIndex]     = useState(0);
-  const [history, setHistory]   = useState([]);
+  const displayedQuestion = useTypewriter(question, 10);
+  const [qIndex, setQIndex] = useState(0);
+  const [history, setHistory] = useState([]);
   const historyRef = useRef(history);
   useEffect(() => { historyRef.current = history; }, [history]);
   // Fix #9: Track interview start time to compute real WPM
   const questionStartTimeRef = useRef(Date.now());
-  
-  const [micOn, setMicOn]       = useState(true);
-  const [camOn, setCamOn]       = useState(true);
+
+  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(true);
   const [camError, setCamError] = useState('');
-  
-  const videoRef                = useRef(null);
-  const streamRef               = useRef(null);
-  const transcriptEndRef        = useRef(null);
+
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const transcriptEndRef = useRef(null);
 
   const { editorRef, language, setLanguage, handleEditorMount, getCode, clearCode } = useCodeWorkspace({ defaultLanguage: 'javascript' });
   const { speak, stop: stopVoice, isSpeaking, getAudioFrequency } = useAudioStream();
@@ -95,7 +95,26 @@ export default function LiveInterview() {
   // Telemetry is now handled internally by Avatar3D to prevent 60FPS React re-renders on the main thread.
 
   const sendTelemetry = (metrics) => {
-    console.debug("[Telemetry]", metrics);
+    // console.debug("[Telemetry]", metrics);
+    if (phaseRef.current === 'interviewing') {
+      if (metrics.posture_violation) {
+        addProctoringLog("Posture violation detected: Unnecessary movement.");
+        recordIntegritySignal('posture_violation', { note: 'Candidate looking away or unauthorized posture movement.' });
+        setWarnings(w => {
+          const newW = w + 1;
+          setOverlayMsg(`PROCTORING WARNING (${newW}/3): STRICT POSTURE ENFORCEMENT. Please maintain correct posture.`);
+          if (newW >= 3) doEndInterview(historyRef.current);
+          return newW;
+        });
+      }
+      
+      if (metrics.eye_violation) {
+        addProctoringLog("Eye movement violation detected.");
+        recordIntegritySignal('eye_violation', { note: 'Suspicious eye movement detected.' });
+        // We don't necessarily increment warnings for eye movement immediately to give leniency, 
+        // but it still deducts marks in the Integrity Matrix.
+      }
+    }
   };
   const { getMetrics, stop: stopHuman } = useHumanBehavior(videoRef, sendTelemetry, { enabled: phase === 'interviewing' });
 
@@ -114,13 +133,13 @@ export default function LiveInterview() {
   } = useIntegrityEngine();
 
   useEffect(() => {
-    return () => { 
-      isMounted.current = false; 
+    return () => {
+      isMounted.current = false;
     };
   }, []);
 
   useEffect(() => {
-    return () => { 
+    return () => {
       forceStopAllTracks();
       stopVoice();
       stopHuman();
@@ -136,7 +155,7 @@ export default function LiveInterview() {
     if (!isSubmittingRef.current && !isSpeaking && phaseRef.current === 'interviewing') {
       handleSubmitAnswer();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSpeaking]);
 
   const {
@@ -191,7 +210,7 @@ export default function LiveInterview() {
           });
         }
       };
-      
+
       const handleBeforeUnload = (e) => {
         addProctoringLog("Attempted to reload/close the interview.");
         e.preventDefault();
@@ -200,32 +219,32 @@ export default function LiveInterview() {
 
       const handleProctoringKey = (e) => {
         const isCtrl = e.ctrlKey || e.metaKey;
-        
+
         // Block F5, F11, F12, Escape
         const isRestrictedKey = ['F5', 'F11', 'F12', 'Escape'].includes(e.key);
         // Block common shortcuts: reload (R), save (S), print (P), find (F), copy/paste/cut (C, V, X), inspect (I)
         const isRestrictedShortcut = isCtrl && ['r', 's', 'p', 'f', 'c', 'v', 'x', 'i'].includes(e.key.toLowerCase());
-        
+
         if (isRestrictedKey || isRestrictedShortcut || e.altKey) {
           e.preventDefault();
           e.stopPropagation();
           addProctoringLog(`Blocked restricted key input: ${e.key} ${isCtrl ? '(with modifier)' : ''}`);
-          
+
           if (e.key === 'Escape' || e.key === 'F11') {
-             setOverlayMsg("PROCTORING ALERT: Exiting fullscreen via shortcuts is disabled. Please stay focused on the interview.");
+            setOverlayMsg("PROCTORING ALERT: Exiting fullscreen via shortcuts is disabled. Please stay focused on the interview.");
           } else {
-             setOverlayMsg("PROCTORING ALERT: Restricted keyboard shortcuts are strictly disabled during the interview.");
+            setOverlayMsg("PROCTORING ALERT: Restricted keyboard shortcuts are strictly disabled during the interview.");
           }
         }
       };
 
-      const handleContextMenu = (e) => { 
+      const handleContextMenu = (e) => {
         e.preventDefault();
         addProctoringLog("Blocked right-click.");
         setOverlayMsg("PROCTORING ALERT: Right-click is disabled.");
       };
-      
-      const handleCopyPaste = (e) => { 
+
+      const handleCopyPaste = (e) => {
         e.preventDefault();
         addProctoringLog(`Blocked ${e.type}.`);
         setOverlayMsg(`PROCTORING ALERT: ${e.type.charAt(0).toUpperCase() + e.type.slice(1)} is disabled.`);
@@ -236,45 +255,45 @@ export default function LiveInterview() {
         addProctoringLog(`Blocked ${e.type} action.`);
         setOverlayMsg("PROCTORING ALERT: Drag and drop operations are disabled.");
       };
-      
+
       let fullscreenExitTimeout;
       const handleFullscreenChange = () => {
         if (!document.fullscreenElement) {
-           addProctoringLog("Exited fullscreen.");
-           setWarnings(w => {
-             const newW = w + 1;
-             if (newW >= 3) doEndInterview(historyRef.current);
-             return newW;
-           });
-           setFullscreenLock(true);
-           setOverlayMsg("PROCTORING WARNING: Fullscreen Exited — Resubmit Fullscreen to Resume");
-           // Auto terminate after 10 seconds if not restored
-           fullscreenExitTimeout = setTimeout(() => {
-              if (!document.fullscreenElement) {
-                  addProctoringLog("Did not return to fullscreen within 10s. Auto terminating.");
-                  doEndInterview(historyRef.current);
-              }
-           }, 10000);
+          addProctoringLog("Exited fullscreen.");
+          setWarnings(w => {
+            const newW = w + 1;
+            if (newW >= 3) doEndInterview(historyRef.current);
+            return newW;
+          });
+          setFullscreenLock(true);
+          setOverlayMsg("PROCTORING WARNING: Fullscreen Exited — Resubmit Fullscreen to Resume");
+          // Auto terminate after 10 seconds if not restored
+          fullscreenExitTimeout = setTimeout(() => {
+            if (!document.fullscreenElement) {
+              addProctoringLog("Did not return to fullscreen within 10s. Auto terminating.");
+              doEndInterview(historyRef.current);
+            }
+          }, 10000);
         } else {
-           clearTimeout(fullscreenExitTimeout);
-           setFullscreenLock(false);
-           setOverlayMsg(""); // Clear overlay
-           addProctoringLog("Returned to fullscreen.");
+          clearTimeout(fullscreenExitTimeout);
+          setFullscreenLock(false);
+          setOverlayMsg(""); // Clear overlay
+          addProctoringLog("Returned to fullscreen.");
         }
       };
 
       const handleDevTools = () => {
-         const widthThreshold = window.outerWidth - window.innerWidth > 160;
-         const heightThreshold = window.outerHeight - window.innerHeight > 160;
-         if (widthThreshold || heightThreshold) {
-            addProctoringLog("DevTools opened (dimensions check).");
-            setWarnings(w => {
-              const newW = w + 1;
-              if (newW >= 3) doEndInterview(historyRef.current);
-              return newW;
-            });
-            setOverlayMsg("PROCTORING WARNING: Developer Tools detected.");
-         }
+        const widthThreshold = window.outerWidth - window.innerWidth > 160;
+        const heightThreshold = window.outerHeight - window.innerHeight > 160;
+        if (widthThreshold || heightThreshold) {
+          addProctoringLog("DevTools opened (dimensions check).");
+          setWarnings(w => {
+            const newW = w + 1;
+            if (newW >= 3) doEndInterview(historyRef.current);
+            return newW;
+          });
+          setOverlayMsg("PROCTORING WARNING: Developer Tools detected.");
+        }
       };
 
       document.addEventListener('visibilitychange', handleDefocus, { capture: true });
@@ -290,7 +309,7 @@ export default function LiveInterview() {
       document.addEventListener('drop', handleDragDrop, { capture: true });
       document.addEventListener('fullscreenchange', handleFullscreenChange, { capture: true });
       window.addEventListener('resize', handleDevTools, { capture: true });
-      
+
       return () => {
         document.removeEventListener('visibilitychange', handleDefocus, { capture: true });
         window.removeEventListener('blur', handleDefocus, { capture: true });
@@ -313,7 +332,7 @@ export default function LiveInterview() {
   const handleInterrupt = useCallback(() => {
     stopVoice();
   }, [stopVoice]);
-  
+
   useVAD(isSpeaking, handleInterrupt);
 
   const wasSpeakingRef = useRef(false);
@@ -331,7 +350,7 @@ export default function LiveInterview() {
   useEffect(() => {
     // SPRINT 1: STRICT STATE MACHINE LOCK
     const shouldListen = phase === 'interviewing' && !loading && micOn && !isSpeaking;
-    
+
     if (shouldListen) {
       if (!isListening) startListening(false);
       if (!isRecording) startRecording();
@@ -339,7 +358,7 @@ export default function LiveInterview() {
       if (isListening) stopListening(false);
       if (isRecording) stopRecordingRef.current();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [micOn, isListening, phase, isSpeaking, loading, startListening, stopListening, isRecording, startRecording]);
 
   const memoizedVideo = React.useMemo(() => (
@@ -375,7 +394,7 @@ export default function LiveInterview() {
   const handleStart = async () => {
     if (phase !== 'ready' || isStartingRef.current) return; // LOCK: Prevent double execution natively
     isStartingRef.current = true;
-    
+
     try {
       if (document.documentElement.requestFullscreen) {
         await document.documentElement.requestFullscreen();
@@ -383,14 +402,14 @@ export default function LiveInterview() {
     } catch (e) {
       console.warn("Fullscreen request failed", e);
     }
-    
+
     setPhase('initializing');
     console.debug('[State] Transition: Ready -> Initializing');
     setError('');
-      setTimeout(async () => {
-        try {
-          // Natural human-like HR greeting instead of robotic intro
-          const greeting = `Hello ${candidateName.split(' ')[0]}, it's great to meet you. Welcome to Sterling AI. To kick things off, could you briefly walk me through your background and what drew you to the ${jobRole} role?`;
+    setTimeout(async () => {
+      try {
+        // Natural human-like HR greeting instead of robotic intro
+        const greeting = `Hello ${candidateName.split(' ')[0]}, it's great to meet you. Welcome to Sterling E Mobility. To kick things off, could you briefly walk me through your background and what drew you to the ${jobRole} role?`;
         console.debug('[State] Transition: Initializing -> Interviewing');
         setPhase('interviewing');
         setQuestion(greeting);
@@ -411,19 +430,19 @@ export default function LiveInterview() {
 
   const handleSubmitAnswer = async () => {
     if (isSubmittingRef.current) return;
-    
+
     console.debug("[State] Transition: Interviewing -> Processing");
     const fullAnswer = (finalTranscript + ' ' + interimTranscript).trim();
-    if (!fullAnswer && !getCode().trim() && !textFallback.trim()) { 
-      setError('Please provide a spoken answer or write code before submitting.'); 
+    if (!fullAnswer && !getCode().trim() && !textFallback.trim()) {
+      setError('Please provide a spoken answer or write code before submitting.');
       console.debug("[State] Reverted: No input detected");
-      return; 
+      return;
     }
-    
+
     isSubmittingRef.current = true;
     setLoading(true);
     setError('');
-    
+
     const statuses = ['Transcribing Audio...', 'Evaluating Logic...', 'Generating Response...'];
     let statusIdx = 0;
     setLoadingStatus(statuses[0]);
@@ -440,14 +459,14 @@ export default function LiveInterview() {
     } else {
       finalWsText = await stopListening(true); // Fallback to backend whisper
     }
-    
+
     stopVoice();
 
     const resolvedAnswer = (finalWsText || fullAnswer || textFallback).trim();
     setTextFallback('');
 
     const behavioralData = getMetrics();
-    
+
     let audioBlob = null;
     if (isRecording) {
       audioBlob = await stopRecording();
@@ -462,7 +481,7 @@ export default function LiveInterview() {
 
       // Fix #9: Compute real WPM from the candidate's answer text + elapsed time since question was shown
       const elapsedSec = Math.max((Date.now() - questionStartTimeRef.current) / 1000, 1);
-      const wordCount  = (resolvedAnswer || '').split(/\s+/).filter(Boolean).length;
+      const wordCount = (resolvedAnswer || '').split(/\s+/).filter(Boolean).length;
       const computedWpm = wordCount > 0 ? Math.round((wordCount / elapsedSec) * 60) : 130;
       const clampedWpm = Math.min(Math.max(computedWpm, 30), 350); // Clamp to realistic speaking range
 
@@ -499,8 +518,8 @@ export default function LiveInterview() {
         nextHistory = [...history, {
           q: question,
           a: resolvedAnswer,
-          score:     res.technical_score  || 0,
-          eqScore:   res.eq_score         || res.behavioral_score   || 0,
+          score: res.technical_score || 0,
+          eqScore: res.eq_score || res.behavioral_score || 0,
           confScore: res.confidence_score || 0,
           commScore: res.communication_score || 0,
           probScore: res.problem_solving_score || 0,
@@ -508,7 +527,7 @@ export default function LiveInterview() {
           profScore: res.professionalism_score || 0,
           learnScore: res.learning_potential_score || 0,
           // Fix #6: Store fluency_score separately so doEndInterview uses the right metric
-          fluencyScore: res.fluency_score  || 0,
+          fluencyScore: res.fluency_score || 0,
           wpm: clampedWpm,  // Fix #9 / #16: persist wpm per answer
           code: getCode()
         }];
@@ -517,11 +536,11 @@ export default function LiveInterview() {
         // Fix #9: Reset question timer for the next question
         questionStartTimeRef.current = Date.now();
       }
-      
+
       resetTranscript();
       if (res.action !== 'repeat' && res.action !== 'small_talk') clearCode();
 
-      if (res.action !== 'repeat' && res.action !== 'small_talk' && nextHistory.length >= MAX_QUESTIONS) { 
+      if (res.action !== 'repeat' && res.action !== 'small_talk' && nextHistory.length >= MAX_QUESTIONS) {
         setPhase('ending');
         // Natural human-like HR goodbye
         const finalGoodbye = res.eq_feedback + " That wraps up our interview for today. Thank you for your time. Our team will review your evaluation and follow up with you shortly. Have a great day!";
@@ -533,19 +552,19 @@ export default function LiveInterview() {
         } catch (e) {
           console.warn("TTS failed on goodbye", e);
         }
-        doEndInterview(nextHistory); 
-        return; 
+        doEndInterview(nextHistory);
+        return;
       }
-      
+
       if (res.action === 'small_talk' || res.action === 'repeat') {
         const feedback = res.eq_feedback || '';
         const nextQ = res.next_technical_question || '';
-        
+
         let combined = feedback;
         if (nextQ && !feedback.toLowerCase().includes(nextQ.toLowerCase())) {
           combined += (combined.endsWith('.') || combined.endsWith('?') || combined.endsWith('!')) ? ` ${nextQ}` : `. ${nextQ}`;
         }
-        
+
         if (!isMounted.current) return;
         if (combined.trim()) {
           setQuestion(combined);
@@ -554,7 +573,7 @@ export default function LiveInterview() {
       } else {
         const feedback = res.eq_feedback;
         let nextQ = "";
-        
+
         if (res.follow_up_question) {
           nextQ = res.follow_up_question;
         } else if (res.next_technical_question) {
@@ -562,38 +581,38 @@ export default function LiveInterview() {
         } else {
           nextQ = "Thank you. Let's proceed.";
         }
-        
+
         let combined = feedback || '';
         if (nextQ && !combined.toLowerCase().includes(nextQ.toLowerCase())) {
           combined += (combined.endsWith('.') || combined.endsWith('?') || combined.endsWith('!')) ? ` ${nextQ}` : `. ${nextQ}`;
         }
-        
+
         if (!isMounted.current) return;
         if (combined.trim()) {
           setQuestion(combined);
           await speak(combined);
         }
       }
-      
+
       if (!isMounted.current) return;
       console.debug("[State] Transition: Processing -> Interviewing");
       setPhase('interviewing');
     } catch (e) {
       if (!isMounted.current) return;
       const isTimeout = e.message === 'WATCHDOG_TIMEOUT';
-      const fallbackMsg = isTimeout 
-        ? 'I am experiencing unusually high latency. Could you please summarize your answer briefly?' 
+      const fallbackMsg = isTimeout
+        ? 'I am experiencing unusually high latency. Could you please summarize your answer briefly?'
         : 'I lost connection to my core servers. Could you please repeat your answer?';
-      
+
       console.error("[Deadlock Protection] AI Assessment Failed:", e);
       setError(isTimeout ? 'AI Core Timeout (30s). Retrying...' : 'Connection to AI Core unstable. Please try submitting again.');
-      
+
       try {
         await speak(fallbackMsg);
       } catch (ttsError) {
         console.error("TTS Fallback failed. Proceeding silently.", ttsError);
       }
-      
+
       if (!isMounted.current) return;
       console.debug("[State] Recovery: Transitioning back to Interviewing");
       setPhase('interviewing');
@@ -632,27 +651,28 @@ export default function LiveInterview() {
       const integrityReport = computeIntegrityFinal();
 
       await apiClient.saveInterview({
-        candidate_id:     candidateId,
-        technical_score:  avgScore('score'),
-        eq_score:         avgScore('eqScore'),
-        confidence:       avgScore('confScore'),
-        communication:    avgScore('commScore'),
+        candidate_id: candidateId,
+        technical_score: avgScore('score'),
+        eq_score: avgScore('eqScore'),
+        confidence: avgScore('confScore'),
+        communication: avgScore('commScore'),
         problem_solving_score: avgScore('probScore'),
-        role_alignment_score:  avgScore('roleScore'),
+        role_alignment_score: avgScore('roleScore'),
         professionalism_score: avgScore('profScore'),
         learning_potential_score: avgScore('learnScore'),
         behavioral_score: avgScore('eqScore'),
         // Fix #6: Use fluencyScore (dedicated field) instead of commScore
-        fluency_score:    avgScore('fluencyScore'),
-        facial_score:     75,
-        summary:          aiReport.synthesis || `Interview complete. ${h.length} questions answered.`,
-        strengths:        aiReport.identified_strengths || ['Code logic', 'Structured responses'],
-        weaknesses:       aiReport.optimization_areas  || [],
+        fluency_score: avgScore('fluencyScore'),
+        facial_score: 75,
+        summary: aiReport.synthesis || `Interview complete. ${h.length} questions answered.`,
+        strengths: aiReport.identified_strengths || ['Code logic', 'Structured responses'],
+        weaknesses: aiReport.optimization_areas || [],
+        timeline_data: h.map((entry, i) => ({ q: `Q${i+1}`, score: Math.round((entry.score || 0) / 10) })),
         proctoring_warnings: warnings,
         proctoring_logs: proctoringLogsRef.current,
         // Sprint 3: Integrity Engine fields
         integrity_score: integrityReport.integrity_score,
-        integrity_data:  integrityReport,
+        integrity_data: integrityReport,
       });
     } catch (e) {
       console.error('Failed to save final interview scores', e);
@@ -678,11 +698,11 @@ export default function LiveInterview() {
     return (
       <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col justify-center items-center p-6">
         <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          
+
           {/* LEFT: Avatar — visible immediately, no loading delay */}
           <div className="flex flex-col items-center gap-4">
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200"
-                 style={{ width: '280px', height: '340px' }}>
+              style={{ width: '280px', height: '340px' }}>
               <Avatar3D
                 isSpeaking={false}
                 isListening={false}
@@ -694,7 +714,7 @@ export default function LiveInterview() {
             </div>
             <div className="text-center">
               <p className="text-sm font-bold text-slate-700">Your AI Interviewer</p>
-              <p className="text-xs text-slate-500 mt-0.5">Sterling AI · HR Excellence Division</p>
+              <p className="text-xs text-slate-500 mt-0.5">Sterling E-Mobility · HR Excellence Division</p>
             </div>
           </div>
 
@@ -704,11 +724,11 @@ export default function LiveInterview() {
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-md border border-slate-800">
                 <img src={logoUrl} alt="Sterling Logo" className="w-7 h-7 object-contain mix-blend-screen"
-                  onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }} />
+                  onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
                 <div className="hidden w-7 h-7 bg-red-600 text-white items-center justify-center font-bold text-xs">Sterling</div>
               </div>
               <div>
-                <div className="text-xs font-bold tracking-widest text-slate-500 uppercase">Sterling AI</div>
+                <div className="text-xs font-bold tracking-widest text-slate-500 uppercase">Sterling E-Mobility</div>
                 <div className="text-xs text-slate-400">AI Interview Platform</div>
               </div>
             </div>
@@ -719,7 +739,7 @@ export default function LiveInterview() {
             <p className="text-slate-500 text-sm mb-6">
               {phase === 'ready'
                 ? `Role: ${jobRole} · Your interviewer is ready and waiting.`
-                : 'Initializing Sterling AI models and behavioral telemetry...'}
+                : 'Initializing Sterling E-Mobility AI models and behavioral telemetry...'}
             </p>
 
             {/* Readiness checklist */}
@@ -778,7 +798,7 @@ export default function LiveInterview() {
 
   return (
     <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col">
-      
+
       {/* HEADER - Matching the screenshot's top nav */}
       <header className="bg-sterling-surface/80 backdrop-blur-md border-b border-sterling-border px-8 py-4 flex justify-between items-center sticky top-0 z-50">
         {/* Logo Area */}
@@ -792,7 +812,7 @@ export default function LiveInterview() {
             <h2 className="text-sm tracking-widest text-slate-500">E-MOBILITY</h2>
           </div>
         </div>
-        
+
         {/* Nav Links - Restricted for Candidate */}
         <div className="hidden md:flex gap-8 text-sm font-bold text-[#111827] items-center">
           <div className="text-slate-400 uppercase tracking-widest text-xs flex items-center gap-2">
@@ -811,48 +831,48 @@ export default function LiveInterview() {
       {/* Error Toast */}
       <AnimatePresence>
         {error && (
-           <motion.div 
-             initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-             className="bg-red-50 border-b border-[#EF4444] text-[#EF4444] px-8 py-3 text-sm font-bold text-center z-50"
-           >
-             {error}
-           </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+            className="bg-red-50 border-b border-[#EF4444] text-[#EF4444] px-8 py-3 text-sm font-bold text-center z-50"
+          >
+            {error}
+          </motion.div>
         )}
       </AnimatePresence>
 
       {/* MAIN WORKSPACE - White, clean borders, red accents */}
       <main className="flex-1 p-8 grid grid-cols-12 gap-8 max-w-[1600px] mx-auto w-full">
-        
+
         {/* LEFT COLUMN: Webcam & Transcript */}
         <div className="col-span-5 flex flex-col gap-8">
-          
+
           {/* Webcam Area */}
           <div className="bg-sterling-surface border border-sterling-border rounded-2xl overflow-hidden h-72 relative shadow-xl">
-             {memoizedVideo}
-             {(!camOn || camError) && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-white/80 backdrop-blur-sm text-slate-500 text-sm font-bold">
-                  Video Feed Offline
-                </div>
-             )}
-             <div className="absolute bottom-4 left-4 flex gap-3 z-20">
-                <button onClick={() => setMicOn(!micOn)} className={`flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg active:scale-95 transition-all duration-300 ease-in-out shadow-lg backdrop-blur-sm ${micOn ? (isListening ? 'bg-red-500/90 text-white hover:bg-red-600 border border-red-400 shadow-red-500/40 animate-[pulse_2s_ease-in-out_infinite]' : 'bg-white/90 text-slate-800 hover:bg-white border border-slate-200 hover:shadow-xl') : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'}`}>
-                  <div className={`w-2 h-2 rounded-full ${micOn ? (isListening ? 'bg-white animate-ping' : 'bg-green-500') : 'bg-red-500'}`}></div>
-                  {micOn ? 'Microphone Active' : 'Microphone Muted'}
-                </button>
-                <button onClick={() => setCamOn(!camOn)} className="px-5 py-2 bg-white/90 text-slate-800 border border-slate-200 rounded-lg text-sm font-bold hover:bg-white hover:shadow-xl active:scale-95 transition-all duration-300 ease-in-out shadow-lg backdrop-blur-sm">
-                  {camOn ? 'Stop Video' : 'Start Video'}
-                </button>
-             </div>
+            {memoizedVideo}
+            {(!camOn || camError) && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-white/80 backdrop-blur-sm text-slate-500 text-sm font-bold">
+                Video Feed Offline
+              </div>
+            )}
+            <div className="absolute bottom-4 left-4 flex gap-3 z-20">
+              <button onClick={() => setMicOn(!micOn)} className={`flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg active:scale-95 transition-all duration-300 ease-in-out shadow-lg backdrop-blur-sm ${micOn ? (isListening ? 'bg-red-500/90 text-white hover:bg-red-600 border border-red-400 shadow-red-500/40 animate-[pulse_2s_ease-in-out_infinite]' : 'bg-white/90 text-slate-800 hover:bg-white border border-slate-200 hover:shadow-xl') : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'}`}>
+                <div className={`w-2 h-2 rounded-full ${micOn ? (isListening ? 'bg-white animate-ping' : 'bg-green-500') : 'bg-red-500'}`}></div>
+                {micOn ? 'Microphone Active' : 'Microphone Muted'}
+              </button>
+              <button onClick={() => setCamOn(!camOn)} className="px-5 py-2 bg-white/90 text-slate-800 border border-slate-200 rounded-lg text-sm font-bold hover:bg-white hover:shadow-xl active:scale-95 transition-all duration-300 ease-in-out shadow-lg backdrop-blur-sm">
+                {camOn ? 'Stop Video' : 'Start Video'}
+              </button>
+            </div>
           </div>
 
           {/* Transcript Box */}
           <div className="bg-sterling-surface/50 backdrop-blur-md border border-sterling-border rounded-2xl flex-1 p-6 flex flex-col shadow-xl">
             <div className="flex items-center justify-between mb-4">
-               <div className="flex items-center gap-3">
-                 <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-                 <h3 className="text-lg font-bold text-slate-900">Live Transcript</h3>
-               </div>
-               {isListening && <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]" />}
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-6 bg-red-600 rounded-full"></div>
+                <h3 className="text-lg font-bold text-slate-900">Live Transcript</h3>
+              </div>
+              {isListening && <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]" />}
             </div>
             <div className="text-sterling-text leading-relaxed flex-1 overflow-y-auto mb-4 font-medium text-[15px]">
               {finalTranscript && <span>{finalTranscript} </span>}
@@ -862,11 +882,11 @@ export default function LiveInterview() {
               )}
               <div ref={transcriptEndRef} />
             </div>
-            
+
             {/* Text Fallback Input */}
             <div className="relative mt-auto">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={textFallback}
                 onChange={(e) => setTextFallback(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSubmitAnswer(); }}
@@ -875,12 +895,12 @@ export default function LiveInterview() {
                 disabled={loading || isSpeaking}
               />
               {(!isSpeaking && finalTranscript && !loading) && (
-                 <button 
-                   onClick={handleSubmitAnswer}
-                   className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-md animate-[pulse_2s_ease-in-out_infinite] transition-all"
-                 >
-                   Submit
-                 </button>
+                <button
+                  onClick={handleSubmitAnswer}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-md animate-[pulse_2s_ease-in-out_infinite] transition-all"
+                >
+                  Submit
+                </button>
               )}
             </div>
           </div>
@@ -888,7 +908,7 @@ export default function LiveInterview() {
 
         {/* RIGHT COLUMN: AI & Code Editor */}
         <div className="col-span-7 flex flex-col gap-8 h-full">
-          
+
           {/* AI Question Box */}
           <div className="bg-sterling-surface/50 backdrop-blur-md border border-sterling-border rounded-2xl p-6 flex flex-col gap-4 shadow-xl">
             <div className="flex items-center justify-between">
@@ -897,14 +917,14 @@ export default function LiveInterview() {
                 <h3 className="text-lg font-bold text-red-600">AI Interviewer</h3>
               </div>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                 Q{qIndex + 1}/{MAX_QUESTIONS}
+                Q{qIndex + 1}/{MAX_QUESTIONS}
               </span>
             </div>
-            
+
             <div className="flex items-start gap-6 mt-2">
               {/* 3D Avatar — Portrait card format (280×350px) */}
               <div className="relative shrink-0 rounded-2xl overflow-hidden shadow-xl border border-slate-200/60 bg-gradient-to-b from-slate-100 to-slate-50"
-                   style={{ width: '200px', height: '260px' }}>
+                style={{ width: '200px', height: '260px' }}>
                 <Avatar3D
                   getAudioFrequency={getAudioFrequency}
                   isSpeaking={isSpeaking}
@@ -929,7 +949,7 @@ export default function LiveInterview() {
             {/* Editor Header */}
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex justify-between items-center">
               <span className="text-sm font-bold text-slate-900 uppercase tracking-wider">Technical Workspace</span>
-              <select 
+              <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
                 className="bg-white border border-slate-300 text-sm text-slate-900 outline-none cursor-pointer px-3 py-1 rounded shadow-sm"
@@ -941,52 +961,52 @@ export default function LiveInterview() {
                 ))}
               </select>
             </div>
-            
+
             {/* Editor Body */}
             <div className="flex-1 w-full relative">
-               {memoizedEditor}
+              {memoizedEditor}
             </div>
-            
+
             {/* Editor Footer */}
             <div className="bg-slate-50 border-t border-slate-200 p-4 flex justify-between items-center">
               <button onClick={async () => {
-                  const code = getCode();
-                  if (language === 'javascript' || language === 'typescript') {
-                    try {
-                      const logs = [];
-                      const originalLog = console.log;
-                      console.log = (...args) => logs.push(args.join(' '));
-                      // eslint-disable-next-line no-new-func
-                      new Function(code)();
-                      console.log = originalLog;
-                      setOverlayMsg("Output:\n" + (logs.join('\n') || "Execution complete. No output."));
-                    } catch (e) {
-                      setOverlayMsg("Syntax Error:\n" + e.message);
-                    }
-                  } else if (language === 'python') {
-                    setLoadingStatus("Compiling Python...");
-                    setLoading(true);
-                    try {
-                      const res = await apiClient.executeCode({ code, language: 'python' });
-                      setOverlayMsg(res.error ? "Python Execution Error:\n" + res.output : "Python Output:\n" + (res.output || "Execution complete. No output."));
-                    } catch (err) {
-                      setOverlayMsg("Failed to connect to backend execution engine.");
-                    }
-                    setLoading(false);
-                  } else {
-                    setOverlayMsg(`Syntactic validation for ${language} passed successfully. Output simulation not available in browser sandbox.`);
+                const code = getCode();
+                if (language === 'javascript' || language === 'typescript') {
+                  try {
+                    const logs = [];
+                    const originalLog = console.log;
+                    console.log = (...args) => logs.push(args.join(' '));
+                    // eslint-disable-next-line no-new-func
+                    new Function(code)();
+                    console.log = originalLog;
+                    setOverlayMsg("Output:\n" + (logs.join('\n') || "Execution complete. No output."));
+                  } catch (e) {
+                    setOverlayMsg("Syntax Error:\n" + e.message);
                   }
-                }}
+                } else if (language === 'python') {
+                  setLoadingStatus("Compiling Python...");
+                  setLoading(true);
+                  try {
+                    const res = await apiClient.executeCode({ code, language: 'python' });
+                    setOverlayMsg(res.error ? "Python Execution Error:\n" + res.output : "Python Output:\n" + (res.output || "Execution complete. No output."));
+                  } catch (err) {
+                    setOverlayMsg("Failed to connect to backend execution engine.");
+                  }
+                  setLoading(false);
+                } else {
+                  setOverlayMsg(`Syntactic validation for ${language} passed successfully. Output simulation not available in browser sandbox.`);
+                }
+              }}
                 className="text-sm font-bold text-sterling-muted hover:text-white transition-colors px-4 py-2"
                 disabled={loading}
               >
                 {language === 'python' ? 'Run Backend Sandbox' : 'Run Code Locally'}
               </button>
-              <button 
+              <button
                 onClick={() => {
-                   if(!isSpeaking && !loading) {
-                     handleSubmitAnswer();
-                   }
+                  if (!isSpeaking && !loading) {
+                    handleSubmitAnswer();
+                  }
                 }}
                 disabled={isSpeaking || loading}
                 className="relative overflow-hidden group bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold px-8 py-3 rounded-lg shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/50 active:scale-95 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:active:scale-100 disabled:shadow-none"
@@ -995,8 +1015,8 @@ export default function LiveInterview() {
                 <span className="relative z-10 flex items-center gap-2">
                   {loading ? (
                     <>
-                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                       Analyzing...
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Analyzing...
                     </>
                   ) : 'Submit Response'}
                 </span>
@@ -1009,11 +1029,11 @@ export default function LiveInterview() {
       {/* Modern Proctoring Overlay Modal */}
       <AnimatePresence>
         {overlayMsg && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
               className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 text-center border-t-4 border-red-600"
             >
@@ -1023,7 +1043,7 @@ export default function LiveInterview() {
               <h2 className="text-2xl font-bold text-slate-900 mb-2">System Notification</h2>
               <p className="text-slate-600 mb-6 whitespace-pre-wrap">{overlayMsg}</p>
               {fullscreenLock ? (
-                <button 
+                <button
                   onClick={() => {
                     document.documentElement.requestFullscreen().catch(e => console.warn(e));
                   }}
@@ -1032,7 +1052,7 @@ export default function LiveInterview() {
                   Return to Fullscreen
                 </button>
               ) : (
-                <button 
+                <button
                   onClick={() => setOverlayMsg('')}
                   className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl transition-all active:scale-95"
                 >

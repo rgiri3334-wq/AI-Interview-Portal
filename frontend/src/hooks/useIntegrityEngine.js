@@ -30,6 +30,12 @@ const SIGNAL_WEIGHTS = {
   abnormally_fast_wpm:    10,
   gpt_challenge_cleared:   0,
   resume_challenge_cleared:0,
+  posture_violation_1st:   10,
+  posture_violation_2nd:   20,
+  posture_violation_3rd:   30,
+  eye_violation_1st:       0, // Leniency for first eye movement
+  eye_violation_2nd:       5,
+  eye_violation_3rd:       15,
 };
 
 // ── GPT Syntax Patterns (mirror of Python GPT_SYNTAX_PATTERNS) ────────────
@@ -55,6 +61,8 @@ export function useIntegrityEngine() {
   const tabSwitchCountRef = useRef(0);
   const gptSuspectedCountRef = useRef(0);
   const resumeFailStreakRef = useRef({});
+  const postureViolationCountRef = useRef(0);
+  const eyeViolationCountRef = useRef(0);
 
   // Expose reactive score for UI display
   const [integrityScore, setIntegrityScore] = useState(100);
@@ -79,6 +87,16 @@ export function useIntegrityEngine() {
         actualKey = 'tab_switch_3rd_plus';
         note = `Tab switch #${n} detected.`;
       }
+    } else if (signalKey === 'posture_violation') {
+      postureViolationCountRef.current += 1;
+      const n = postureViolationCountRef.current;
+      actualKey = n === 1 ? 'posture_violation_1st' : n === 2 ? 'posture_violation_2nd' : 'posture_violation_3rd';
+      note = `Posture violation #${n} detected (Strict penalty).`;
+    } else if (signalKey === 'eye_violation') {
+      eyeViolationCountRef.current += 1;
+      const n = eyeViolationCountRef.current;
+      actualKey = n === 1 ? 'eye_violation_1st' : n === 2 ? 'eye_violation_2nd' : 'eye_violation_3rd';
+      note = `Eye movement violation #${n} detected (Lenient penalty).`;
     }
 
     const deduction = SIGNAL_WEIGHTS[actualKey] ?? 0;
