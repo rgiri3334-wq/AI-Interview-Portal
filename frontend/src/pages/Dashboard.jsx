@@ -246,6 +246,104 @@ function TriageCard({ candidate, onClick }) {
   );
 }
 
+// ── Candidate List Modal ──────────────────────────────────────────────────
+function CandidateListModal({ filter, leaderboard, onClose, onNavigate }) {
+  if (!filter) return null;
+
+  let filtered = leaderboard;
+  let title = "Total Candidates";
+  
+  if (filter === 'INTERVIEWED') {
+    filtered = leaderboard.filter(c => c.interview_status === 'completed' || c.global_score > 0);
+    title = "Interviews Done";
+  } else if (filter === 'HIRED') {
+    filtered = leaderboard.filter(c => c.hiring_decision === 'HIRED');
+    title = "Offers Extended";
+  } else if (filter === 'SHORTLISTED') {
+    filtered = leaderboard.filter(c => c.hiring_decision === 'SHORTLISTED');
+    title = "Shortlisted Candidates";
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col overflow-hidden border border-slate-200"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+          <div>
+            <h2 className="font-extrabold text-slate-900 text-xl tracking-tight">{title}</h2>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1">{filtered.length} candidate{filtered.length !== 1 ? 's' : ''} found</p>
+          </div>
+          <button onClick={onClose} className="w-10 h-10 rounded-full bg-white hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors font-bold shadow-sm border border-slate-200">✕</button>
+        </div>
+
+        <div className="px-6 py-4 overflow-y-auto flex-1 bg-white">
+          {filtered.length === 0 ? (
+            <div className="text-center py-20 bg-slate-50 rounded-2xl border border-slate-100">
+              <Users size={48} className="text-slate-300 mx-auto mb-4" />
+              <p className="font-extrabold text-slate-900 text-lg tracking-tight">No Candidates Found</p>
+              <p className="text-sm font-medium text-slate-500 mt-2">No candidates match the current filter criteria.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr>
+                    {['Candidate', 'Role', 'Resume', 'Global Score', 'Decision', 'Action'].map(h => (
+                      <th key={h} className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filtered.map((c, i) => (
+                    <tr key={c.id || i} className="hover:bg-slate-50 transition-colors group">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-sm font-black text-slate-700 shrink-0 group-hover:bg-red-50 group-hover:text-red-600 group-hover:border-red-100 transition-colors shadow-sm">
+                            {c.name?.[0]}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-slate-900 leading-tight">{c.name}</p>
+                            <p className="text-xs text-slate-500 font-medium mt-1">{c.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="px-3 py-1 bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-widest">{c.job_role}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`text-sm font-black ${c.resume_score >= 70 ? 'text-emerald-600' : c.resume_score >= 50 ? 'text-amber-500' : 'text-slate-500'}`}>{c.resume_score || 0}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`text-xl font-black tracking-tight ${c.global_score >= 75 ? 'text-emerald-600' : c.global_score >= 55 ? 'text-red-600' : 'text-slate-400'}`}>
+                          {Number(c.global_score || 0).toFixed(1)}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <DecisionBadge decision={c.hiring_decision || (c.interview_status === 'completed' ? 'UNDER_REVIEW' : 'PENDING')} />
+                      </td>
+                      <td className="py-4 px-4">
+                        <button className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm rounded-xl text-xs font-bold text-slate-700 transition-colors uppercase tracking-wider whitespace-nowrap"
+                          onClick={() => { localStorage.setItem('candidate_id', c.id); onNavigate('/report'); onClose(); }}>View Report</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [dashData, setDashData] = useState(null);
@@ -691,6 +789,7 @@ export default function Dashboard() {
 
       <AnimatePresence>
         {triageCandidate && <IntegritySignalModal candidate={triageCandidate} onClose={() => setTriageCandidate(null)} />}
+        {modalFilter && <CandidateListModal filter={modalFilter} leaderboard={leaderboard} onClose={() => setModalFilter(null)} onNavigate={navigate} />}
       </AnimatePresence>
     </div>
   );
