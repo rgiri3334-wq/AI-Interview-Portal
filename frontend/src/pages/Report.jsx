@@ -76,7 +76,8 @@ export default function Report() {
   useEffect(() => {
     const fetchCandidates = async () => {
       try {
-        const lb = await apiClient.getLeaderboard();
+        const lbResponse = await apiClient.getLeaderboard();
+        const lb = lbResponse.candidates || lbResponse || [];
         const completed = lb.filter(c => c.interview_status === 'completed' || c.global_score > 0);
         setCandidates(completed);
         
@@ -92,7 +93,8 @@ export default function Report() {
           setError("No candidates have completed their interviews yet.");
         }
       } catch (e) {
-        setError("Failed to fetch candidates leaderboard.");
+        console.error("fetchCandidates error:", e);
+        setError("Failed to fetch candidates leaderboard: " + (e.message || String(e)));
         setLoading(false);
       }
     };
