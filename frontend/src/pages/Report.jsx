@@ -208,7 +208,7 @@ export default function Report() {
                     <span className="font-bold text-slate-600 text-sm tracking-wide">{m.label}</span>
                     <div className="flex items-center gap-4">
                       <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-red-600 rounded-full" style={{width: \`\${m.val}%\`}}></div>
+                        <div className="h-full bg-red-600 rounded-full" style={{width: `${m.val}%`}}></div>
                       </div>
                       <span className="font-black text-slate-900 w-8 text-right text-sm">{m.val}</span>
                     </div>
