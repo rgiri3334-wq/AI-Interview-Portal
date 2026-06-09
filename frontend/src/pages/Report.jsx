@@ -360,8 +360,12 @@ export default function Report() {
                 <li key={i} className="flex items-start gap-4">
                   <div className="w-2 h-2 mt-1.5 rounded-full bg-amber-600 shrink-0" />
                   <span className="text-amber-900 text-sm font-bold leading-relaxed">{w}</span>
-                </li>
-         {/* HIDDEN PDF TEMPLATE - ONLY VISIBLE TO HTML2CANVAS */}
+              ))}
+            </ul>
+          </motion.div>
+        </div>
+
+        {/* HIDDEN PDF TEMPLATE - ONLY VISIBLE TO HTML2CANVAS */}
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
           <div ref={pdfRef} style={{ width: '1500px', minHeight: '840px', backgroundColor: '#F4EFEB', color: '#0F172A', padding: '40px', boxSizing: 'border-box', fontFamily: 'sans-serif', position: 'relative', overflow: 'hidden', display: 'flex', gap: '50px' }}>
             
