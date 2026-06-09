@@ -236,21 +236,17 @@ export default function SystemHealth() {
                 </motion.div>
 
                 {/* Metric 2: Database Latency */}
-                <motion.div
-                  variants={itemVariants}
-                  className="bg-white/80 backdrop-blur-2xl p-6 rounded-[2rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group hover:shadow-[0_20px_40px_rgb(15,23,42,0.08)] transition-all"
-                >
+                <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-2xl p-6 rounded-[2rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group hover:shadow-[0_20px_40px_rgb(15,23,42,0.08)] transition-all">
                   <div className="flex justify-between items-start mb-4 relative z-10">
                     <div className="w-12 h-12 rounded-xl bg-slate-50 text-slate-600 border border-slate-100 flex items-center justify-center shadow-inner group-hover:text-slate-900 group-hover:border-slate-200 transition-colors">
                       <Database size={20} />
                     </div>
+                    <div className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-200 flex items-center gap-1.5">
+                      <span className={`w-1.5 h-1.5 rounded-full ${healthData?.db_status === 'Connected' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} /> {healthData?.db_status}
+                    </div>
                   </div>
-                  <h3 className="text-slate-400 text-xs font-black uppercase tracking-widest mb-1 relative z-10">
-                    Database Latency
-                  </h3>
-                  <p className="text-3xl font-black text-slate-900 tracking-tight relative z-10">
-                    {healthData?.db_latency}
-                  </p>
+                  <h3 className="text-slate-400 text-xs font-black uppercase tracking-widest mb-1 relative z-10">Database Latency</h3>
+                  <p className="text-3xl font-black text-slate-900 tracking-tight relative z-10">{healthData?.db_latency}</p>
                   <Sparkline data={apiData} dataKey="latency" color="#475569" />
                 </motion.div>
 
@@ -381,7 +377,7 @@ export default function SystemHealth() {
                               top: 20,
                               right: 20,
                               left: -20,
-                              bottom: 0,
+                              bottom: 15,
                             }}
                           >
                             <defs>
@@ -514,7 +510,7 @@ export default function SystemHealth() {
                                 top: 0,
                                 right: 0,
                                 left: -20,
-                                bottom: 0,
+                                bottom: 15,
                               }}
                             >
                               <CartesianGrid
@@ -787,7 +783,7 @@ export default function SystemHealth() {
                               top: 10,
                               right: 10,
                               left: -20,
-                              bottom: 0,
+                              bottom: 15,
                             }}
                             barGap={12}
                           >
