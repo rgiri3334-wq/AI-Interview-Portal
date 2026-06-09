@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { motion } from 'framer-motion';
 import {
   Star, Brain, Smile, Volume2, MessageSquare, Search,
@@ -13,7 +11,8 @@ import {
 } from 'recharts';
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
-import logoUrl from '../assets/sterling_logo.png';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // ── Sterling Premium Score Ring ──────────────────────────────────────────
 function ScoreRing({ score, max = 100, color = '#DC2626', label, size = 120 }) {
@@ -73,10 +72,11 @@ const BAR_COLORS = ['#DC2626', '#EF4444', '#F87171', '#DC2626', '#EF4444'];
 export default function Report() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const pdfRef = useRef(null);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const pdfRef = useRef(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -133,144 +133,41 @@ export default function Report() {
   const overall = iv.overall_score ? Math.round(iv.overall_score) : Math.max(0, Math.round((normalizedTech + eqScore + confScore + commScore) / 4));
 
   const grade = overall >= 90 ? 'S' : overall >= 80 ? 'A' : overall >= 70 ? 'B' : overall >= 60 ? 'C' : 'F';
-  const gradeColor = grade === 'S' ? '#8B5CF6' : grade === 'A' ? '#10B981' : grade === 'B' ? '#3B82F6' : grade === 'C' ? '#F59E0B' : '#DC2626';
+  const gradeColor = overall >= 80 ? '#10B981' : overall >= 60 ? '#DC2626' : '#991B1B';
+
+  const handleExport = async () => {
+    if (!pdfRef.current) return;
+    setIsExporting(true);
+    
+    setTimeout(async () => {
+      try {
+        const canvas = await html2canvas(pdfRef.current, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#020617', // Match the slate-950 background
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        // A4 size is exactly 210 x 297 mm
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`Sterling_Dossier_${c.name.replace(/\\s+/g, '_')}.pdf`);
+      } catch (err) {
+        console.error("Failed to generate PDF", err);
+      } finally {
+        setIsExporting(false);
+      }
+    }, 100);
+  };
+
+  
     return (
       <div className="p-8">
-        {/* Hidden PDF Template */}
-        <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', zIndex: -9999 }}>
-          <div ref={pdfRef} className="w-[794px] h-[1123px] bg-white flex flex-col p-12 text-slate-900 font-sans relative overflow-hidden box-border">
-            {/* Futuristic Header */}
-            <div className="flex justify-between items-center border-b-[4px] border-red-600 pb-6 mb-8">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center shadow-sm border border-slate-200">
-                  <img src={logoUrl} alt="Sterling Logo" className="w-10 h-10 object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
-                  <div className="hidden w-10 h-10 bg-red-600 text-white flex items-center justify-center font-bold text-sm rounded-lg">S</div>
-                </div>
-                <div>
-                  <h1 className="text-3xl font-black tracking-tight text-slate-900">STERLING E-MOBILITY</h1>
-                  <p className="text-red-600 font-bold tracking-widest uppercase text-sm">Enterprise AI Dossier</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Generated On</div>
-                <div className="text-sm font-bold text-slate-900">{new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</div>
-              </div>
-            </div>
-
-            {/* Candidate Info Grid */}
-            <div className="grid grid-cols-2 gap-6 mb-8">
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-red-600"></div>
-                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Candidate Identity</h2>
-                <div className="space-y-3">
-                  <div><span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Name</span><span className="font-black text-lg text-slate-900">{c.name}</span></div>
-                  <div><span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Email</span><span className="font-bold text-sm text-slate-700">{c.email}</span></div>
-                </div>
-              </div>
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
-                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Role Context</h2>
-                <div className="space-y-3">
-                  <div><span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Target Role</span><span className="font-black text-lg text-slate-900">{c.job_role || 'Not specified'}</span></div>
-                  <div><span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Experience</span><span className="font-bold text-sm text-slate-700">{c.experience || 'Not specified'}</span></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Overall Fit & Status */}
-            <div className="bg-slate-900 text-white p-8 rounded-2xl mb-8 flex items-center justify-between shadow-lg border border-slate-800">
-              <div>
-                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Final Hiring Decision</h2>
-                <div className="text-3xl font-black tracking-tight text-white">{iv.hiring_decision || 'PENDING'}</div>
-              </div>
-              <div className="text-center px-10 border-x border-slate-700">
-                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Grade</h2>
-                <div className="text-4xl font-black" style={{color: gradeColor}}>{grade}</div>
-              </div>
-              <div className="text-right">
-                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Overall Fit</h2>
-                <div className="text-4xl font-black text-red-500">{overall}<span className="text-xl text-slate-500">/100</span></div>
-              </div>
-            </div>
-
-            {/* AI Intelligence Metrics */}
-            <div className="mb-8">
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-5 flex items-center gap-2 border-b border-slate-200 pb-3">
-                <Brain size={16} className="text-red-600"/> AI Intelligence Metrics
-              </h2>
-              <div className="grid grid-cols-2 gap-x-12 gap-y-5">
-                {[
-                  { label: 'Technical Mastery', val: normalizedTech },
-                  { label: 'Problem Solving', val: iv.problem_solving_score || 0 },
-                  { label: 'Role Alignment', val: iv.role_alignment_score || 0 },
-                  { label: 'Professionalism', val: iv.professionalism_score || 0 },
-                  { label: 'Learning Potential', val: iv.learning_potential_score || 0 },
-                  { label: 'Emotional Intelligence', val: eqScore },
-                  { label: 'Confidence Index', val: confScore },
-                  { label: 'Communication', val: commScore },
-                  { label: 'Behavioral Alignment', val: iv.behavioral_score || 0 }
-                ].map((m, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <span className="font-bold text-slate-600 text-sm tracking-wide">{m.label}</span>
-                    <div className="flex items-center gap-4">
-                      <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-red-600 rounded-full" style={{width: `${m.val}%`}}></div>
-                      </div>
-                      <span className="font-black text-slate-900 w-8 text-right text-sm">{m.val}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Summaries */}
-            <div className="grid grid-cols-2 gap-8 flex-1">
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <MessageSquare size={14} className="text-red-600"/> Executive Summary
-                  </h2>
-                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 text-[13px] font-medium text-slate-700 leading-relaxed shadow-sm">
-                    {iv.summary || 'No summary available.'}
-                  </div>
-                </div>
-                <div>
-                  <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <ShieldAlert size={14} className="text-red-600"/> Proctoring Intelligence
-                  </h2>
-                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-600">Integrity Violations</span>
-                    <span className="font-black text-red-600 bg-red-100 px-3 py-1 rounded-lg text-sm">{iv.proctoring_warnings || 0} / 3</span>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <TrendingUp size={14} className="text-emerald-600"/> Key Strengths
-                  </h2>
-                  <div className="bg-emerald-50 border border-emerald-100 p-5 rounded-xl text-[13px] font-bold text-emerald-800 leading-relaxed shadow-sm">
-                    {iv.strengths || 'Not analyzed.'}
-                  </div>
-                </div>
-                <div>
-                  <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <TrendingDown size={14} className="text-red-600"/> Critical Weaknesses
-                  </h2>
-                  <div className="bg-red-50 border border-red-100 p-5 rounded-xl text-[13px] font-bold text-red-800 leading-relaxed shadow-sm">
-                    {iv.weaknesses || 'Not analyzed.'}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="mt-8 border-t-[4px] border-slate-900 pt-6 flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              <div>CONFIDENTIAL - INTERNAL HR USE ONLY</div>
-              <div>STERLING AI PLATFORM v3.0</div>
-            </div>
-          </div>
-        </div>
 
 
         {/* Header Section */}
@@ -288,8 +185,9 @@ export default function Report() {
             <button onClick={() => navigate('/report')} className="px-5 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors text-slate-800 shadow-sm">
               <RotateCcw size={16} /> All Reports
             </button>
-            <button onClick={handleExport} className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-md uppercase tracking-wider">
-              <Download size={16} /> Export Dossier
+            <button onClick={handleExport} disabled={isExporting} className={`px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-md uppercase tracking-wider ${isExporting ? 'opacity-70 cursor-not-allowed' : ''}`}>
+              {isExporting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Download size={16} />} 
+              {isExporting ? 'Exporting PDF...' : 'Export Dossier'}
             </button>
           </div>
         </motion.div>
@@ -466,6 +364,120 @@ export default function Report() {
         </div>
 
       
+      </div>
+
+        {/* HIDDEN PDF TEMPLATE - ONLY VISIBLE TO HTML2CANVAS */}
+        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+          <div ref={pdfRef} style={{ width: '794px', height: '1123px', backgroundColor: '#020617', color: '#F8FAFC', padding: '40px', boxSizing: 'border-box', fontFamily: 'sans-serif', position: 'relative' }}>
+            {/* Header */}
+            <div style={{ borderBottom: '2px solid #DC2626', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <div>
+                <h1 style={{ fontSize: '28px', fontWeight: '900', color: '#FFFFFF', margin: 0, letterSpacing: '2px' }}>STERLING E-MOBILITY</h1>
+                <p style={{ fontSize: '14px', color: '#DC2626', margin: '5px 0 0 0', fontWeight: 'bold', letterSpacing: '4px' }}>ENTERPRISE AI DOSSIER</p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: '10px', color: '#64748B', margin: 0, letterSpacing: '1px', fontWeight: 'bold' }}>CONFIDENTIAL HR DOCUMENT</p>
+                <p style={{ fontSize: '10px', color: '#64748B', margin: '4px 0 0 0', letterSpacing: '1px' }}>DATE: {new Date().toLocaleDateString()}</p>
+              </div>
+            </div>
+
+            {/* Candidate Info Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px', background: '#0F172A', padding: '20px', borderRadius: '8px', border: '1px solid #1E293B' }}>
+              <div>
+                <p style={{ fontSize: '10px', color: '#64748B', margin: '0 0 4px 0', letterSpacing: '1px', fontWeight: 'bold' }}>CANDIDATE</p>
+                <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFFFFF', margin: 0 }}>{c.name}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: '10px', color: '#64748B', margin: '0 0 4px 0', letterSpacing: '1px', fontWeight: 'bold' }}>ROLE</p>
+                <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFFFFF', margin: 0 }}>{c.job_role}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: '10px', color: '#64748B', margin: '0 0 4px 0', letterSpacing: '1px', fontWeight: 'bold' }}>EMAIL</p>
+                <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFFFFF', margin: 0 }}>{c.email}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: '10px', color: '#64748B', margin: '0 0 4px 0', letterSpacing: '1px', fontWeight: 'bold' }}>EXPERIENCE / SKILLS</p>
+                <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#FFFFFF', margin: 0 }}>{c.experience || 'Not specified'} &bull; {c.skills || 'Not specified'}</p>
+              </div>
+            </div>
+
+            {/* Final Decision HUD */}
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '30px' }}>
+              <div style={{ flex: 1, background: gradeColor, padding: '20px', borderRadius: '8px', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <p style={{ fontSize: '12px', margin: '0 0 5px 0', letterSpacing: '2px', opacity: 0.9, fontWeight: 'bold' }}>FINAL GRADE</p>
+                  <p style={{ fontSize: '36px', fontWeight: '900', margin: 0 }}>{grade}</p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: '12px', margin: '0 0 5px 0', letterSpacing: '2px', opacity: 0.9, fontWeight: 'bold' }}>OVERALL FIT</p>
+                  <p style={{ fontSize: '36px', fontWeight: '900', margin: 0 }}>{overall}<span style={{fontSize: '18px', opacity: 0.8}}>/100</span></p>
+                </div>
+              </div>
+              <div style={{ flex: 1, background: '#0F172A', padding: '20px', borderRadius: '8px', border: \`1px solid \${gradeColor}\`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 5px 0', letterSpacing: '2px', fontWeight: 'bold' }}>HIRING STATUS</p>
+                  <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#FFFFFF', margin: 0 }}>{iv.hiring_decision || 'PENDING'}</p>
+                 </div>
+              </div>
+            </div>
+
+            {/* AI Intelligence Metrics */}
+            <div style={{ marginBottom: '30px' }}>
+              <h2 style={{ fontSize: '14px', color: '#DC2626', borderBottom: '1px solid #1E293B', paddingBottom: '10px', marginBottom: '15px', letterSpacing: '2px', fontWeight: 'bold' }}>[ AI INTELLIGENCE METRICS ]</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {[
+                  { label: 'Technical Mastery', val: normalizedTech },
+                  { label: 'Problem Solving', val: iv.problem_solving_score || 0 },
+                  { label: 'Role Alignment', val: iv.role_alignment_score || 0 },
+                  { label: 'Professionalism', val: iv.professionalism_score || 0 },
+                  { label: 'Learning Potential', val: iv.learning_potential_score || 0 },
+                  { label: 'Emotional Intelligence', val: eqScore },
+                  { label: 'Confidence Index', val: confScore },
+                  { label: 'Communication', val: commScore },
+                  { label: 'Behavioral Alignment', val: iv.behavioral_score || 0 },
+                ].map((m, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0F172A', padding: '10px 15px', borderRadius: '4px', border: '1px solid #1E293B' }}>
+                    <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 'bold' }}>{m.label}</span>
+                    <span style={{ fontSize: '14px', color: '#FFFFFF', fontWeight: 'bold' }}>{m.val}<span style={{ color: '#64748B' }}>/100</span></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Lower Section Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+               {/* Exec Summary & Proctoring */}
+               <div>
+                  <h2 style={{ fontSize: '14px', color: '#DC2626', borderBottom: '1px solid #1E293B', paddingBottom: '10px', marginBottom: '15px', letterSpacing: '2px', fontWeight: 'bold' }}>[ EXECUTIVE SUMMARY ]</h2>
+                  <p style={{ fontSize: '12px', color: '#CBD5E1', lineHeight: '1.6', margin: '0 0 20px 0' }}>{iv.summary || 'No summary available.'}</p>
+                  
+                  <h2 style={{ fontSize: '14px', color: '#DC2626', borderBottom: '1px solid #1E293B', paddingBottom: '10px', marginBottom: '15px', letterSpacing: '2px', fontWeight: 'bold' }}>[ PROCTORING INTELLIGENCE ]</h2>
+                  <div style={{ background: '#0F172A', padding: '15px', borderRadius: '4px', borderLeft: iv.proctoring_warnings > 0 ? '4px solid #EF4444' : '4px solid #10B981' }}>
+                    <p style={{ fontSize: '12px', color: '#FFFFFF', margin: '0 0 5px 0', fontWeight: 'bold' }}>Warnings: <span style={{ color: iv.proctoring_warnings > 0 ? '#EF4444' : '#10B981' }}>{iv.proctoring_warnings || 0}</span> / 3</p>
+                    <p style={{ fontSize: '10px', color: '#94A3B8', margin: 0 }}>{(iv.proctoring_logs && iv.proctoring_logs.length > 0) ? 'Violations detected. Review required.' : 'No violations detected. Session secure.'}</p>
+                  </div>
+               </div>
+
+               {/* Strengths & Weaknesses */}
+               <div>
+                  <h2 style={{ fontSize: '14px', color: '#10B981', borderBottom: '1px solid #1E293B', paddingBottom: '10px', marginBottom: '15px', letterSpacing: '2px', fontWeight: 'bold' }}>[ KEY STRENGTHS ]</h2>
+                  <ul style={{ paddingLeft: '15px', margin: '0 0 20px 0', color: '#CBD5E1', fontSize: '12px', lineHeight: '1.6' }}>
+                    {(iv.strengths || []).map((s, i) => <li key={i} style={{ marginBottom: '5px' }}>{s}</li>)}
+                  </ul>
+
+                  <h2 style={{ fontSize: '14px', color: '#F59E0B', borderBottom: '1px solid #1E293B', paddingBottom: '10px', marginBottom: '15px', letterSpacing: '2px', fontWeight: 'bold' }}>[ CRITICAL WEAKNESSES ]</h2>
+                  <ul style={{ paddingLeft: '15px', margin: '0', color: '#CBD5E1', fontSize: '12px', lineHeight: '1.6' }}>
+                    {(iv.weaknesses || []).map((w, i) => <li key={i} style={{ marginBottom: '5px' }}>{w}</li>)}
+                  </ul>
+               </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ position: 'absolute', bottom: '40px', left: '40px', right: '40px', textAlign: 'center', borderTop: '1px solid #1E293B', paddingTop: '20px' }}>
+               <p style={{ fontSize: '10px', color: '#64748B', letterSpacing: '3px', margin: 0, fontWeight: 'bold' }}>STERLING E-MOBILITY AI PLATFORM &copy; {new Date().getFullYear()} - ALL RIGHTS RESERVED</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
