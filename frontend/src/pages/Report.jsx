@@ -47,14 +47,14 @@ function ScoreRing({ score, max = 100, color = '#DC2626', label, size = 120 }) {
 // No mock report in production to prevent data leaks
 
 const radarFromReport = (r) => [
-  { axis: 'Technical', value: (r.technical_score * 10) || 90 },
-  { axis: 'Problem Solving', value: r.problem_solving || 85 },
-  { axis: 'Communication', value: r.communication || 95 },
-  { axis: 'Confidence', value: r.confidence || 92 },
-  { axis: 'Professionalism', value: r.professionalism || 90 },
-  { axis: 'Role Alignment', value: r.role_alignment || 88 },
-  { axis: 'Learning Potential', value: r.learning_potential || 85 },
-  { axis: 'EQ', value: r.eq_score || 88 },
+  { axis: 'Technical', value: r.technical_score || 90 },
+  { axis: 'Problem Solving', value: r.problem_solving_score || 85 },
+  { axis: 'Communication', value: r.communication_score || 95 },
+  { axis: 'Confidence', value: r.confidence_score || 92 },
+  { axis: 'Professionalism', value: r.professionalism_score || 90 },
+  { axis: 'Role Alignment', value: r.role_alignment_score || 88 },
+  { axis: 'Learning Potential', value: r.learning_potential_score || 85 },
+  { axis: 'EQ', value: r.behavioral_score || 88 },
 ];
 
 const barData = [
@@ -124,8 +124,11 @@ export default function Report() {
   const iv = report.interview;
   const radarData = radarFromReport(iv);
 
-  const normalizedTech = Math.max(0, iv.technical_score * 10);
-  const overall = Math.max(0, Math.round((normalizedTech + iv.eq_score + iv.confidence + iv.communication) / 4));
+  const normalizedTech = Math.max(0, iv.technical_score || 0);
+  const eqScore = iv.behavioral_score || 0;
+  const confScore = iv.confidence_score || 0;
+  const commScore = iv.communication_score || 0;
+  const overall = iv.overall_score ? Math.round(iv.overall_score) : Math.max(0, Math.round((normalizedTech + eqScore + confScore + commScore) / 4));
 
   const grade = overall >= 90 ? 'S' : overall >= 80 ? 'A' : overall >= 70 ? 'B' : overall >= 60 ? 'C' : 'F';
   const gradeColor = overall >= 80 ? '#10B981' : overall >= 60 ? '#DC2626' : '#991B1B';
@@ -147,13 +150,13 @@ OVERALL FIT: ${overall}/100
 
 [ AI INTELLIGENCE METRICS ]
 Technical Mastery:    ${normalizedTech}/100
-Problem Solving:      ${iv.problem_solving}/100
-Role Alignment:       ${iv.role_alignment}/100
-Professionalism:      ${iv.professionalism}/100
-Learning Potential:   ${iv.learning_potential}/100
-Emotional Intelligence: ${iv.eq_score}/100
-Confidence Index:     ${iv.confidence}/100
-Communication:        ${iv.communication}/100
+Problem Solving:      ${iv.problem_solving_score || 0}/100
+Role Alignment:       ${iv.role_alignment_score || 0}/100
+Professionalism:      ${iv.professionalism_score || 0}/100
+Learning Potential:   ${iv.learning_potential_score || 0}/100
+Emotional Intelligence: ${eqScore}/100
+Confidence Index:     ${confScore}/100
+Communication:        ${commScore}/100
 Behavioral Alignment: ${iv.behavioral_score || 0}/100
 
 [ PROCTORING INTELLIGENCE ]
@@ -241,9 +244,9 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <ScoreRing score={normalizedTech} label="Technical" color="#DC2626" />
-            <ScoreRing score={iv.eq_score} label="EQ Score" color="#10B981" />
-            <ScoreRing score={iv.confidence} label="Confidence" color="#DC2626" />
-            <ScoreRing score={iv.communication} label="Clarity" color="#DC2626" />
+            <ScoreRing score={eqScore} label="EQ Score" color="#10B981" />
+            <ScoreRing score={confScore} label="Confidence" color="#DC2626" />
+            <ScoreRing score={commScore} label="Clarity" color="#DC2626" />
           </div>
         </motion.div>
 

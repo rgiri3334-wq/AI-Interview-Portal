@@ -402,7 +402,7 @@ export default function Dashboard() {
     }).sort((a, b) => a.timestamp - b.timestamp);
     
     if (sorted.length === 1) {
-      return [{ day: 'Start', avg: 0 }, { day: sorted[0].day, avg: sorted[0].avg }, { day: 'Latest', avg: sorted[0].avg }];
+      return [{ day: 'Start', avg: sorted[0].avg }, { day: sorted[0].day, avg: sorted[0].avg }, { day: 'Latest', avg: sorted[0].avg }];
     }
     return sorted.length > 0 ? sorted : [{ day: 'No Data', avg: 0 }];
   }, [leaderboard]);
@@ -433,7 +433,7 @@ export default function Dashboard() {
   };
 
   const radarData = [
-    { axis: 'Technical',       A: avg('technical_score') * 10 },
+    { axis: 'Technical',       A: avg('technical_score') },
     { axis: 'Communication',   A: avg('communication_score') },
     { axis: 'Confidence',      A: avg('confidence_score') },
     { axis: 'Problem Solving', A: avg('problem_solving_score') },
