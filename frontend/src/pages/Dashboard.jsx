@@ -291,7 +291,7 @@ function TriageCard({ candidate, onClick }) {
 }
 
 // ── Candidate List Modal ──────────────────────────────────────────────────
-function CandidateListModal({ filter, leaderboard, onClose, onNavigate }) {
+function CandidateListModal({ filter, leaderboard, onClose, onNavigate, onDecisionChange }) {
   if (!filter) return null;
 
   let filtered = leaderboard;
@@ -370,7 +370,7 @@ function CandidateListModal({ filter, leaderboard, onClose, onNavigate }) {
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <DecisionBadge decision={c.hiring_decision || (c.interview_status === 'completed' ? 'UNDER_REVIEW' : 'IN_PROGRESS')} />
+                        <DecisionDropdown candidate={c} onUpdate={onDecisionChange} />
                       </td>
                       <td className="py-4 px-4">
                         <button className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm rounded-xl text-xs font-bold text-slate-700 transition-colors uppercase tracking-wider whitespace-nowrap"
@@ -845,7 +845,7 @@ export default function Dashboard() {
 
       <AnimatePresence>
         {triageCandidate && <IntegritySignalModal candidate={triageCandidate} onClose={() => setTriageCandidate(null)} />}
-        {modalFilter && <CandidateListModal filter={modalFilter} leaderboard={leaderboard} onClose={() => setModalFilter(null)} onNavigate={navigate} />}
+        {modalFilter && <CandidateListModal filter={modalFilter} leaderboard={leaderboard} onClose={() => setModalFilter(null)} onNavigate={navigate} onDecisionChange={handleDecisionChange} />}
       </AnimatePresence>
     </div>
   );
