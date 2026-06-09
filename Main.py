@@ -1962,6 +1962,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
         # BUG-10/BUG-27 fix: Safe JSON parse — stored value could be empty string, None, or valid JSON
         def _safe_json_list(val):
             if not val: return []
+            if isinstance(val, list): return val
             try: return json.loads(val)
             except Exception: return []
         iv = {
@@ -1976,7 +1977,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
             "behavioral_score": latest.behavioral_score,
             "fluency_score": getattr(latest, "fluency_score", 0),
             "overall_score": getattr(latest, "overall_score", 0),
-            "summary": "Interview completed.", 
+            "summary": report.summary if report and report.summary else "Interview completed.", 
             "strengths": _safe_json_list(report.strengths if report else None), 
             "weaknesses": _safe_json_list(report.weaknesses if report else None),
             "overall_rating": "N/A", "hiring_recommendation": report.recommendation if report else "N/A", "readiness_score": 0,
