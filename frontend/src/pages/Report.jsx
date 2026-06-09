@@ -290,33 +290,62 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
           <p className="text-slate-600 leading-relaxed text-lg font-medium">{iv.summary}</p>
         </motion.div>
 
-        {/* Proctoring Intelligence Report */}
-        {(iv.proctoring_warnings > 0 || (iv.proctoring_logs && iv.proctoring_logs.length > 0)) && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }} className="bg-white border border-slate-200 rounded-2xl p-8 mb-8 shadow-sm border-t-4 border-t-slate-800">
-            <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center justify-between uppercase tracking-widest">
-              <span className="flex items-center"><ShieldAlert size={16} className="text-red-600 mr-3" /> Proctoring Intelligence Report</span>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${iv.proctoring_warnings === 0 ? 'bg-green-100 text-green-700' : iv.proctoring_warnings < 3 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                {iv.proctoring_warnings} Warnings
-              </span>
+        {/* Integrity Triage Matrix */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }} className="bg-white border border-slate-200 rounded-2xl p-8 mb-8 shadow-sm border-t-4 border-t-slate-800">
+          <div className="flex justify-between items-start mb-8">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center uppercase tracking-widest">
+              <ShieldAlert size={16} className="text-slate-800 mr-3" /> Integrity Triage Matrix
             </h3>
-            
-            {iv.proctoring_logs && iv.proctoring_logs.length > 0 ? (
-              <div className="space-y-4">
-                {iv.proctoring_logs.map((log, index) => (
-                  <div key={index} className="flex items-start gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="w-2 h-2 mt-2 rounded-full bg-red-500 shrink-0" />
-                    <div>
-                      <span className="text-xs font-bold text-slate-400 mb-1 block">{log.timestamp}</span>
-                      <span className="text-sm font-semibold text-slate-800 leading-relaxed">{log.event}</span>
-                    </div>
-                  </div>
-                ))}
+            <div className={`px-4 py-1 rounded-full text-sm font-bold uppercase tracking-wider border
+              ${iv.integrity_verdict === 'CLEAN' ? 'bg-green-50 text-green-700 border-green-200' : 
+                iv.integrity_verdict === 'BORDERLINE' ? 'bg-amber-50 text-amber-700 border-amber-200' : 
+                iv.integrity_verdict === 'FLAGGED' ? 'bg-orange-50 text-orange-700 border-orange-200' : 
+                'bg-red-50 text-red-700 border-red-200'}`}>
+              Verdict: {iv.integrity_verdict || 'CLEAN'} ({iv.integrity_score || 100})
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-8">
+            {[
+              { label: 'Posture (35%)', score: iv.posture_score || 100 },
+              { label: 'Movement (25%)', score: iv.movement_score || 100 },
+              { label: 'Eye Tracking (20%)', score: iv.eye_tracking_score || 100 },
+              { label: 'Authenticity (15%)', score: iv.authenticity_score || 100 },
+              { label: 'Environment (5%)', score: iv.environment_score || 100 },
+            ].map((metric, idx) => (
+              <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col items-center text-center">
+                <span className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">{metric.label}</span>
+                <span className={`text-2xl font-black ${metric.score < 50 ? 'text-red-600' : metric.score < 80 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                  {Math.round(metric.score)}
+                </span>
               </div>
-            ) : (
-              <p className="text-slate-500 italic text-sm">No specific violation logs recorded.</p>
-            )}
-          </motion.div>
-        )}
+            ))}
+          </div>
+
+          <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Signal Logs</h4>
+          {iv.integrity_signals && iv.integrity_signals.length > 0 ? (
+            <div className="space-y-3">
+              {iv.integrity_signals.map((log, index) => (
+                <div key={index} className="flex items-start gap-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                  <div className={`w-2 h-2 mt-2 rounded-full shrink-0 ${log.deduction > 0 ? 'bg-red-500' : 'bg-slate-300'}`} />
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 mb-0.5 block">
+                      {new Date(log.timestamp).toLocaleTimeString()} &bull; {log.category?.toUpperCase() || 'SYS'} &bull; {log.signal}
+                    </span>
+                    <span className="text-sm font-semibold text-slate-800">{log.note}</span>
+                    {log.deduction > 0 && (
+                      <span className="ml-2 text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-100">
+                        -{log.deduction} pts
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-slate-500 italic text-sm">No integrity violations recorded. Perfect run.</p>
+          )}
+        </motion.div>
 
         {/* Attributes Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">

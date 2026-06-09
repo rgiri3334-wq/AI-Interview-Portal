@@ -234,6 +234,14 @@ class FinalReport(Base):
     integrity_score = Column(Integer, server_default="100", default=100)          # 0-100; 100 = clean
     integrity_verdict = Column(String, server_default="CLEAN", default="CLEAN")  # CLEAN|BORDERLINE|FLAGGED|HIGH_RISK
     integrity_signals = Column(Text, server_default="[]", default="[]")          # JSON array of signal log entries
+    
+    # Phase 1: New Triage Matrix Scores
+    posture_score = Column(Float, server_default="100.0", default=100.0)
+    movement_score = Column(Float, server_default="100.0", default=100.0)
+    eye_tracking_score = Column(Float, server_default="100.0", default=100.0)
+    authenticity_score = Column(Float, server_default="100.0", default=100.0)
+    environment_score = Column(Float, server_default="100.0", default=100.0)
+    
     summary = Column(Text, nullable=True)
     timeline_data = Column(Text, default="[]")
 

@@ -92,19 +92,6 @@ export default function LiveInterview() {
 
 
 
-  // Telemetry is now handled internally by Avatar3D to prevent 60FPS React re-renders on the main thread.
-
-  const sendTelemetry = (metrics) => {
-    console.debug("[Telemetry]", metrics);
-  };
-  const { getMetrics, stop: stopHuman } = useHumanBehavior(videoRef, sendTelemetry, { enabled: phase === 'interviewing' });
-
-  // Fix #15: Use a ref for phase so useHumanBehavior always sees the latest value without stale closure lag
-  const phaseRef = useRef(phase);
-  useEffect(() => { phaseRef.current = phase; }, [phase]);
-
-  const { isRecording, startRecording, stopRecording, forceStopAllTracks } = useAudioRecorder();
-
   // Sprint 3: Integrity Engine — collects signals throughout the interview
   const {
     integrityScore,
@@ -112,6 +99,18 @@ export default function LiveInterview() {
     checkBehavioral,
     computeFinal: computeIntegrityFinal,
   } = useIntegrityEngine();
+
+  const onVisionSignal = useCallback((signalKey, meta) => {
+    recordIntegritySignal(signalKey, meta);
+  }, [recordIntegritySignal]);
+
+  const { getMetrics, stop: stopHuman } = useHumanBehavior(videoRef, onVisionSignal, { enabled: phase === 'interviewing' });
+
+  // Fix #15: Use a ref for phase so useHumanBehavior always sees the latest value without stale closure lag
+  const phaseRef = useRef(phase);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  const { isRecording, startRecording, stopRecording, forceStopAllTracks } = useAudioRecorder();
 
   useEffect(() => {
     return () => {
@@ -653,6 +652,12 @@ export default function LiveInterview() {
         // Sprint 3: Integrity Engine fields
         integrity_score: integrityReport.integrity_score,
         integrity_data: integrityReport,
+        // Phase 1: Integrity Triage Matrix Sub-Scores
+        posture_score: integrityReport.posture_score,
+        movement_score: integrityReport.movement_score,
+        eye_tracking_score: integrityReport.eye_tracking_score,
+        authenticity_score: integrityReport.authenticity_score,
+        environment_score: integrityReport.environment_score,
       });
     } catch (e) {
       console.error('Failed to save final interview scores', e);

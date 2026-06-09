@@ -1,38 +1,48 @@
 /**
- * useIntegrityEngine.js — Sprint 3 (Client-Side)
+ * useIntegrityEngine.js — Phase 1 Upgrade
  *
- * JavaScript mirror of services/integrity_engine.py.
- * Runs entirely in the browser during the live interview.
- *
+ * Implements the 35/25/20/15/5 Integrity Triage Matrix.
+ * 
  * Usage:
  *   const { recordSignal, computeFinal, integrityScore } = useIntegrityEngine();
- *
- *   // When a proctoring warning fires:
- *   recordSignal('tab_switch');
- *
- *   // At interview end, get the full report for the API:
- *   const integrityReport = computeFinal();
  */
 import { useRef, useState, useCallback } from 'react';
 
-// ── Signal weights (mirror of Python SIGNAL_WEIGHTS) ──────────────────────
+// ── Signal weights grouped by Matrix Category ──────────────────────
 const SIGNAL_WEIGHTS = {
-  tab_switch_1st:          0,
-  tab_switch_2nd:          8,
-  tab_switch_3rd_plus:    15,
-  devtools_detected:      12,
-  gpt_syntax_confirmed:   20,
-  gpt_syntax_suspected:    0,
-  resume_challenge_fail_1: 0,
-  resume_challenge_fail_2: 18,
-  zero_filler_words:       5,
-  perfect_structure_every: 8,
-  abnormally_fast_wpm:    10,
-  gpt_challenge_cleared:   0,
-  resume_challenge_cleared:0,
+  // Environment (5%)
+  tab_switch_1st:          { cat: 'env', val: 0 },
+  tab_switch_2nd:          { cat: 'env', val: 50 },
+  tab_switch_3rd_plus:     { cat: 'env', val: 100 },
+  devtools_detected:       { cat: 'env', val: 100 },
+  
+  // Authenticity (15%)
+  gpt_syntax_confirmed:    { cat: 'auth', val: 50 },
+  gpt_syntax_suspected:    { cat: 'auth', val: 0 },
+  resume_challenge_fail_1: { cat: 'auth', val: 0 },
+  resume_challenge_fail_2: { cat: 'auth', val: 40 },
+  zero_filler_words:       { cat: 'auth', val: 20 },
+  perfect_structure_every: { cat: 'auth', val: 30 },
+  abnormally_fast_wpm:     { cat: 'auth', val: 30 },
+  vocabulary_shift:        { cat: 'auth', val: 25 },
+  gpt_challenge_cleared:   { cat: 'auth', val: 0 },
+  resume_challenge_cleared:{ cat: 'auth', val: 0 },
+  
+  // Posture (35%)
+  posture_warning:         { cat: 'posture', val: 15 },
+  posture_critical:        { cat: 'posture', val: 40 },
+  
+  // Movement (25%)
+  movement_warning:        { cat: 'movement', val: 15 },
+  seat_abandonment:        { cat: 'movement', val: 60 },
+  multiple_people:         { cat: 'movement', val: 100 },
+  
+  // Eye Tracking (20%)
+  off_screen_gaze:         { cat: 'eye', val: 15 },
+  continuous_off_screen:   { cat: 'eye', val: 50 },
 };
 
-// ── GPT Syntax Patterns (mirror of Python GPT_SYNTAX_PATTERNS) ────────────
+// ── GPT Syntax Patterns ────────────
 const GPT_PATTERNS = [
   /\bCertainly[,!]?\b/i,
   /\bAbsolutely[,!]?\b/i,
@@ -50,14 +60,32 @@ const GPT_PATTERNS = [
 ];
 
 export function useIntegrityEngine() {
-  const scoreRef = useRef(100);
+  const scoresRef = useRef({
+    posture: 100.0,
+    movement: 100.0,
+    eye: 100.0,
+    auth: 100.0,
+    env: 100.0,
+  });
+
   const signalsRef = useRef([]);
   const tabSwitchCountRef = useRef(0);
   const gptSuspectedCountRef = useRef(0);
   const resumeFailStreakRef = useRef({});
 
-  // Expose reactive score for UI display
   const [integrityScore, setIntegrityScore] = useState(100);
+
+  const calculateTotalScore = useCallback(() => {
+    const s = scoresRef.current;
+    // 35/25/20/15/5 matrix
+    const total = 
+      (s.posture * 0.35) + 
+      (s.movement * 0.25) + 
+      (s.eye * 0.20) + 
+      (s.auth * 0.15) + 
+      (s.env * 0.05);
+    return Math.max(0, Math.min(100, Math.round(total)));
+  }, []);
 
   // ── Record a signal ─────────────────────────────────────────────────────
   const recordSignal = useCallback((signalKey, metadata = {}) => {
@@ -81,26 +109,35 @@ export function useIntegrityEngine() {
       }
     }
 
-    const deduction = SIGNAL_WEIGHTS[actualKey] ?? 0;
-    scoreRef.current = Math.max(0, scoreRef.current - deduction);
-    setIntegrityScore(scoreRef.current);
+    const weightInfo = SIGNAL_WEIGHTS[actualKey];
+    const deduction = weightInfo ? weightInfo.val : 0;
+    const cat = weightInfo ? weightInfo.cat : null;
+
+    if (cat && deduction > 0) {
+      scoresRef.current[cat] = Math.max(0, scoresRef.current[cat] - deduction);
+    }
+
+    const newTotal = calculateTotalScore();
+    setIntegrityScore(newTotal);
 
     const entry = {
       signal: actualKey,
+      category: cat || 'unknown',
       deduction,
-      score_after: scoreRef.current,
+      score_after: newTotal,
       note,
       timestamp: ts,
       metadata,
     };
     signalsRef.current.push(entry);
 
-    console.debug(
-      `[Integrity] ${actualKey} | -${deduction}pts | Score: ${scoreRef.current}`,
-      metadata
-    );
-    return { deducted: deduction, new_score: scoreRef.current, note };
-  }, []);
+    if (deduction > 0) {
+      console.warn(
+        `[Integrity] ${actualKey} (-${deduction} to ${cat}) | New Total: ${newTotal}`
+      );
+    }
+    return { deducted: deduction, new_score: newTotal, note };
+  }, [calculateTotalScore]);
 
   // ── GPT syntax check ────────────────────────────────────────────────────
   const checkGptSyntax = useCallback((transcript, questionNumber) => {
@@ -131,40 +168,28 @@ export function useIntegrityEngine() {
     };
   }, [recordSignal]);
 
-  // ── Confirm GPT challenge result ────────────────────────────────────────
   const confirmGptChallenge = useCallback((passed, score) => {
     if (passed || score >= 5) {
-      recordSignal('gpt_challenge_cleared', {
-        note: 'Challenge passed. GPT suspicion cleared.',
-      });
+      recordSignal('gpt_challenge_cleared', { note: 'Challenge passed. GPT suspicion cleared.' });
     } else {
-      recordSignal('gpt_syntax_confirmed', {
-        note: `Challenge failed (score ${score}/10). GPT use confirmed.`,
-      });
+      recordSignal('gpt_syntax_confirmed', { note: `Challenge failed (score ${score}/10). GPT use confirmed.` });
     }
   }, [recordSignal]);
 
-  // ── Record resume challenge result ──────────────────────────────────────
   const recordResumeChallenge = useCallback((skillClaim, passed, score) => {
     const streaks = resumeFailStreakRef.current;
     if (!streaks[skillClaim]) streaks[skillClaim] = 0;
 
     if (passed || score >= 5) {
       streaks[skillClaim] = 0;
-      recordSignal('resume_challenge_cleared', {
-        note: `Resume claim verified: '${skillClaim.slice(0, 50)}'`,
-      });
+      recordSignal('resume_challenge_cleared', { note: `Resume claim verified: '${skillClaim.slice(0, 50)}'` });
     } else {
       streaks[skillClaim] += 1;
       const streak = streaks[skillClaim];
       if (streak === 1) {
-        recordSignal('resume_challenge_fail_1', {
-          note: `First failure on '${skillClaim.slice(0, 50)}'. Grace period.`,
-        });
+        recordSignal('resume_challenge_fail_1', { note: `First failure on '${skillClaim.slice(0, 50)}'. Grace period.` });
       } else {
-        recordSignal('resume_challenge_fail_2', {
-          note: `Second consecutive failure on '${skillClaim.slice(0, 50)}'.`,
-        });
+        recordSignal('resume_challenge_fail_2', { note: `Second consecutive failure on '${skillClaim.slice(0, 50)}'.` });
       }
     }
   }, [recordSignal]);
@@ -177,35 +202,33 @@ export function useIntegrityEngine() {
     totalAnswers = 0,
   }) => {
     if (totalAnswers < 3) return;
+    
     if (avgWpm > 280) {
-      recordSignal('abnormally_fast_wpm', {
-        note: `Average WPM ${avgWpm.toFixed(0)} (>280) — possible script reading.`,
-      });
+      recordSignal('abnormally_fast_wpm', { note: `Average WPM ${avgWpm.toFixed(0)} (>280) — possible script reading.` });
+    } else if (avgWpm > 220 && roboticStructureCount >= totalAnswers * 0.7) {
+      recordSignal('vocabulary_shift', { note: `High WPM + robotic structure implies pre-written text reading.` });
     }
+
     if (totalFillerWords === 0 && totalAnswers >= 5) {
-      recordSignal('zero_filler_words', {
-        note: 'Zero filler words detected across all answers.',
-      });
+      recordSignal('zero_filler_words', { note: 'Zero filler words detected across all answers.' });
     }
     if (totalAnswers >= 4 && roboticStructureCount >= totalAnswers * 0.85) {
-      recordSignal('perfect_structure_every', {
-        note: `${roboticStructureCount}/${totalAnswers} answers robotically structured.`,
-      });
+      recordSignal('perfect_structure_every', { note: `${roboticStructureCount}/${totalAnswers} answers robotically structured.` });
     }
   }, [recordSignal]);
 
   // ── Compute final verdict ───────────────────────────────────────────────
   const computeFinal = useCallback(() => {
-    const score = Math.max(0, Math.min(100, scoreRef.current));
+    const finalTotal = calculateTotalScore();
 
     let verdict, verdict_label, verdict_color, recommendation;
-    if (score >= 90) {
+    if (finalTotal >= 90) {
       verdict = 'CLEAN'; verdict_label = '✅ Clean'; verdict_color = 'green';
       recommendation = 'No integrity concerns. Proceed to next round.';
-    } else if (score >= 70) {
+    } else if (finalTotal >= 70) {
       verdict = 'BORDERLINE'; verdict_label = '🟡 Borderline'; verdict_color = 'yellow';
       recommendation = 'Minor flags detected. Human review recommended.';
-    } else if (score >= 50) {
+    } else if (finalTotal >= 50) {
       verdict = 'FLAGGED'; verdict_label = '🟠 Flagged'; verdict_color = 'orange';
       recommendation = 'Multiple integrity signals. Human review REQUIRED before advancing.';
     } else {
@@ -218,7 +241,12 @@ export function useIntegrityEngine() {
     );
 
     return {
-      integrity_score: score,
+      integrity_score: finalTotal,
+      posture_score: scoresRef.current.posture,
+      movement_score: scoresRef.current.movement,
+      eye_tracking_score: scoresRef.current.eye,
+      authenticity_score: scoresRef.current.auth,
+      environment_score: scoresRef.current.env,
       integrity_verdict: verdict,
       integrity_verdict_label: verdict_label,
       integrity_verdict_color: verdict_color,
@@ -226,22 +254,17 @@ export function useIntegrityEngine() {
       signal_count: significant.length,
       signal_log: signalsRef.current,
       significant_signals: significant,
-      total_tab_switches: tabSwitchCountRef.current,
-      gpt_suspected_count: gptSuspectedCountRef.current,
       computed_at: new Date().toISOString(),
-      human_override: null,
-      human_override_by: null,
-      human_override_note: null,
     };
-  }, []);
+  }, [calculateTotalScore]);
 
   return {
-    integrityScore,        // Live reactive score for UI badge
-    recordSignal,          // Record any event
-    checkGptSyntax,        // Returns { challenge_required, matched_patterns }
-    confirmGptChallenge,   // Call after challenge answer scored
-    recordResumeChallenge, // Track resume claim verifications
-    checkBehavioral,       // Call at end of interview with aggregate stats
-    computeFinal,          // Returns full integrity report dict for API
+    integrityScore,        
+    recordSignal,          
+    checkGptSyntax,        
+    confirmGptChallenge,   
+    recordResumeChallenge, 
+    checkBehavioral,       
+    computeFinal,          
   };
 }

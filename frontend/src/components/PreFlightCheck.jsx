@@ -135,6 +135,8 @@ export default function PreFlightCheck({ onPass, candidateName = 'Candidate', jo
 
   const [checksDone, setChecksDone] = useState(false);
   const [canBegin, setCanBegin]     = useState(false);
+  const [showCompliance, setShowCompliance] = useState(false);
+  const [complianceChecked, setComplianceChecked] = useState(false);
 
   // ── Release all preflight streams ────────────────────────────────────────
   const releaseStreams = useCallback(() => {
@@ -467,7 +469,11 @@ export default function PreFlightCheck({ onPass, candidateName = 'Candidate', jo
 
           {/* Begin Interview Button */}
           <motion.button
-            onClick={handleBegin}
+            onClick={() => {
+              if (canBegin && !showCompliance) {
+                setShowCompliance(true);
+              }
+            }}
             disabled={!canBegin}
             whileHover={canBegin ? { scale: 1.02 } : {}}
             whileTap={canBegin ? { scale: 0.98 } : {}}
@@ -495,6 +501,87 @@ export default function PreFlightCheck({ onPass, candidateName = 'Candidate', jo
           </p>
         </motion.div>
       </div>
+
+      {/* Compliance Overlay */}
+      <AnimatePresence>
+        {showCompliance && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100"
+            >
+              <div className="bg-red-600 px-6 py-4 text-white">
+                <h3 className="text-xl font-bold">Candidate Guidelines & Compliance</h3>
+                <p className="text-red-100 text-sm mt-1">Please acknowledge the following rules before beginning.</p>
+              </div>
+              <div className="p-6">
+                <ul className="space-y-3 text-sm text-slate-700 font-medium mb-6">
+                  <li className="flex gap-3">
+                    <span className="text-red-500 text-lg leading-none">✓</span>
+                    You must remain clearly visible in the camera frame at all times.
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="text-red-500 text-lg leading-none">✓</span>
+                    Do not use secondary devices (phones, tablets) or multiple monitors.
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="text-red-500 text-lg leading-none">✓</span>
+                    Eye movements and posture are actively monitored to ensure fairness.
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="text-red-500 text-lg leading-none">✓</span>
+                    Switching browser tabs or using Developer Tools is strictly prohibited.
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="text-red-500 text-lg leading-none">✓</span>
+                    Ensure you are in a quiet, brightly lit room with no other individuals present.
+                  </li>
+                </ul>
+
+                <label className="flex items-start gap-3 cursor-pointer p-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-red-50 hover:border-red-200 transition-colors">
+                  <div className="pt-0.5">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                      checked={complianceChecked}
+                      onChange={(e) => setComplianceChecked(e.target.checked)}
+                    />
+                  </div>
+                  <span className="text-sm text-slate-700 select-none">
+                    I agree to the guidelines above and consent to AI-assisted proctoring and behavioral analysis for the duration of this interview.
+                  </span>
+                </label>
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <button 
+                    onClick={() => setShowCompliance(false)}
+                    className="px-5 py-2.5 rounded-xl font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button 
+                    onClick={handleBegin}
+                    disabled={!complianceChecked}
+                    className={`px-6 py-2.5 rounded-xl font-bold transition-all shadow-md ${
+                      complianceChecked 
+                        ? 'bg-red-600 text-white hover:bg-red-700 shadow-red-500/30 hover:shadow-lg' 
+                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Acknowledge & Start
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

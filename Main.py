@@ -427,6 +427,12 @@ class SaveInterviewRequest(BaseModel):
     # Sprint 3: Integrity Engine fields (optional — backend computes if not sent)
     integrity_score:         int   = Field(default=100, ge=0, le=100, description="Integrity score 0-100 from client-side signal tracking")
     integrity_data:          dict  = Field(default_factory=dict, description="Full signal log from IntegrityEngine.compute_final()")
+    # Phase 1: Integrity Triage Matrix Sub-Scores
+    posture_score:           float = Field(default=100.0)
+    movement_score:          float = Field(default=100.0)
+    eye_tracking_score:      float = Field(default=100.0)
+    authenticity_score:      float = Field(default=100.0)
+    environment_score:       float = Field(default=100.0)
 
 class DecisionUpdateRequest(BaseModel):
     decision: str
@@ -1924,6 +1930,12 @@ async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Ses
         integrity_score=req.integrity_score,
         integrity_verdict=score_band(req.integrity_score),
         integrity_signals=json.dumps(req.integrity_data.get("signal_log", [])),
+        # Phase 1: New Triage Matrix Scores
+        posture_score=req.posture_score,
+        movement_score=req.movement_score,
+        eye_tracking_score=req.eye_tracking_score,
+        authenticity_score=req.authenticity_score,
+        environment_score=req.environment_score,
     )
     # Sprint 3: Attach integrity score to interview session for dashboard display
     integrity_score = req.integrity_score
@@ -2013,7 +2025,15 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
             "weaknesses": _safe_json_list(report.weaknesses if report else None),
             "overall_rating": "N/A", "hiring_recommendation": report.recommendation if report else "N/A", "readiness_score": 0,
             "proctoring_warnings": getattr(latest, "proctoring_warnings", 0), 
-            "proctoring_logs": []
+            "proctoring_logs": [],
+            "integrity_score": getattr(report, "integrity_score", 100) if report else 100,
+            "integrity_verdict": getattr(report, "integrity_verdict", "CLEAN") if report else "CLEAN",
+            "integrity_signals": _safe_json_list(report.integrity_signals if report else None),
+            "posture_score": getattr(report, "posture_score", 100) if report else 100,
+            "movement_score": getattr(report, "movement_score", 100) if report else 100,
+            "eye_tracking_score": getattr(report, "eye_tracking_score", 100) if report else 100,
+            "authenticity_score": getattr(report, "authenticity_score", 100) if report else 100,
+            "environment_score": getattr(report, "environment_score", 100) if report else 100,
         }
     else:
         iv = {
