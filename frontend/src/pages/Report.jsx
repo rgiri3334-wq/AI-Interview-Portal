@@ -11,7 +11,6 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
-} from 'recharts';
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
 import logoUrl from '../../assets/sterling_logo.png';
