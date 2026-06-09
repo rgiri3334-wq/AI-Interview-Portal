@@ -6,6 +6,7 @@ import CandidateDetails from './pages/CandidateDetails';
 import Dashboard from './pages/Dashboard';
 import LiveInterview from './pages/LiveInterview';
 import Report from './pages/Report';
+import ReportList from './pages/ReportList';
 import AdminPanel from './pages/AdminPanel';
 import CandidateRegister from './pages/CandidateRegister';
 import CandidateLogin from './pages/CandidateLogin';
@@ -69,7 +70,8 @@ export default function App() {
           <Route path="/candidate" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateDetails /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><Dashboard /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><LiveInterview /></ProtectedRoute>} />
-          <Route path="/report" element={<ProtectedRoute allowedRoles={['admin']}><Report /></ProtectedRoute>} />
+          <Route path="/report" element={<ProtectedRoute allowedRoles={['admin']}><ReportList /></ProtectedRoute>} />
+          <Route path="/report/:id" element={<ProtectedRoute allowedRoles={['admin']}><Report /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminPanel /></ProtectedRoute>} />
           <Route path="/system-health" element={<ProtectedRoute allowedRoles={['admin']}><SystemHealth /></ProtectedRoute>} />
           <Route path="/admin-management" element={<ProtectedRoute allowedRoles={['admin']}><AdminManagement /></ProtectedRoute>} />

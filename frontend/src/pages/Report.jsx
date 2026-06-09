@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Star, Brain, Smile, Volume2, MessageSquare, Search,
@@ -67,58 +67,27 @@ const BAR_COLORS = ['#DC2626', '#EF4444', '#F87171', '#DC2626', '#EF4444'];
 
 export default function Report() {
   const navigate = useNavigate();
-  const [candidates, setCandidates] = useState([]);
-  const [activeTabId, setActiveTabId] = useState(localStorage.getItem('candidate_id'));
+  const { id } = useParams();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  useEffect(() => {
-    const fetchCandidates = async () => {
-      try {
-        const lbResponse = await apiClient.getLeaderboard();
-        const lb = lbResponse.candidates || lbResponse || [];
-        const completed = lb.filter(c => c.interview_status === 'completed' || c.global_score > 0);
-        setCandidates(completed);
-        
-        if (completed.length > 0) {
-          const storedId = localStorage.getItem('candidate_id');
-          if (!storedId || !completed.find(c => c.id === storedId)) {
-            setActiveTabId(completed[0].id);
-          } else {
-            setActiveTabId(storedId);
-          }
-        } else {
-          setLoading(false);
-          setError("No candidates have completed their interviews yet.");
-        }
-      } catch (e) {
-        console.error("fetchCandidates error:", e);
-        setError("Failed to fetch candidates leaderboard: " + (e.message || String(e)));
-        setLoading(false);
-      }
-    };
-    fetchCandidates();
-  }, []);
 
   useEffect(() => {
     const fetchReport = async () => {
-      if (!activeTabId) return;
+      if (!id) return;
       setLoading(true);
       setError(null);
       try {
-        const r = await apiClient.getCandidateReport(activeTabId);
+        const r = await apiClient.getCandidateReport(id);
         if (!r || !r.candidate) throw new Error("Invalid report data");
         setReport(r);
-        localStorage.setItem('candidate_id', activeTabId);
       } catch (e) {
         setError("Failed to retrieve report for this candidate.");
       }
       setLoading(false);
     };
     fetchReport();
-  }, [activeTabId]);
+  }, [id]);
 
   const renderContent = () => {
     if (loading) {
@@ -138,11 +107,9 @@ export default function Report() {
           <AlertCircle size={48} className="text-red-500 mb-4 mx-auto" />
           <h2 className="text-2xl font-bold text-slate-800 mb-2">Report Unavailable</h2>
           <p className="text-slate-500 mb-6 max-w-md mx-auto">{error || "Could not load report."}</p>
-          {candidates.length === 0 && (
-            <button onClick={() => navigate('/dashboard')} className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 mx-auto">
-              Return to Dashboard
-            </button>
-          )}
+          <button onClick={() => navigate('/report')} className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 mx-auto">
+            Return to Reports
+          </button>
         </div>
       );
     }
@@ -235,8 +202,8 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
             <p className="text-slate-500 font-medium">Advanced metrics and Sterling AI evaluation for {c.name}</p>
           </div>
           <div className="flex gap-4">
-            <button onClick={() => { localStorage.removeItem('candidate_id'); navigate('/dashboard'); }} className="px-5 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors text-slate-800 shadow-sm">
-              <RotateCcw size={16} /> Dashboard
+            <button onClick={() => navigate('/report')} className="px-5 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors text-slate-800 shadow-sm">
+              <RotateCcw size={16} /> All Reports
             </button>
             <button onClick={handleExport} className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-md uppercase tracking-wider">
               <Download size={16} /> Export Dossier
@@ -387,71 +354,11 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
     );
   };
 
-  const filteredCandidates = candidates.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
-
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
       <Sidebar />
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Candidate Cards Navigation */}
-        <div className="bg-white border-b border-slate-200 p-6 z-10 shadow-sm shrink-0">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-extrabold text-slate-800">Completed Interviews ({filteredCandidates.length})</h2>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search candidates..." 
-                value={searchTerm} 
-                onChange={e => setSearchTerm(e.target.value)} 
-                className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition-all w-64" 
-              />
-            </div>
-          </div>
-          
-          <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
-            {filteredCandidates.map(cand => (
-              <button
-                key={cand.id}
-                onClick={() => setActiveTabId(cand.id)}
-                className={`flex flex-col text-left p-4 min-w-[240px] max-w-[280px] rounded-xl border transition-all ${
-                  activeTabId === cand.id 
-                    ? 'border-red-600 bg-red-50 shadow-md ring-1 ring-red-600' 
-                    : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
-                }`}
-              >
-                <div className="flex justify-between items-start mb-2 w-full gap-2">
-                  <span className="font-bold text-slate-900 truncate">{cand.name}</span>
-                  {cand.hiring_decision ? (
-                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
-                      cand.hiring_decision === 'HIRED' || cand.hiring_decision === 'SHORTLISTED' ? 'bg-green-100 text-green-700' :
-                      cand.hiring_decision === 'REJECTED' ? 'bg-red-100 text-red-700' :
-                      'bg-slate-200 text-slate-700'
-                    }`}>
-                      {cand.hiring_decision}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-yellow-100 text-yellow-700">
-                      REVIEW
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between w-full text-xs text-slate-500 font-medium">
-                  <span className="truncate">{cand.job_role || 'Candidate'}</span>
-                  <span className="font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-100">{cand.global_score > 0 ? `${cand.global_score}/100` : '-'}</span>
-                </div>
-              </button>
-            ))}
-            {filteredCandidates.length === 0 && (
-              <div className="py-4 text-sm font-medium text-slate-500">No matching candidates found.</div>
-            )}
-          </div>
-        </div>
-
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto">
-          {renderContent()}
-        </div>
+      <main className="flex-1 flex flex-col h-screen overflow-y-auto">
+        {renderContent()}
       </main>
     </div>
   );
