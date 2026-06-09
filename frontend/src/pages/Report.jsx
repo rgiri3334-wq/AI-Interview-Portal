@@ -67,60 +67,86 @@ const BAR_COLORS = ['#DC2626', '#EF4444', '#F87171', '#DC2626', '#EF4444'];
 
 export default function Report() {
   const navigate = useNavigate();
+  const [candidates, setCandidates] = useState([]);
+  const [activeTabId, setActiveTabId] = useState(localStorage.getItem('candidate_id'));
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const candidateId = localStorage.getItem('candidate_id');
+
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      try {
+        const lb = await apiClient.getLeaderboard();
+        const completed = lb.filter(c => c.interview_status === 'completed' || c.global_score > 0);
+        setCandidates(completed);
+        
+        if (completed.length > 0) {
+          const storedId = localStorage.getItem('candidate_id');
+          if (!storedId || !completed.find(c => c.id === storedId)) {
+            setActiveTabId(completed[0].id);
+          } else {
+            setActiveTabId(storedId);
+          }
+        } else {
+          setLoading(false);
+          setError("No candidates have completed their interviews yet.");
+        }
+      } catch (e) {
+        setError("Failed to fetch candidates leaderboard.");
+        setLoading(false);
+      }
+    };
+    fetchCandidates();
+  }, []);
 
   useEffect(() => {
     const fetchReport = async () => {
-      if (candidateId) {
-        try {
-          const r = await apiClient.getCandidateReport(candidateId);
-          if (!r || !r.candidate) throw new Error("Invalid report data");
-          setReport(r);
-        } catch (e) {
-          setError("Failed to generate or retrieve report. Please ensure the backend is running and the candidate exists.");
-        }
-      } else {
-        setError("No candidate session found. Please return to the dashboard.");
+      if (!activeTabId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const r = await apiClient.getCandidateReport(activeTabId);
+        if (!r || !r.candidate) throw new Error("Invalid report data");
+        setReport(r);
+        localStorage.setItem('candidate_id', activeTabId);
+      } catch (e) {
+        setError("Failed to retrieve report for this candidate.");
       }
       setLoading(false);
     };
     fetchReport();
-  }, [candidateId]);
+  }, [activeTabId]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-        <Sidebar />
-        <main className="flex-1 flex items-center justify-center">
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex-1 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <p className="text-slate-500 font-bold tracking-wide uppercase">Compiling AI Analytics...</p>
           </div>
-        </main>
-      </div>
-    );
-  }
+        </div>
+      );
+    }
 
-  if (error || !report) {
-    return (
-      <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-        <Sidebar />
-        <main className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-          <AlertCircle size={48} className="text-red-500 mb-4" />
+    if (error || !report) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[60vh]">
+          <AlertCircle size={48} className="text-red-500 mb-4 mx-auto" />
           <h2 className="text-2xl font-bold text-slate-800 mb-2">Report Unavailable</h2>
-          <p className="text-slate-500 mb-6 max-w-md">{error || "Could not load report."}</p>
-          <button onClick={() => { localStorage.removeItem('candidate_id'); navigate('/dashboard'); }} className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">
-            Return to Dashboard
-          </button>
-        </main>
-      </div>
-    );
-  }
+          <p className="text-slate-500 mb-6 max-w-md mx-auto">{error || "Could not load report."}</p>
+          {candidates.length === 0 && (
+            <button onClick={() => navigate('/dashboard')} className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 mx-auto">
+              Return to Dashboard
+            </button>
+          )}
+        </div>
+      );
+    }
 
-  const c = report.candidate;
+    const c = report.candidate;
+
+
   const iv = report.interview;
   const radarData = radarFromReport(iv);
 
@@ -189,10 +215,10 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
     URL.revokeObjectURL(url);
   };
 
-  return (
-    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-      <Sidebar />
-      <main className="flex-1 p-8 overflow-y-auto">
+  
+    return (
+      <div className="p-8">
+
 
         {/* Header Section */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-10 flex justify-between items-end">
@@ -353,6 +379,39 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
           </motion.div>
         </div>
 
+      
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
+      <Sidebar />
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        {/* Candidate Tabs Navigation */}
+        <div className="bg-white border-b border-slate-200 px-8 flex gap-8 overflow-x-auto shrink-0 z-10 shadow-sm">
+          {candidates.map(cand => (
+            <button
+              key={cand.id}
+              onClick={() => setActiveTabId(cand.id)}
+              className={`py-4 px-2 whitespace-nowrap text-sm font-extrabold tracking-tight border-b-2 transition-colors relative ${
+                activeTabId === cand.id 
+                  ? 'border-red-600 text-red-600' 
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {cand.name}
+              {activeTabId === cand.id && (
+                <motion.div layoutId="activeTab" className="absolute -bottom-[2px] left-0 right-0 h-[2px] bg-red-600" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-y-auto">
+          {renderContent()}
+        </div>
       </main>
     </div>
   );
