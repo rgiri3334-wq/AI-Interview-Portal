@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
+  AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
@@ -57,10 +57,12 @@ const radarFromReport = (r) => [
   { axis: 'EQ', value: r.behavioral_score || 88 },
 ];
 
-const barData = [
-  { q: 'Q1', score: 8 }, { q: 'Q2', score: 9 },
-  { q: 'Q3', score: 10 }, { q: 'Q4', score: 9 },
-  { q: 'Q5', score: 10 },
+const timelineData = [
+  { q: 'Q1', score: 6.5 }, { q: 'Q2', score: 7.0 },
+  { q: 'Q3', score: 8.5 }, { q: 'Q4', score: 7.5 },
+  { q: 'Q5', score: 9.0 }, { q: 'Q6', score: 8.5 },
+  { q: 'Q7', score: 9.5 }, { q: 'Q8', score: 10.0 },
+  { q: 'Q9', score: 9.0 }, { q: 'Q10', score: 10.0 },
 ];
 
 const BAR_COLORS = ['#DC2626', '#EF4444', '#F87171', '#DC2626', '#EF4444'];
@@ -269,15 +271,19 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
               <TrendingUp size={16} className="text-red-600 mr-3" /> Technical Accuracy Timeline
             </h3>
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={barData}>
-                <CartesianGrid stroke="#E2E8F0" vertical={false} />
+              <AreaChart data={timelineData}>
+                <defs>
+                  <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#DC2626" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#DC2626" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="#E2E8F0" vertical={false} strokeDasharray="3 3" />
                 <XAxis dataKey="q" tick={{ fill: '#64748B', fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
                 <YAxis domain={[0, 10]} tick={{ fill: '#64748B', fontSize: 12 }} axisLine={false} tickLine={false} width={30} />
-                <Tooltip cursor={{ fill: '#F1F5F9', opacity: 0.5 }} contentStyle={{ backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', color: '#0F172A' }} />
-                <Bar dataKey="score" radius={[4, 4, 0, 0]}>
-                  {barData.map((_, i) => <Cell key={i} fill={['#DC2626', '#EF4444', '#F87171', '#DC2626', '#EF4444'][i % 5]} />)}
-                </Bar>
-              </BarChart>
+                <Tooltip cursor={{ stroke: '#F1F5F9', strokeWidth: 2 }} contentStyle={{ backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', color: '#0F172A', borderRadius: '8px' }} />
+                <Area type="monotone" dataKey="score" stroke="#DC2626" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
+              </AreaChart>
             </ResponsiveContainer>
           </motion.div>
         </div>
