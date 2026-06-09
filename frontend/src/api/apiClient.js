@@ -154,6 +154,9 @@ export const apiClient = {
   saveInterview:      (data) => withRetry(() => api.post('/api/interviews/save', data)),
   getCandidateReport: (id) => api.get(`/api/reports/${id}`),
   getAIReport:        (id) => api.get(`/api/interview/ai-report/${id}`),
+  updateHiringDecision: (candidateId, decision) => api.patch(`/api/interviews/${candidateId}/decision`, { decision }),
+  
+  // Dashboard & Admin
   getDashboardData:   () => api.get('/api/dashboard'),
   getLeaderboard:     () => api.get('/api/leaderboard'),
 };

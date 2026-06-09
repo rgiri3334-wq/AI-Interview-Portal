@@ -32,6 +32,9 @@ export default function Login() {
         if (res.email) {
           sessionStorage.setItem('adminEmail', res.email);
         }
+        if (res.role) {
+          sessionStorage.setItem('adminRole', res.role);
+        }
         navigate('/home'); 
       }
     } catch (err) {

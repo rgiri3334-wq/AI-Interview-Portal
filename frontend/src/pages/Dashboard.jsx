@@ -42,9 +42,51 @@ const DECISION_STYLE = {
 function DecisionBadge({ decision }) {
   const s = DECISION_STYLE[decision] || DECISION_STYLE.PENDING;
   return (
-    <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${s.bg} border ${s.border} ${s.color} inline-flex items-center gap-1.5 shadow-sm`}>
+    <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${s.bg} border ${s.border} ${s.color} inline-flex items-center gap-1.5 shadow-sm whitespace-nowrap`}>
       {s.icon} {decision?.replace('_', ' ') || 'PENDING'}
     </span>
+  );
+}
+
+function DecisionDropdown({ candidate, onUpdate }) {
+  const adminRole = sessionStorage.getItem('adminRole') || 'sub_admin';
+  const currentDecision = candidate.hiring_decision || (candidate.interview_status === 'completed' ? 'UNDER_REVIEW' : 'PENDING');
+  
+  if (adminRole !== 'master_admin') {
+    return (
+      <div className="flex flex-col gap-2">
+        <DecisionBadge decision={currentDecision} />
+        {candidate.ai_recommendation && (
+          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+            AI: {candidate.ai_recommendation}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <select
+        value={currentDecision}
+        onChange={(e) => onUpdate(candidate.id, e.target.value)}
+        className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border shadow-sm outline-none transition-colors cursor-pointer appearance-none ${
+          DECISION_STYLE[currentDecision]?.bg || DECISION_STYLE.PENDING.bg
+        } ${DECISION_STYLE[currentDecision]?.color || DECISION_STYLE.PENDING.color} ${
+          DECISION_STYLE[currentDecision]?.border || DECISION_STYLE.PENDING.border
+        }`}
+      >
+        <option value="PENDING">⏳ PENDING</option>
+        <option value="SHORTLISTED">⭐ SHORTLISTED</option>
+        <option value="UNDER_REVIEW">🔍 UNDER REVIEW</option>
+        <option value="REJECTED">❌ REJECTED</option>
+      </select>
+      {candidate.ai_recommendation && (
+        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+          AI: {candidate.ai_recommendation}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -374,6 +416,18 @@ export default function Dashboard() {
 
   useEffect(() => { load(); }, [load]);
 
+  const handleDecisionChange = async (candidateId, newDecision) => {
+    try {
+      await apiClient.updateHiringDecision(candidateId, newDecision);
+      setLeaderboard(prev => prev.map(c => 
+        c.id === candidateId ? { ...c, hiring_decision: newDecision } : c
+      ));
+    } catch (err) {
+      console.error('Failed to update decision:', err);
+      alert('Failed to update decision. Please try again.');
+    }
+  };
+
   const realTrendData = useMemo(() => {
     if (!leaderboard || leaderboard.length === 0) return [{ day: 'No Data', avg: 0 }];
     const groups = {};
@@ -642,7 +696,7 @@ export default function Dashboard() {
                             </div>
                             <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">Global Score</p>
                           </div>
-                          <DecisionBadge decision={c.hiring_decision || 'PENDING'} />
+                          <DecisionDropdown candidate={c} onUpdate={handleDecisionChange} />
                         </motion.div>
                       );
                     })}
@@ -719,7 +773,7 @@ export default function Dashboard() {
                                 <ScoreBar score={c.technical_score} colorClass="bg-red-600" />
                               </td>
                               <td className="py-5 px-4">
-                                <DecisionBadge decision={c.hiring_decision || (c.interview_status === 'completed' ? 'UNDER_REVIEW' : 'PENDING')} />
+                                <DecisionDropdown candidate={c} onUpdate={handleDecisionChange} />
                               </td>
                               <td className="py-5 px-4">
                                 <button className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm rounded-xl text-xs font-bold text-slate-700 transition-colors uppercase tracking-wider"

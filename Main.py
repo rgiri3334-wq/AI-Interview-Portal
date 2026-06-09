@@ -420,6 +420,9 @@ class SaveInterviewRequest(BaseModel):
     integrity_score:         int   = Field(default=100, ge=0, le=100, description="Integrity score 0-100 from client-side signal tracking")
     integrity_data:          dict  = Field(default_factory=dict, description="Full signal log from IntegrityEngine.compute_final()")
 
+class DecisionUpdateRequest(BaseModel):
+    decision: str
+
 class AdminQuestion(BaseModel):
     department: str
     role: str
@@ -1621,7 +1624,8 @@ async def get_leaderboard(db: Session = Depends(get_db)):
             "fluency_score": getattr(latest, "fluency_score", 0.0) if latest else 0.0,
             "eq_score": getattr(latest, "eq_score", 0.0) if latest else 0.0,
             "global_score": latest.overall_score if latest else 0.0,
-            "hiring_decision": latest.recommendation if latest and latest.recommendation else "PENDING",
+            "hiring_decision": getattr(latest.report, "hiring_decision", "PENDING") if (latest and getattr(latest, "report", None)) else "PENDING",
+            "ai_recommendation": latest.recommendation if latest and latest.recommendation else "PENDING",
             "interview_status": "completed" if latest and latest.completed_at else "pending",
             "proctoring_warnings": getattr(latest, "proctoring_warnings", 0) if latest else 0,
             # Sprint 4: Integrity fields for Triage Matrix
@@ -1902,7 +1906,8 @@ async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Ses
         recommendation=req.hiring_recommendation,
         strengths=json.dumps(req.strengths),
         weaknesses=json.dumps(req.weaknesses),
-        hiring_decision=hiring.get("decision", "Neutral"),
+        summary=req.summary,
+        hiring_decision="PENDING",
         grade=grade,
         # Sprint 4: Persist integrity verdict from IntegrityEngine
         integrity_score=req.integrity_score,
@@ -1935,9 +1940,20 @@ async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Ses
         "status": "saved",
         "created_at": ts,
         "global_score": round(global_score, 1),
-        "hiring_decision": hiring.get("decision", "Neutral"),
+        "hiring_decision": "PENDING",
         "hiring_label": hiring.get("label", "Under Review"),
     }
+
+@app.patch("/api/interviews/{candidate_id}/decision", tags=["Data"])
+async def update_hiring_decision(candidate_id: str, req: DecisionUpdateRequest, db: Session = Depends(get_db)):
+    iv = db.query(InterviewSession).filter_by(candidate_id=candidate_id).order_by(InterviewSession.started_at.desc()).first()
+    if not iv or not iv.report:
+        raise HTTPException(status_code=404, detail="Interview or Report not found")
+    
+    iv.report.hiring_decision = req.decision
+    db.commit()
+    
+    return {"success": True, "decision": req.decision}
 
 # ── Data: Report ──────────────────────────────────────────────────────────
 
