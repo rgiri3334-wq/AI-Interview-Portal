@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { motion } from 'framer-motion';
 import {
   Star, Brain, Smile, Volume2, MessageSquare, Search,
@@ -9,8 +11,10 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
+} from 'recharts';
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
+import logoUrl from '../../assets/sterling_logo.png';
 
 // ── Sterling Premium Score Ring ──────────────────────────────────────────
 function ScoreRing({ score, max = 100, color = '#DC2626', label, size = 120 }) {
@@ -70,6 +74,7 @@ const BAR_COLORS = ['#DC2626', '#EF4444', '#F87171', '#DC2626', '#EF4444'];
 export default function Report() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const pdfRef = useRef(null);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -123,73 +128,144 @@ export default function Report() {
   const radarData = radarFromReport(iv);
 
   const normalizedTech = Math.max(0, iv.technical_score || 0);
-  const eqScore = iv.behavioral_score || 0;
-  const confScore = iv.confidence_score || 0;
-  const commScore = iv.communication_score || 0;
-  const overall = iv.overall_score ? Math.round(iv.overall_score) : Math.max(0, Math.round((normalizedTech + eqScore + confScore + commScore) / 4));
-
-  const grade = overall >= 90 ? 'S' : overall >= 80 ? 'A' : overall >= 70 ? 'B' : overall >= 60 ? 'C' : 'F';
-  const gradeColor = overall >= 80 ? '#10B981' : overall >= 60 ? '#DC2626' : '#991B1B';
-
-  const handleExport = () => {
-    const dossierContent = `STERLING E-MOBILITY - ENTERPRISE AI DOSSIER
-===================================================
-CANDIDATE: ${c.name}
-ROLE: ${c.job_role}
-EMAIL: ${c.email}
-EXPERIENCE: ${c.experience || 'Not specified'}
-SKILLS: ${c.skills || 'Not specified'}
-DATE GENERATED: ${new Date().toLocaleString()}
-
-[ FINAL HIRING DECISION ]
-STATUS: ${iv.hiring_decision || 'PENDING'}
-GRADE: ${grade}
-OVERALL FIT: ${overall}/100
-
-[ AI INTELLIGENCE METRICS ]
-Technical Mastery:    ${normalizedTech}/100
-Problem Solving:      ${iv.problem_solving_score || 0}/100
-Role Alignment:       ${iv.role_alignment_score || 0}/100
-Professionalism:      ${iv.professionalism_score || 0}/100
-Learning Potential:   ${iv.learning_potential_score || 0}/100
-Emotional Intelligence: ${eqScore}/100
-Confidence Index:     ${confScore}/100
-Communication:        ${commScore}/100
-Behavioral Alignment: ${iv.behavioral_score || 0}/100
-
-[ PROCTORING INTELLIGENCE ]
-Warnings: ${iv.proctoring_warnings || 0} / 3
-Logs: ${(iv.proctoring_logs && iv.proctoring_logs.length > 0) ? iv.proctoring_logs.map(l => `[${l.timestamp}] ${l.event}`).join('\n      ') : 'No violations detected.'}
-
-[ EXECUTIVE SUMMARY ]
-${iv.summary || 'No summary available.'}
-
-[ KEY STRENGTHS ]
-${iv.strengths || 'Not analyzed.'}
-
-[ CRITICAL WEAKNESSES ]
-${iv.weaknesses || 'Not analyzed.'}
-
-[ OVERALL RATING ]
-${iv.overall_rating || 'Not evaluated.'}
-
-===================================================
-CONFIDENTIAL - INTERNAL HR USE ONLY`;
-
-    const blob = new Blob([dossierContent], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Sterling_Dossier_${c.name.replace(/\s+/g, '_')}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   
     return (
       <div className="p-8">
+        {/* Hidden PDF Template */}
+        <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', zIndex: -9999 }}>
+          <div ref={pdfRef} className="w-[794px] h-[1123px] bg-white flex flex-col p-12 text-slate-900 font-sans relative overflow-hidden box-border">
+            {/* Futuristic Header */}
+            <div className="flex justify-between items-center border-b-[4px] border-red-600 pb-6 mb-8">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center shadow-sm border border-slate-200">
+                  <img src={logoUrl} alt="Sterling Logo" className="w-10 h-10 object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+                  <div className="hidden w-10 h-10 bg-red-600 text-white flex items-center justify-center font-bold text-sm rounded-lg">S</div>
+                </div>
+                <div>
+                  <h1 className="text-3xl font-black tracking-tight text-slate-900">STERLING E-MOBILITY</h1>
+                  <p className="text-red-600 font-bold tracking-widest uppercase text-sm">Enterprise AI Dossier</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Generated On</div>
+                <div className="text-sm font-bold text-slate-900">{new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</div>
+              </div>
+            </div>
+
+            {/* Candidate Info Grid */}
+            <div className="grid grid-cols-2 gap-6 mb-8">
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-red-600"></div>
+                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Candidate Identity</h2>
+                <div className="space-y-3">
+                  <div><span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Name</span><span className="font-black text-lg text-slate-900">{c.name}</span></div>
+                  <div><span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Email</span><span className="font-bold text-sm text-slate-700">{c.email}</span></div>
+                </div>
+              </div>
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
+                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Role Context</h2>
+                <div className="space-y-3">
+                  <div><span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Target Role</span><span className="font-black text-lg text-slate-900">{c.job_role || 'Not specified'}</span></div>
+                  <div><span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Experience</span><span className="font-bold text-sm text-slate-700">{c.experience || 'Not specified'}</span></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Overall Fit & Status */}
+            <div className="bg-slate-900 text-white p-8 rounded-2xl mb-8 flex items-center justify-between shadow-lg border border-slate-800">
+              <div>
+                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Final Hiring Decision</h2>
+                <div className="text-3xl font-black tracking-tight text-white">{iv.hiring_decision || 'PENDING'}</div>
+              </div>
+              <div className="text-center px-10 border-x border-slate-700">
+                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Grade</h2>
+                <div className="text-4xl font-black" style={{color: gradeColor}}>{grade}</div>
+              </div>
+              <div className="text-right">
+                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Overall Fit</h2>
+                <div className="text-4xl font-black text-red-500">{overall}<span className="text-xl text-slate-500">/100</span></div>
+              </div>
+            </div>
+
+            {/* AI Intelligence Metrics */}
+            <div className="mb-8">
+              <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-5 flex items-center gap-2 border-b border-slate-200 pb-3">
+                <Brain size={16} className="text-red-600"/> AI Intelligence Metrics
+              </h2>
+              <div className="grid grid-cols-2 gap-x-12 gap-y-5">
+                {[
+                  { label: 'Technical Mastery', val: normalizedTech },
+                  { label: 'Problem Solving', val: iv.problem_solving_score || 0 },
+                  { label: 'Role Alignment', val: iv.role_alignment_score || 0 },
+                  { label: 'Professionalism', val: iv.professionalism_score || 0 },
+                  { label: 'Learning Potential', val: iv.learning_potential_score || 0 },
+                  { label: 'Emotional Intelligence', val: eqScore },
+                  { label: 'Confidence Index', val: confScore },
+                  { label: 'Communication', val: commScore },
+                  { label: 'Behavioral Alignment', val: iv.behavioral_score || 0 }
+                ].map((m, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="font-bold text-slate-600 text-sm tracking-wide">{m.label}</span>
+                    <div className="flex items-center gap-4">
+                      <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-red-600 rounded-full" style={{width: \`\${m.val}%\`}}></div>
+                      </div>
+                      <span className="font-black text-slate-900 w-8 text-right text-sm">{m.val}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Summaries */}
+            <div className="grid grid-cols-2 gap-8 flex-1">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <MessageSquare size={14} className="text-red-600"/> Executive Summary
+                  </h2>
+                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 text-[13px] font-medium text-slate-700 leading-relaxed shadow-sm">
+                    {iv.summary || 'No summary available.'}
+                  </div>
+                </div>
+                <div>
+                  <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <ShieldAlert size={14} className="text-red-600"/> Proctoring Intelligence
+                  </h2>
+                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-600">Integrity Violations</span>
+                    <span className="font-black text-red-600 bg-red-100 px-3 py-1 rounded-lg text-sm">{iv.proctoring_warnings || 0} / 3</span>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <TrendingUp size={14} className="text-emerald-600"/> Key Strengths
+                  </h2>
+                  <div className="bg-emerald-50 border border-emerald-100 p-5 rounded-xl text-[13px] font-bold text-emerald-800 leading-relaxed shadow-sm">
+                    {iv.strengths || 'Not analyzed.'}
+                  </div>
+                </div>
+                <div>
+                  <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <TrendingDown size={14} className="text-red-600"/> Critical Weaknesses
+                  </h2>
+                  <div className="bg-red-50 border border-red-100 p-5 rounded-xl text-[13px] font-bold text-red-800 leading-relaxed shadow-sm">
+                    {iv.weaknesses || 'Not analyzed.'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-8 border-t-[4px] border-slate-900 pt-6 flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <div>CONFIDENTIAL - INTERNAL HR USE ONLY</div>
+              <div>STERLING AI PLATFORM v3.0</div>
+            </div>
+          </div>
+        </div>
 
 
         {/* Header Section */}
