@@ -2024,6 +2024,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
             "strengths": _safe_json_list(report.strengths if report else None), 
             "weaknesses": _safe_json_list(report.weaknesses if report else None),
             "overall_rating": "N/A", "hiring_recommendation": report.recommendation if report else "N/A", "readiness_score": 0,
+            "hiring_decision": getattr(report, "hiring_decision", "PENDING") if report else "PENDING",
             "proctoring_warnings": getattr(latest, "proctoring_warnings", 0), 
             "proctoring_logs": [],
             "integrity_score": getattr(report, "integrity_score", 100) if report else 100,
@@ -2041,7 +2042,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
             "problem_solving_score": 0, "role_alignment_score": 0, "professionalism_score": 0, "learning_potential_score": 0,
             "behavioral_score": 0, "fluency_score": 0, "overall_score": 0,
             "summary": "Interview pending.", "strengths": [], "weaknesses": [],
-            "overall_rating": "N/A", "hiring_recommendation": "N/A", "readiness_score": 0,
+            "overall_rating": "N/A", "hiring_recommendation": "N/A", "readiness_score": 0, "hiring_decision": "PENDING",
             "proctoring_warnings": 0, "proctoring_logs": []
         }
     return {"candidate": c_dict, "interview": iv}
