@@ -127,19 +127,13 @@ export default function Report() {
   const radarData = radarFromReport(iv);
 
   const normalizedTech = Math.max(0, iv.technical_score || 0);
+  const eqScore = iv.behavioral_score || 0;
+  const confScore = iv.confidence_score || 0;
+  const commScore = iv.communication_score || 0;
+  const overall = iv.overall_score ? Math.round(iv.overall_score) : Math.max(0, Math.round((normalizedTech + eqScore + confScore + commScore) / 4));
 
-  const overall = Math.round(
-    (normalizedTech * 0.4) +
-    ((iv.problem_solving_score || 0) * 0.2) +
-    ((iv.role_alignment_score || 0) * 0.2) +
-    ((iv.professionalism_score || 0) * 0.2)
-  );
-
-  let grade = 'C';
-  let gradeColor = '#F59E0B';
-  if (overall >= 90) { grade = 'S'; gradeColor = '#8B5CF6'; }
-  else if (overall >= 80) { grade = 'A'; gradeColor = '#10B981'; }
-  else if (overall >= 70) { grade = 'B'; gradeColor = '#3B82F6'; }
+  const grade = overall >= 90 ? 'S' : overall >= 80 ? 'A' : overall >= 70 ? 'B' : overall >= 60 ? 'C' : 'F';
+  const gradeColor = grade === 'S' ? '#8B5CF6' : grade === 'A' ? '#10B981' : grade === 'B' ? '#3B82F6' : grade === 'C' ? '#F59E0B' : '#DC2626';
     return (
       <div className="p-8">
         {/* Hidden PDF Template */}
