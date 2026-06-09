@@ -76,7 +76,8 @@ export default function Report() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const pdfRef = useRef(null);
+  const page1Ref = useRef(null);
+  const page2Ref = useRef(null);
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
@@ -137,28 +138,28 @@ export default function Report() {
   const gradeColor = overall >= 80 ? '#10B981' : overall >= 60 ? '#DC2626' : '#991B1B';
 
   const handleExport = async () => {
-    if (!pdfRef.current) return;
+    if (!page1Ref.current || !page2Ref.current) return;
     setIsExporting(true);
     
     setTimeout(async () => {
       try {
-        const canvas = await html2canvas(pdfRef.current, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#F8FAFC',
-        });
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = 210;
+        const pdfHeight = 297;
+        const pages = [page1Ref.current, page2Ref.current];
+
+        for (let i = 0; i < pages.length; i++) {
+          if (i > 0) pdf.addPage();
+          const canvas = await html2canvas(pages[i], {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#FFFFFF',
+          });
+          const imgData = canvas.toDataURL('image/png');
+          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        }
         
-        const imgData = canvas.toDataURL('image/png');
-        
-        // Calculate dimensions based on actual canvas aspect ratio
-        const pdfWidth = 297; // Landscape A4 width
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        
-        // Dynamic PDF sizing for landscape
-        const pdf = new jsPDF('l', 'mm', [Math.max(pdfHeight, 210), pdfWidth]);
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Sterling_Dossier_${c.name.replace(/\s+/g, '_')}.pdf`);
       } catch (err) {
         console.error("Failed to generate PDF", err);
@@ -369,187 +370,159 @@ export default function Report() {
       
         {/* HIDDEN PDF TEMPLATE - ONLY VISIBLE TO HTML2CANVAS */}
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-          <div ref={pdfRef} style={{ width: '1500px', minHeight: '840px', backgroundColor: '#F5EBE1', color: '#0F172A', padding: '40px 50px', boxSizing: 'border-box', fontFamily: 'sans-serif', position: 'relative', overflow: 'hidden', display: 'flex', gap: '50px' }}>
-            
-            {/* LEFT COLUMN */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-               {/* Left Header */}
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0F172A', paddingBottom: '15px', marginBottom: '15px' }}>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                   <div style={{ width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <img src={sterlingLogo} alt="Logo" style={{ width: '100%' }} />
-                   </div>
-                   <h1 style={{ fontSize: '26px', fontWeight: '900', margin: 0, lineHeight: '1.1', color: '#0F172A', textTransform: 'uppercase' }}>STERLING<br/><span style={{ fontSize: '20px', color: '#0F172A', fontWeight: 'normal' }}>E-MOBILITY</span></h1>
-                 </div>
-                 <div style={{ textAlign: 'right' }}>
-                   <p style={{ margin: 0, fontSize: '16px', color: '#0F172A', letterSpacing: '1px' }}>CONFIDENTIAL</p>
-                   <p style={{ margin: 0, fontSize: '24px', fontWeight: '900', color: '#0F172A', textTransform: 'uppercase' }}>ENTERPRISE AI DOSSIER</p>
-                 </div>
+          
+          {/* PAGE 1: EXECUTIVE OVERVIEW */}
+          <div ref={page1Ref} style={{ width: '800px', height: '1131px', backgroundColor: '#FFFFFF', color: '#0F172A', padding: '60px', boxSizing: 'border-box', fontFamily: 'sans-serif', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '2px solid #E2E8F0', paddingBottom: '20px', marginBottom: '40px' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                 <img src={sterlingLogo} alt="Logo" style={{ width: '40px' }} />
+                 <h1 style={{ fontSize: '24px', fontWeight: '900', margin: 0, lineHeight: '1', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '1px' }}>STERLING<br/><span style={{ fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>E-MOBILITY</span></h1>
                </div>
-
-               <p style={{ fontSize: '16px', color: '#0F172A', marginBottom: '25px', letterSpacing: '1px' }}>GENERATED ON {new Date().toLocaleDateString()}</p>
-
-               {/* Candidate Details */}
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
-                  <div>
-                     <p style={{ margin: '0 0 5px 0', fontSize: '18px', color: '#0F172A', letterSpacing: '1px' }}>TARGET CANDIDATE:</p>
-                     <h2 style={{ margin: '0 0 10px 0', fontSize: '42px', fontWeight: '900', color: '#0F172A' }}>{c.name}</h2>
-                     <p style={{ margin: 0, fontSize: '18px', color: '#0F172A' }}>CONTACT: <span style={{ fontWeight: 'normal' }}>{c.email}</span></p>
-                  </div>
-                  <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                     <div style={{ width: '90px', height: '90px', background: '#A8B2C1', borderRadius: '50%', marginBottom: '10px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden', border: '3px solid #0F172A', position: 'relative' }}>
-                        <div style={{ width: '36px', height: '36px', background: '#0F172A', borderRadius: '50%', position: 'absolute', top: '15px' }}></div>
-                        <div style={{ width: '66px', height: '40px', background: '#0F172A', borderTopLeftRadius: '35px', borderTopRightRadius: '35px', position: 'absolute', bottom: '-5px' }}></div>
-                     </div>
-                     <p style={{ margin: 0, fontSize: '18px', color: '#0F172A' }}>{c.job_role}</p>
-                  </div>
-               </div>
-
-               {/* Grades Row */}
-               <div style={{ display: 'flex', gap: '30px', marginBottom: '40px' }}>
-                  {/* Hexagon Grade Box */}
-                  <div style={{ width: '180px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div style={{ width: '160px', height: '160px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpolygon points=\'50 2 96 25 96 75 50 98 4 75 4 25\' fill=\'%230F172A\' stroke=\'%23DC2626\' stroke-width=\'4\'/%3E%3Cpolygon points=\'50 10 88 30 88 70 50 90 12 70 12 30\' fill=\'%23CBD5E1\'/%3E%3C/svg%3E") no-repeat center', backgroundSize: 'contain' }}>
-                        <h1 style={{ fontSize: '80px', fontWeight: '900', color: '#0F172A', margin: 0, lineHeight: 1 }}>{grade}</h1>
-                    </div>
-                    <h3 style={{ margin: '15px 0 0 0', fontSize: '24px', fontWeight: '900', color: '#0F172A', textAlign: 'center' }}>FINAL GRADE</h3>
-                  </div>
-                  
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: '20px' }}>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                        <span style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A' }}>AI Verdict</span>
-                        <span style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A' }}>{overall}/100</span>
-                     </div>
-                     <div style={{ width: '100%', height: '16px', background: '#94A3B8', borderRadius: '8px', overflow: 'hidden', marginBottom: '10px' }}>
-                        <div style={{ width: `${overall}%`, background: '#0F172A', height: '100%' }}></div>
-                     </div>
-                     <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#0F172A', letterSpacing: '1px' }}>SHORTLISTED</span>
-                     </div>
-                  </div>
-               </div>
-
-               {/* Intelligence Metrics */}
-               <h3 style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A', margin: '0 0 15px 0' }}>INTELLIGENCE METRICS</h3>
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {[
-                    { label: 'TECHNICAL MASTERY', val: normalizedTech },
-                    { label: 'PROBLEM SOLVING', val: iv.problem_solving_score || 0 },
-                    { label: 'CONFIDENCE INDEX', val: confScore },
-                    { label: 'LEARNING POTENTIAL', val: iv.learning_potential_score || 0 },
-                    { label: 'empty', val: null },
-                    { label: 'ROLE ALIGNMENT', val: 'title' },
-                    { label: 'PROFESSIONALISM', val: iv.professionalism_score || 0 },
-                    { label: 'LEARNING POTENTIAL', val: iv.learning_potential_score || 0 },
-                    { label: 'EMOTIONAL INTELL..', val: eqScore },
-                    { label: 'BEHAVIORAL FIT', val: iv.behavioral_score || 0 },
-                    { label: 'COMMUNICATION', val: commScore },
-                  ].map((m, i) => {
-                    if (m.label === 'empty') return <div key={i} style={{ height: '15px' }}></div>;
-                    if (m.val === 'title') return <h3 key={i} style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A', margin: '15px 0 5px 0' }}>{m.label}</h3>;
-                    
-                    return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
-                       <div style={{ width: '280px', background: '#0F172A', color: 'white', padding: '6px 15px', fontSize: '16px', borderTopLeftRadius: '20px', borderBottomLeftRadius: '20px', zIndex: 1 }}>
-                         {m.label}
-                       </div>
-                       <div style={{ flex: 1, background: '#94A3B8', height: '34px', borderTopRightRadius: '17px', borderBottomRightRadius: '17px', position: 'relative', marginLeft: '-2px' }}>
-                          <div style={{ width: `${m.val}%`, background: '#DC2626', height: '100%', borderTopRightRadius: '17px', borderBottomRightRadius: '17px' }}></div>
-                       </div>
-                       <div style={{ width: '50px', textAlign: 'right', fontSize: '20px', fontWeight: '900', color: '#0F172A' }}>{m.val}</div>
-                    </div>
-                  )})}
-               </div>
-
-               <div style={{ flex: 1 }}></div>
-               {/* Footer Left */}
-               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #0F172A', paddingTop: '15px', marginTop: '30px' }}>
-                  <span style={{ fontSize: '14px', color: '#0F172A' }}>STERLING E-MOBILITY AI DOSSIER</span>
-                  <span style={{ fontSize: '14px', color: '#0F172A' }}>DOCUMENT ID [{iv.interview_id ? iv.interview_id.substring(0,8).toUpperCase() : 'N/A'}]</span>
+               <div style={{ textAlign: 'right' }}>
+                 <p style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: 'bold', color: '#64748B', letterSpacing: '2px', textTransform: 'uppercase' }}>CANDIDATE DOSSIER</p>
+                 <p style={{ margin: 0, fontSize: '14px', color: '#0F172A' }}>{new Date().toLocaleDateString()}</p>
                </div>
             </div>
 
-            {/* CENTER DIVIDER */}
-            <div style={{ width: '2px', background: '#0F172A', opacity: 0.8 }}></div>
-
-            {/* RIGHT COLUMN */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-               {/* Right Header */}
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0F172A', paddingBottom: '15px', marginBottom: '30px' }}>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                   <div style={{ width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <img src={sterlingLogo} alt="Logo" style={{ width: '100%' }} />
-                   </div>
-                   <h1 style={{ fontSize: '26px', fontWeight: '900', margin: 0, lineHeight: '1.1', color: '#0F172A', textTransform: 'uppercase' }}>STERLING<br/><span style={{ fontSize: '20px', color: '#0F172A', fontWeight: 'normal' }}>E-MOBILITY</span></h1>
-                 </div>
-                 <div style={{ textAlign: 'right' }}>
-                   <p style={{ margin: 0, fontSize: '16px', color: '#0F172A', letterSpacing: '1px' }}>GENERATED DATE:</p>
-                   <p style={{ margin: 0, fontSize: '24px', fontWeight: '900', color: '#0F172A' }}>{new Date().toLocaleDateString()}</p>
-                 </div>
-               </div>
-
-               {/* Exec Summary */}
-               <div style={{ border: '2px solid #94A3B8', borderRadius: '16px', marginBottom: '20px', display: 'flex', background: 'transparent', overflow: 'hidden' }}>
-                  <div style={{ flex: 1, padding: '25px' }}>
-                     <h3 style={{ margin: '0 0 10px 0', fontSize: '24px', fontWeight: '900', color: '#0F172A' }}>EXECUTIVE SUMMARY</h3>
-                     <p style={{ margin: 0, fontSize: '20px', lineHeight: '1.5', color: '#0F172A' }}>{iv.summary || 'No summary available.'}</p>
-                  </div>
-                  <div style={{ width: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: '2px solid #94A3B8' }}>
-                     <span style={{ fontSize: '50px' }}>👍</span>
-                  </div>
-               </div>
-
-               {/* Key Strengths */}
-               <div style={{ border: '2px solid #94A3B8', borderRadius: '16px', marginBottom: '20px', display: 'flex', background: 'transparent', overflow: 'hidden' }}>
-                  <div style={{ flex: 1, padding: '25px' }}>
-                     <h3 style={{ margin: '0 0 15px 0', fontSize: '24px', fontWeight: '900', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <span style={{ display: 'inline-flex', width: '30px', height: '30px', background: '#0F172A', color: 'white', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>✓</span>
-                        KEY STRENGTHS
-                     </h3>
-                     <ul style={{ paddingLeft: '45px', margin: 0, fontSize: '20px', lineHeight: '1.5', color: '#0F172A', listStyleType: 'disc' }}>
-                       {(iv.strengths || []).map((s, i) => <li key={i}>{s}</li>)}
-                     </ul>
-                  </div>
-                  <div style={{ width: '150px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', borderLeft: '2px solid #94A3B8' }}>
-                     <span style={{ fontSize: '90px', fontWeight: '900', color: '#0F172A', lineHeight: 1 }}>{overall}</span>
-                  </div>
-               </div>
-
-               {/* Critical Weaknesses */}
-               <div style={{ border: '2px solid #94A3B8', borderRadius: '16px', marginBottom: '20px', display: 'flex', background: 'transparent', overflow: 'hidden' }}>
-                  <div style={{ flex: 1, padding: '25px' }}>
-                     <h3 style={{ margin: '0 0 15px 0', fontSize: '24px', fontWeight: '900', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <span style={{ display: 'inline-flex', width: '30px', height: '30px', background: '#0F172A', color: 'white', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>✓</span>
-                        CRITICAL WEAKNESSES
-                     </h3>
-                     <ul style={{ paddingLeft: '45px', margin: 0, fontSize: '20px', lineHeight: '1.5', color: '#0F172A', listStyleType: 'disc' }}>
-                       {(iv.weaknesses || []).map((w, i) => <li key={i}>{w}</li>)}
-                     </ul>
-                  </div>
-                  <div style={{ width: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: '2px solid #94A3B8' }}>
-                     <div style={{ width: '60px', height: '60px', background: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M50 10 L10 90 L90 90 Z\' fill=\'%230F172A\' stroke=\'%230F172A\' stroke-width=\'5\' stroke-linejoin=\'round\'/%3E%3Ctext x=\'50\' y=\'80\' font-size=\'50\' font-family=\'sans-serif\' font-weight=\'bold\' fill=\'white\' text-anchor=\'middle\'%3E!%3C/text%3E%3C/svg%3E") no-repeat center', backgroundSize: 'contain' }}></div>
-                  </div>
-               </div>
-
-               {/* Proctoring Log */}
-               <div style={{ display: 'flex', gap: '30px', alignItems: 'center', background: 'transparent', padding: '10px 20px' }}>
-                  <div style={{ width: '80px', height: '90px', background: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M10 20 L50 5 L90 20 L90 50 C90 75 50 95 50 95 C50 95 10 75 10 50 Z\' fill=\'%23CBD5E1\' stroke=\'%230F172A\' stroke-width=\'6\' stroke-linejoin=\'round\'/%3E%3Crect x=\'35\' y=\'50\' width=\'30\' height=\'25\' fill=\'%230F172A\' rx=\'5\'/%3E%3Cpath d=\'M40 50 L40 40 C40 30 60 30 60 40 L60 50\' fill=\'none\' stroke=\'%230F172A\' stroke-width=\'6\' stroke-linecap=\'round\'/%3E%3C/svg%3E") no-repeat center', backgroundSize: 'contain' }}></div>
+            {/* Candidate Profile */}
+            <div style={{ marginBottom: '50px' }}>
+               <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#DC2626', letterSpacing: '2px', textTransform: 'uppercase' }}>Executive Profile</p>
+               <h2 style={{ margin: '0 0 15px 0', fontSize: '48px', fontWeight: '900', color: '#0F172A', letterSpacing: '-1px' }}>{c.name}</h2>
+               <div style={{ display: 'flex', gap: '40px' }}>
                   <div>
-                     <h3 style={{ margin: '0 0 5px 0', fontSize: '22px', fontWeight: '900', color: '#0F172A' }}>PROCTORING LOG:</h3>
-                     <p style={{ margin: '0 0 2px 0', fontSize: '20px', color: '#0F172A' }}>SECURITY WARNINGS {iv.proctoring_warnings || 0}/3</p>
-                     <p style={{ margin: '0 0 5px 0', fontSize: '20px', color: '#0F172A' }}>{iv.proctoring_warnings > 0 ? 'Violations detected. Review required.' : 'Session completely secure.'}</p>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#64748B', fontWeight: 'bold', textTransform: 'uppercase' }}>Target Role</p>
+                    <p style={{ margin: 0, fontSize: '20px', color: '#0F172A', fontWeight: '600' }}>{c.job_role}</p>
                   </div>
-               </div>
-
-               <div style={{ flex: 1 }}></div>
-               {/* Footer Right */}
-               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #0F172A', paddingTop: '15px', marginTop: '30px' }}>
-                  <span style={{ fontSize: '14px', color: '#0F172A' }}>STERLING E-MOBILITY AI DOSSIER</span>
-                  <span style={{ fontSize: '14px', color: '#0F172A' }}>DOCUMENT ID [{iv.interview_id ? iv.interview_id.substring(0,8).toUpperCase() : 'N/A'}]</span>
+                  <div>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#64748B', fontWeight: 'bold', textTransform: 'uppercase' }}>Contact</p>
+                    <p style={{ margin: 0, fontSize: '20px', color: '#0F172A', fontWeight: '600' }}>{c.email}</p>
+                  </div>
                </div>
             </div>
 
+            {/* The Verdict Card */}
+            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '40px', marginBottom: '50px', display: 'flex', gap: '40px', alignItems: 'center' }}>
+               <div style={{ width: '160px', height: '160px', border: '8px solid #FFFFFF', borderRadius: '24px', background: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 25px -5px rgba(220, 38, 38, 0.3)' }}>
+                  <h1 style={{ fontSize: '80px', fontWeight: '900', color: '#FFFFFF', margin: 0, lineHeight: 1 }}>{grade}</h1>
+               </div>
+               <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#64748B', letterSpacing: '2px', textTransform: 'uppercase' }}>AI Evaluation Verdict</h3>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '15px', marginBottom: '20px' }}>
+                     <span style={{ fontSize: '56px', fontWeight: '900', color: '#0F172A', lineHeight: 1 }}>{overall}</span>
+                     <span style={{ fontSize: '24px', color: '#64748B', fontWeight: 'bold' }}>/ 100</span>
+                  </div>
+                  <div style={{ display: 'inline-block', background: iv.hiring_decision === 'REJECTED' ? '#FEE2E2' : '#D1FAE5', color: iv.hiring_decision === 'REJECTED' ? '#991B1B' : '#065F46', padding: '10px 20px', borderRadius: '8px', fontSize: '18px', fontWeight: '900', letterSpacing: '1px' }}>
+                     {iv.hiring_decision || 'PENDING'}
+                  </div>
+               </div>
+            </div>
+
+            {/* Executive Summary */}
+            <div style={{ flex: 1 }}>
+               <p style={{ margin: '0 0 20px 0', fontSize: '14px', fontWeight: 'bold', color: '#DC2626', letterSpacing: '2px', textTransform: 'uppercase' }}>Executive Summary</p>
+               <p style={{ margin: 0, fontSize: '20px', lineHeight: '1.8', color: '#334155' }}>
+                 {iv.summary || 'Comprehensive AI evaluation completed. The candidate demonstrated key competencies aligned with the role requirements. Refer to the analytics section for a detailed breakdown of intelligence metrics and proctoring logs.'}
+               </p>
+            </div>
+
+            {/* Footer */}
+            <div style={{ borderTop: '2px solid #E2E8F0', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>STERLING E-MOBILITY • CANDIDATE ASSESSMENT REPORT</span>
+               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#94A3B8' }}>PAGE 1 OF 2</span>
+            </div>
           </div>
+
+          {/* PAGE 2: DETAILED ANALYTICS */}
+          <div ref={page2Ref} style={{ width: '800px', height: '1131px', backgroundColor: '#FFFFFF', color: '#0F172A', padding: '60px', boxSizing: 'border-box', fontFamily: 'sans-serif', position: 'relative', display: 'flex', flexDirection: 'column', marginTop: '20px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '2px solid #E2E8F0', paddingBottom: '20px', marginBottom: '40px' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                 <img src={sterlingLogo} alt="Logo" style={{ width: '40px' }} />
+                 <h1 style={{ fontSize: '24px', fontWeight: '900', margin: 0, lineHeight: '1', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '1px' }}>STERLING<br/><span style={{ fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>E-MOBILITY</span></h1>
+               </div>
+               <div style={{ textAlign: 'right' }}>
+                 <p style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: 'bold', color: '#64748B', letterSpacing: '2px', textTransform: 'uppercase' }}>DETAILED ANALYTICS</p>
+                 <p style={{ margin: 0, fontSize: '14px', color: '#0F172A' }}>ID: {iv.interview_id ? iv.interview_id.substring(0,8).toUpperCase() : 'N/A'}</p>
+               </div>
+            </div>
+
+            {/* Colorful Intelligence Metrics */}
+            <div style={{ marginBottom: '50px' }}>
+               <p style={{ margin: '0 0 25px 0', fontSize: '14px', fontWeight: 'bold', color: '#DC2626', letterSpacing: '2px', textTransform: 'uppercase' }}>Core Intelligence Metrics</p>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  {[
+                    { label: 'Technical Mastery', val: normalizedTech, color: '#4F46E5' },
+                    { label: 'Problem Solving', val: iv.problem_solving_score || 0, color: '#7C3AED' },
+                    { label: 'Confidence Index', val: confScore, color: '#D97706' },
+                    { label: 'Learning Potential', val: iv.learning_potential_score || 0, color: '#059669' },
+                    { label: 'Emotional Intelligence', val: eqScore, color: '#E11D48' },
+                    { label: 'Communication', val: commScore, color: '#0284C7' },
+                  ].map((m, i) => (
+                    <div key={i}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#334155' }}>{m.label}</span>
+                          <span style={{ fontSize: '14px', fontWeight: '900', color: '#0F172A' }}>{m.val}/100</span>
+                       </div>
+                       <div style={{ width: '100%', height: '12px', background: '#F1F5F9', borderRadius: '6px', overflow: 'hidden' }}>
+                          <div style={{ width: `${m.val}%`, background: m.color, height: '100%', borderRadius: '6px' }}></div>
+                       </div>
+                    </div>
+                  ))}
+               </div>
+            </div>
+
+            {/* Strengths & Weaknesses Split Cards */}
+            <div style={{ display: 'flex', gap: '30px', marginBottom: '50px' }}>
+               <div style={{ flex: 1, background: '#F8FAFC', border: '1px solid #E2E8F0', borderTop: '4px solid #10B981', borderRadius: '12px', padding: '25px' }}>
+                  <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', fontWeight: '900', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                     <span style={{ color: '#10B981' }}>●</span> Key Strengths
+                  </h3>
+                  <ul style={{ paddingLeft: '20px', margin: 0, fontSize: '14px', lineHeight: '1.6', color: '#334155' }}>
+                     {(iv.strengths || []).map((s, i) => <li key={i} style={{ marginBottom: '8px' }}>{s}</li>)}
+                  </ul>
+               </div>
+               <div style={{ flex: 1, background: '#F8FAFC', border: '1px solid #E2E8F0', borderTop: '4px solid #F59E0B', borderRadius: '12px', padding: '25px' }}>
+                  <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', fontWeight: '900', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                     <span style={{ color: '#F59E0B' }}>●</span> Optimization Areas
+                  </h3>
+                  <ul style={{ paddingLeft: '20px', margin: 0, fontSize: '14px', lineHeight: '1.6', color: '#334155' }}>
+                     {(iv.weaknesses || []).map((w, i) => <li key={i} style={{ marginBottom: '8px' }}>{w}</li>)}
+                  </ul>
+               </div>
+            </div>
+
+            {/* Proctoring Log */}
+            <div style={{ flex: 1 }}>
+               <p style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: 'bold', color: '#DC2626', letterSpacing: '2px', textTransform: 'uppercase' }}>Security & Proctoring</p>
+               <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden' }}>
+                  <div style={{ background: '#F1F5F9', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0' }}>
+                     <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#334155' }}>Session Integrity</span>
+                     <span style={{ fontSize: '14px', fontWeight: '900', color: iv.proctoring_warnings > 0 ? '#DC2626' : '#10B981' }}>
+                        {iv.proctoring_warnings > 0 ? 'WARNINGS DETECTED' : 'SECURE'}
+                     </span>
+                  </div>
+                  <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: iv.proctoring_warnings > 0 ? '#FEE2E2' : '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                        {iv.proctoring_warnings > 0 ? '⚠️' : '🔒'}
+                     </div>
+                     <div>
+                        <p style={{ margin: '0 0 5px 0', fontSize: '16px', fontWeight: 'bold', color: '#0F172A' }}>Total Warnings: {iv.proctoring_warnings || 0}</p>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#475569' }}>
+                           {iv.proctoring_warnings > 0 ? 'Human review of session recording is recommended to verify proctoring flags.' : 'No suspicious behavior or policy violations detected during the session.'}
+                        </p>
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ borderTop: '2px solid #E2E8F0', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>STERLING E-MOBILITY • CANDIDATE ASSESSMENT REPORT</span>
+               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#94A3B8' }}>PAGE 2 OF 2</span>
+            </div>
+          </div>
+
         </div>
       </div>
     );
