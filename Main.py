@@ -1624,8 +1624,8 @@ async def get_leaderboard(db: Session = Depends(get_db)):
             "fluency_score": getattr(latest, "fluency_score", 0.0) if latest else 0.0,
             "eq_score": getattr(latest, "eq_score", 0.0) if latest else 0.0,
             "global_score": latest.overall_score if latest else 0.0,
-            "hiring_decision": getattr(latest.report, "hiring_decision", "PENDING") if (latest and getattr(latest, "report", None)) else "PENDING",
-            "ai_recommendation": latest.recommendation if latest and latest.recommendation else "PENDING",
+            "hiring_decision": getattr(latest.report, "hiring_decision", "PENDING") if (latest and getattr(latest, "report", None)) else None,
+            "ai_recommendation": latest.recommendation if latest and latest.recommendation else None,
             "interview_status": "completed" if latest and (latest.completed_at or latest.overall_score > 0) else "pending",
             "proctoring_warnings": getattr(latest, "proctoring_warnings", 0) if latest else 0,
             # Sprint 4: Integrity fields for Triage Matrix
