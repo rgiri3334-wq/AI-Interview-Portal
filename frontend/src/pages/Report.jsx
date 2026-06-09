@@ -364,8 +364,6 @@ export default function Report() {
         </div>
 
       
-      </div>
-
         {/* HIDDEN PDF TEMPLATE - ONLY VISIBLE TO HTML2CANVAS */}
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
           <div ref={pdfRef} style={{ width: '794px', height: '1123px', backgroundColor: '#020617', color: '#F8FAFC', padding: '40px', boxSizing: 'border-box', fontFamily: 'sans-serif', position: 'relative' }}>
@@ -413,7 +411,7 @@ export default function Report() {
                   <p style={{ fontSize: '36px', fontWeight: '900', margin: 0 }}>{overall}<span style={{fontSize: '18px', opacity: 0.8}}>/100</span></p>
                 </div>
               </div>
-              <div style={{ flex: 1, background: '#0F172A', padding: '20px', borderRadius: '8px', border: \`1px solid \${gradeColor}\`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ flex: 1, background: '#0F172A', padding: '20px', borderRadius: '8px', border: `1px solid ${gradeColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                  <div style={{ textAlign: 'center' }}>
                   <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 5px 0', letterSpacing: '2px', fontWeight: 'bold' }}>HIRING STATUS</p>
                   <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#FFFFFF', margin: 0 }}>{iv.hiring_decision || 'PENDING'}</p>
