@@ -1958,10 +1958,14 @@ async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Ses
 @app.patch("/api/interviews/{candidate_id}/decision", tags=["Data"])
 async def update_hiring_decision(candidate_id: str, req: DecisionUpdateRequest, db: Session = Depends(get_db)):
     iv = db.query(InterviewSession).filter_by(candidate_id=candidate_id).order_by(InterviewSession.started_at.desc()).first()
-    if not iv or not iv.report:
-        raise HTTPException(status_code=404, detail="Interview or Report not found")
+    if not iv:
+        raise HTTPException(status_code=404, detail="Interview not found")
+        
+    report = db.query(FinalReport).filter_by(interview_id=iv.interview_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
     
-    iv.report.hiring_decision = req.decision
+    report.hiring_decision = req.decision
     db.commit()
     
     return {"success": True, "decision": req.decision}
