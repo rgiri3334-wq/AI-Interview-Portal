@@ -367,7 +367,7 @@ export default function Report() {
       
         {/* HIDDEN PDF TEMPLATE - ONLY VISIBLE TO HTML2CANVAS */}
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-          <div ref={pdfRef} style={{ width: '794px', height: '1123px', backgroundColor: '#FFFFFF', color: '#0F172A', padding: '40px', boxSizing: 'border-box', fontFamily: 'sans-serif', position: 'relative', overflow: 'hidden' }}>
+          <div ref={pdfRef} style={{ width: '794px', minHeight: '1123px', backgroundColor: '#FFFFFF', color: '#0F172A', padding: '40px', boxSizing: 'border-box', fontFamily: 'sans-serif', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             
             {/* Background cyber grid accents */}
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '8px', background: 'linear-gradient(90deg, #DC2626 0%, #EF4444 50%, #DC2626 100%)' }}></div>
@@ -483,8 +483,11 @@ export default function Report() {
                </div>
             </div>
 
+            {/* Spacer to push footer to bottom if content is short */}
+            <div style={{ flex: 1 }}></div>
+
             {/* Footer */}
-            <div style={{ position: 'absolute', bottom: '40px', left: '40px', right: '40px', textAlign: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '20px' }}>
+            <div style={{ textAlign: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '20px', marginTop: '40px' }}>
                <p style={{ fontSize: '10px', color: '#94A3B8', letterSpacing: '4px', margin: 0, fontWeight: '900' }}>STERLING E-MOBILITY AI PLATFORM &copy; {new Date().getFullYear()} - ALL RIGHTS RESERVED</p>
             </div>
           </div>
