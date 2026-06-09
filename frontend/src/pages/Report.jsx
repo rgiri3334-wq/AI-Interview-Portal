@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Star, Brain, Smile, Volume2, MessageSquare,
+  Star, Brain, Smile, Volume2, MessageSquare, Search,
   TrendingUp, TrendingDown, Download, RotateCcw, Award, CheckCircle, AlertCircle, ShieldAlert
 } from 'lucide-react';
 import {
@@ -72,6 +72,7 @@ export default function Report() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchCandidates = async () => {
@@ -386,28 +387,65 @@ CONFIDENTIAL - INTERNAL HR USE ONLY`;
     );
   };
 
+  const filteredCandidates = candidates.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
       <Sidebar />
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Candidate Tabs Navigation */}
-        <div className="bg-white border-b border-slate-200 px-8 flex gap-8 overflow-x-auto shrink-0 z-10 shadow-sm">
-          {candidates.map(cand => (
-            <button
-              key={cand.id}
-              onClick={() => setActiveTabId(cand.id)}
-              className={`py-4 px-2 whitespace-nowrap text-sm font-extrabold tracking-tight border-b-2 transition-colors relative ${
-                activeTabId === cand.id 
-                  ? 'border-red-600 text-red-600' 
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              {cand.name}
-              {activeTabId === cand.id && (
-                <motion.div layoutId="activeTab" className="absolute -bottom-[2px] left-0 right-0 h-[2px] bg-red-600" />
-              )}
-            </button>
-          ))}
+        {/* Candidate Cards Navigation */}
+        <div className="bg-white border-b border-slate-200 p-6 z-10 shadow-sm shrink-0">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-extrabold text-slate-800">Completed Interviews ({filteredCandidates.length})</h2>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Search candidates..." 
+                value={searchTerm} 
+                onChange={e => setSearchTerm(e.target.value)} 
+                className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition-all w-64" 
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
+            {filteredCandidates.map(cand => (
+              <button
+                key={cand.id}
+                onClick={() => setActiveTabId(cand.id)}
+                className={`flex flex-col text-left p-4 min-w-[240px] max-w-[280px] rounded-xl border transition-all ${
+                  activeTabId === cand.id 
+                    ? 'border-red-600 bg-red-50 shadow-md ring-1 ring-red-600' 
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                }`}
+              >
+                <div className="flex justify-between items-start mb-2 w-full gap-2">
+                  <span className="font-bold text-slate-900 truncate">{cand.name}</span>
+                  {cand.hiring_decision ? (
+                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
+                      cand.hiring_decision === 'HIRED' || cand.hiring_decision === 'SHORTLISTED' ? 'bg-green-100 text-green-700' :
+                      cand.hiring_decision === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                      'bg-slate-200 text-slate-700'
+                    }`}>
+                      {cand.hiring_decision}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-yellow-100 text-yellow-700">
+                      REVIEW
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between w-full text-xs text-slate-500 font-medium">
+                  <span className="truncate">{cand.job_role || 'Candidate'}</span>
+                  <span className="font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-100">{cand.global_score > 0 ? `${cand.global_score}/100` : '-'}</span>
+                </div>
+              </button>
+            ))}
+            {filteredCandidates.length === 0 && (
+              <div className="py-4 text-sm font-medium text-slate-500">No matching candidates found.</div>
+            )}
+          </div>
         </div>
 
         {/* Main Content Area */}
