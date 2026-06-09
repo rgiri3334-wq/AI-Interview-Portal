@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
-import logoUrl from '../../assets/sterling_logo.png';
+import logoUrl from '../assets/sterling_logo.png';
 
 // ── Sterling Premium Score Ring ──────────────────────────────────────────
 function ScoreRing({ score, max = 100, color = '#DC2626', label, size = 120 }) {
