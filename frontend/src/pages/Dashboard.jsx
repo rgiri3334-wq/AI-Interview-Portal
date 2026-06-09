@@ -37,6 +37,7 @@ const DECISION_STYLE = {
   UNDER_REVIEW: { bg: 'bg-orange-50',  border: 'border-orange-200',  color: 'text-orange-700',  icon: '🔍' },
   REJECTED:     { bg: 'bg-slate-100',  border: 'border-slate-300',  color: 'text-slate-700',  icon: '❌' },
   PENDING:      { bg: 'bg-slate-50', border: 'border-slate-200', color: 'text-slate-500', icon: '⏳' },
+  IN_PROGRESS:  { bg: 'bg-blue-50', border: 'border-blue-200', color: 'text-blue-600', icon: '📝' },
 };
 
 function DecisionBadge({ decision }) {
@@ -50,7 +51,7 @@ function DecisionBadge({ decision }) {
 
 function DecisionDropdown({ candidate, onUpdate }) {
   const adminRole = sessionStorage.getItem('adminRole') || 'sub_admin';
-  const currentDecision = candidate.hiring_decision || (candidate.interview_status === 'completed' ? 'UNDER_REVIEW' : 'PENDING');
+  const currentDecision = candidate.hiring_decision || (candidate.interview_status === 'completed' ? 'UNDER_REVIEW' : 'IN_PROGRESS');
   
   if (adminRole !== 'master_admin') {
     return (
@@ -76,6 +77,7 @@ function DecisionDropdown({ candidate, onUpdate }) {
           DECISION_STYLE[currentDecision]?.border || DECISION_STYLE.PENDING.border
         }`}
       >
+        <option value="IN_PROGRESS" disabled hidden>📝 IN PROGRESS</option>
         <option value="PENDING">⏳ PENDING</option>
         <option value="SHORTLISTED">⭐ SHORTLISTED</option>
         <option value="UNDER_REVIEW">🔍 UNDER REVIEW</option>
@@ -299,7 +301,7 @@ function CandidateListModal({ filter, leaderboard, onClose, onNavigate }) {
     filtered = leaderboard.filter(c => c.interview_status === 'completed' || c.global_score > 0);
     title = "Interviews Done";
   } else if (filter === 'PENDING') {
-    filtered = leaderboard.filter(c => c.interview_status === 'completed' && (!c.hiring_decision || c.hiring_decision === 'PENDING'));
+    filtered = leaderboard.filter(c => c.interview_status === 'completed' && (!c.hiring_decision || c.hiring_decision === 'PENDING' || c.hiring_decision === 'UNDER_REVIEW'));
     title = "Pending Review";
   } else if (filter === 'SHORTLISTED') {
     filtered = leaderboard.filter(c => c.hiring_decision === 'SHORTLISTED');
@@ -368,7 +370,7 @@ function CandidateListModal({ filter, leaderboard, onClose, onNavigate }) {
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <DecisionBadge decision={c.hiring_decision || (c.interview_status === 'completed' ? 'UNDER_REVIEW' : 'PENDING')} />
+                        <DecisionBadge decision={c.hiring_decision || (c.interview_status === 'completed' ? 'UNDER_REVIEW' : 'IN_PROGRESS')} />
                       </td>
                       <td className="py-4 px-4">
                         <button className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm rounded-xl text-xs font-bold text-slate-700 transition-colors uppercase tracking-wider whitespace-nowrap"
@@ -476,7 +478,7 @@ export default function Dashboard() {
   }
 
   const d = dashData || {};
-  const pendingReview = leaderboard.filter(c => c?.interview_status === 'completed' && (!c?.hiring_decision || c?.hiring_decision === 'PENDING')).length;
+  const pendingReview = leaderboard.filter(c => c?.interview_status === 'completed' && (!c?.hiring_decision || c?.hiring_decision === 'PENDING' || c?.hiring_decision === 'UNDER_REVIEW')).length;
   const shortlisted = leaderboard.filter(c => c?.hiring_decision === 'SHORTLISTED').length;
 
   const avg = (key) => {
