@@ -376,8 +376,8 @@ export default function Report() {
                {/* Left Header */}
                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #E2E8F0', paddingBottom: '15px', marginBottom: '15px' }}>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                   <div style={{ background: '#DC2626', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px' }}>
-                      <img src={sterlingLogo} alt="Logo" style={{ width: '100%', filter: 'brightness(0) invert(1)' }} />
+                   <div style={{ width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px' }}>
+                      <img src={sterlingLogo} alt="Logo" style={{ width: '100%' }} />
                    </div>
                    <h1 style={{ fontSize: '26px', fontWeight: '900', margin: 0, lineHeight: '1.1', color: '#0F172A', textTransform: 'uppercase' }}>STERLING<br/><span style={{ fontSize: '20px', color: '#64748B' }}>E-MOBILITY</span></h1>
                  </div>
@@ -396,21 +396,16 @@ export default function Report() {
                      <h2 style={{ margin: '0 0 10px 0', fontSize: '38px', fontWeight: '900', color: '#0F172A' }}>{c.name} <span style={{ fontSize: '16px', color: '#64748B', fontWeight: 'bold' }}>[cite: 1]</span></h2>
                      <p style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0F172A' }}>CONTACT: <span style={{ fontWeight: 'normal', color: '#475569' }}>{c.email}</span></p>
                   </div>
-                  <div style={{ textAlign: 'center' }}>
-                     <div style={{ width: '80px', height: '80px', background: '#0F172A', borderRadius: '50%', margin: '0 auto 10px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ width: '40px', height: '40px', background: 'white', clipPath: 'circle(50% at 50% 50%)' }}></div>
-                     </div>
+                  <div style={{ textAlign: 'right' }}>
                      <p style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#0F172A' }}>{c.job_role}</p>
                   </div>
                </div>
 
                {/* Grades Row */}
                <div style={{ display: 'flex', gap: '30px', marginBottom: '30px' }}>
-                  {/* Hexagon Grade */}
-                  <div style={{ width: '160px', height: '180px', background: '#E2E8F0', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                     <div style={{ position: 'absolute', inset: '8px', background: '#FFFFFF', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                         <h1 style={{ fontSize: '80px', fontWeight: '900', color: '#0F172A', margin: 0, lineHeight: 1 }}>{grade}</h1>
-                     </div>
+                  {/* Grade Badge */}
+                  <div style={{ width: '160px', height: '180px', border: '8px solid #E2E8F0', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <h1 style={{ fontSize: '80px', fontWeight: '900', color: '#0F172A', margin: 0, lineHeight: 1 }}>{grade}</h1>
                   </div>
                   
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -480,8 +475,8 @@ export default function Report() {
                {/* Right Header */}
                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #E2E8F0', paddingBottom: '15px', marginBottom: '30px' }}>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                   <div style={{ background: '#DC2626', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px' }}>
-                      <img src={sterlingLogo} alt="Logo" style={{ width: '100%', filter: 'brightness(0) invert(1)' }} />
+                   <div style={{ width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px' }}>
+                      <img src={sterlingLogo} alt="Logo" style={{ width: '100%' }} />
                    </div>
                    <h1 style={{ fontSize: '26px', fontWeight: '900', margin: 0, lineHeight: '1.1', color: '#0F172A', textTransform: 'uppercase' }}>STERLING<br/><span style={{ fontSize: '20px', color: '#64748B' }}>E-MOBILITY</span></h1>
                  </div>
@@ -533,15 +528,14 @@ export default function Report() {
                      <p style={{ margin: '10px 0 0 35px', fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>[cite: 4]</p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                     <div style={{ width: '60px', height: '60px', background: '#0F172A', clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '30px', fontWeight: 'bold', paddingTop: '10px' }}>!</div>
+                     <div style={{ width: '60px', height: '60px', background: '#0F172A', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '40px', fontWeight: 'bold' }}>!</div>
                   </div>
                </div>
 
                {/* Proctoring Log */}
                <div style={{ border: '3px solid #0F172A', borderRadius: '12px', padding: '25px', display: 'flex', gap: '30px', alignItems: 'center', background: 'white' }}>
-                  <div style={{ width: '80px', height: '90px', border: '5px solid #0F172A', borderRadius: '0 0 40px 40px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                     <div style={{ position: 'absolute', top: '-10px', width: '90%', height: '20px', border: '5px solid #0F172A', borderRadius: '10px 10px 0 0', borderBottom: 'none' }}></div>
-                     <span style={{ fontSize: '30px' }}>🔒</span>
+                  <div style={{ width: '80px', height: '80px', background: '#0F172A', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     <span style={{ fontSize: '35px' }}>🔒</span>
                   </div>
                   <div>
                      <h3 style={{ margin: '0 0 5px 0', fontSize: '20px', fontWeight: '900', color: '#0F172A' }}>PROCTORING LOG:</h3>
