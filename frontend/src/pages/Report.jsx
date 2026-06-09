@@ -146,18 +146,17 @@ export default function Report() {
           scale: 2,
           useCORS: true,
           logging: false,
-          backgroundColor: '#ffffff',
+          backgroundColor: '#F8FAFC',
         });
         
         const imgData = canvas.toDataURL('image/png');
         
-        // PDF size width is 210 mm
-        const pdfWidth = 210;
-        // Calculate height based on aspect ratio
+        // Calculate dimensions based on actual canvas aspect ratio
+        const pdfWidth = 297; // Landscape A4 width
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         
-        // Dynamic PDF sizing
-        const pdf = new jsPDF('p', 'mm', [pdfWidth, Math.max(pdfHeight, 297)]);
+        // Dynamic PDF sizing for landscape
+        const pdf = new jsPDF('l', 'mm', [Math.max(pdfHeight, 210), pdfWidth]);
         
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Sterling_Dossier_${c.name.replace(/\s+/g, '_')}.pdf`);
@@ -370,147 +369,196 @@ export default function Report() {
       
         {/* HIDDEN PDF TEMPLATE - ONLY VISIBLE TO HTML2CANVAS */}
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-          <div ref={pdfRef} style={{ width: '794px', minHeight: '1123px', backgroundColor: '#FFFFFF', color: '#0F172A', padding: '30px', boxSizing: 'border-box', fontFamily: 'sans-serif', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div ref={pdfRef} style={{ width: '1500px', minHeight: '840px', backgroundColor: '#F8FAFC', color: '#0F172A', padding: '40px', boxSizing: 'border-box', fontFamily: 'sans-serif', position: 'relative', overflow: 'hidden', display: 'flex', gap: '50px' }}>
             
-            {/* Background geometric accents */}
-            <div style={{ position: 'absolute', top: 0, right: 0, width: '300px', height: '300px', background: 'radial-gradient(circle at top right, rgba(220,38,38,0.1) 0%, transparent 70%)', zIndex: 0 }}></div>
-            <div style={{ position: 'absolute', bottom: 0, left: 0, width: '400px', height: '400px', background: 'radial-gradient(circle at bottom left, rgba(220,38,38,0.08) 0%, transparent 70%)', zIndex: 0 }}></div>
-            
-            {/* Foreground Container to keep above background */}
-            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-              
-              {/* Header (Clean Rectangular) */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '4px solid #0F172A', paddingBottom: '15px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <div style={{ background: '#DC2626', padding: '10px' }}>
-                    <img src={sterlingLogo} alt="Sterling Logo" style={{ height: '35px', filter: 'brightness(0) invert(1)' }} />
-                  </div>
-                  <div>
-                    <h1 style={{ fontSize: '28px', fontWeight: '900', color: '#0F172A', margin: 0, letterSpacing: '2px', textTransform: 'uppercase' }}>Sterling E-Mobility</h1>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px' }}>
-                      <span style={{ background: '#DC2626', color: 'white', padding: '2px 8px', fontSize: '10px', fontWeight: '900', letterSpacing: '2px' }}>DOSSIER</span>
-                      <span style={{ fontSize: '12px', color: '#DC2626', fontWeight: '900', letterSpacing: '3px' }}>AI INTELLIGENCE REPORT</span>
-                    </div>
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right', borderLeft: '2px solid #E2E8F0', paddingLeft: '15px' }}>
-                  <p style={{ fontSize: '9px', color: '#64748B', margin: 0, letterSpacing: '2px', fontWeight: '900' }}>CONFIDENTIAL HR</p>
-                  <p style={{ fontSize: '14px', color: '#0F172A', margin: '2px 0 0 0', fontWeight: '900' }}>{new Date().toLocaleDateString()}</p>
-                </div>
-              </div>
-
-              {/* Candidate Info - Horizontal Dense Bar */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', background: '#F8FAFC', padding: '12px 20px', borderLeft: '4px solid #DC2626', borderRight: '4px solid #0F172A', marginBottom: '20px' }}>
-                <div>
-                  <p style={{ fontSize: '9px', color: '#DC2626', margin: '0 0 2px 0', letterSpacing: '2px', fontWeight: '900' }}>CANDIDATE</p>
-                  <p style={{ fontSize: '16px', fontWeight: '900', color: '#0F172A', margin: 0 }}>{c.name}</p>
-                </div>
-                <div>
-                  <p style={{ fontSize: '9px', color: '#DC2626', margin: '0 0 2px 0', letterSpacing: '2px', fontWeight: '900' }}>ROLE</p>
-                  <p style={{ fontSize: '16px', fontWeight: '900', color: '#0F172A', margin: 0 }}>{c.job_role}</p>
-                </div>
-                <div>
-                  <p style={{ fontSize: '9px', color: '#DC2626', margin: '0 0 2px 0', letterSpacing: '2px', fontWeight: '900' }}>EMAIL</p>
-                  <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#475569', margin: 0 }}>{c.email}</p>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: '9px', color: '#DC2626', margin: '0 0 2px 0', letterSpacing: '2px', fontWeight: '900' }}>EXP/SKILLS</p>
-                  <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#475569', margin: 0 }}>{c.experience || 'N/A'} &bull; {c.skills || 'N/A'}</p>
-                </div>
-              </div>
-
-              {/* Final Decision HUD - Compressed */}
-              <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-                <div style={{ flex: 1.5, background: gradeColor, padding: '15px 20px', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <p style={{ fontSize: '10px', margin: '0 0 2px 0', letterSpacing: '3px', opacity: 0.9, fontWeight: '900' }}>FINAL GRADE</p>
-                    <p style={{ fontSize: '36px', fontWeight: '900', margin: 0, lineHeight: 1 }}>{grade}</p>
-                  </div>
-                  <div style={{ textAlign: 'right', paddingRight: '20px' }}>
-                    <p style={{ fontSize: '10px', margin: '0 0 2px 0', letterSpacing: '3px', opacity: 0.9, fontWeight: '900' }}>OVERALL FIT</p>
-                    <p style={{ fontSize: '36px', fontWeight: '900', margin: 0, lineHeight: 1 }}>{overall}<span style={{fontSize: '16px', opacity: 0.8}}>/100</span></p>
-                  </div>
-                </div>
-                <div style={{ flex: 1, background: '#0F172A', padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                   <div style={{ position: 'absolute', top: 0, right: 0, padding: '2px 8px', background: gradeColor, color: 'white', fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px' }}>SYS.DECISION</div>
-                   <div style={{ textAlign: 'center' }}>
-                    <p style={{ fontSize: '10px', color: '#94A3B8', margin: '0 0 2px 0', letterSpacing: '3px', fontWeight: '900' }}>HIRING STATUS</p>
-                    <p style={{ fontSize: '24px', fontWeight: '900', color: gradeColor, margin: 0 }}>{iv.hiring_decision || 'PENDING'}</p>
+            {/* LEFT COLUMN */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+               {/* Left Header */}
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #E2E8F0', paddingBottom: '15px', marginBottom: '15px' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                   <div style={{ background: '#DC2626', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px' }}>
+                      <img src={sterlingLogo} alt="Logo" style={{ width: '100%', filter: 'brightness(0) invert(1)' }} />
                    </div>
-                </div>
-              </div>
+                   <h1 style={{ fontSize: '26px', fontWeight: '900', margin: 0, lineHeight: '1.1', color: '#0F172A', textTransform: 'uppercase' }}>STERLING<br/><span style={{ fontSize: '20px', color: '#64748B' }}>E-MOBILITY</span></h1>
+                 </div>
+                 <div style={{ textAlign: 'right' }}>
+                   <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold', color: '#64748B', letterSpacing: '2px' }}>CONFIDENTIAL</p>
+                   <p style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0F172A', textTransform: 'uppercase' }}>ENTERPRISE AI DOSSIER</p>
+                 </div>
+               </div>
 
-              {/* AI Intelligence Metrics - 3 Column Dense Grid */}
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <div style={{ height: '2px', flex: 1, background: '#E2E8F0' }}></div>
-                  <h2 style={{ fontSize: '12px', color: '#0F172A', margin: 0, letterSpacing: '3px', fontWeight: '900' }}>[ AI INTELLIGENCE METRICS ]</h2>
-                  <div style={{ height: '2px', width: '30px', background: '#DC2626' }}></div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+               <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A', marginBottom: '25px', letterSpacing: '1px' }}>GENERATED ON {new Date().toLocaleDateString()} <span style={{ color: '#64748B' }}>[cite: 1]</span></p>
+
+               {/* Candidate Details */}
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '30px' }}>
+                  <div>
+                     <p style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: 'bold', color: '#0F172A', letterSpacing: '1px' }}>TARGET CANDIDATE:</p>
+                     <h2 style={{ margin: '0 0 10px 0', fontSize: '38px', fontWeight: '900', color: '#0F172A' }}>{c.name} <span style={{ fontSize: '16px', color: '#64748B', fontWeight: 'bold' }}>[cite: 1]</span></h2>
+                     <p style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0F172A' }}>CONTACT: <span style={{ fontWeight: 'normal', color: '#475569' }}>{c.email}</span></p>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                     <div style={{ width: '80px', height: '80px', background: '#0F172A', borderRadius: '50%', margin: '0 auto 10px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: '40px', height: '40px', background: 'white', clipPath: 'circle(50% at 50% 50%)' }}></div>
+                     </div>
+                     <p style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#0F172A' }}>{c.job_role}</p>
+                  </div>
+               </div>
+
+               {/* Grades Row */}
+               <div style={{ display: 'flex', gap: '30px', marginBottom: '30px' }}>
+                  {/* Hexagon Grade */}
+                  <div style={{ width: '160px', height: '180px', background: '#E2E8F0', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                     <div style={{ position: 'absolute', inset: '8px', background: '#FFFFFF', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                         <h1 style={{ fontSize: '80px', fontWeight: '900', color: '#0F172A', margin: 0, lineHeight: 1 }}>{grade}</h1>
+                     </div>
+                  </div>
+                  
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                     <h3 style={{ margin: '0 0 5px 0', fontSize: '20px', fontWeight: '900', color: '#0F172A', letterSpacing: '1px' }}>FINAL GRADE</h3>
+                     <p style={{ margin: '0 0 20px 0', fontSize: '16px', color: '#64748B', fontWeight: 'bold' }}>[cite: 1]</p>
+                     
+                     <div style={{ borderTop: '2px solid #0F172A', paddingTop: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                           <span style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A' }}>AI Verdict</span>
+                           <span style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A' }}>{overall}/100</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                           <span style={{ fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>[cite: 1]</span>
+                           <div style={{ flex: 1, background: '#F1F5F9', padding: '10px', textAlign: 'center', fontSize: '20px', fontWeight: '900', color: '#DC2626', letterSpacing: '2px' }}>
+                              {iv.hiring_decision || 'PENDING'}
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               {/* Intelligence Metrics */}
+               <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', margin: '0 0 15px 0', letterSpacing: '1px' }}>INTELLIGENCE METRICS</h3>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {[
-                    { label: 'Technical', val: normalizedTech },
-                    { label: 'Problem Solve', val: iv.problem_solving_score || 0 },
-                    { label: 'Role Align', val: iv.role_alignment_score || 0 },
-                    { label: 'Professional', val: iv.professionalism_score || 0 },
-                    { label: 'Learn Potent', val: iv.learning_potential_score || 0 },
-                    { label: 'EQ Score', val: eqScore },
-                    { label: 'Confidence', val: confScore },
-                    { label: 'Communicate', val: commScore },
-                    { label: 'Behavioral', val: iv.behavioral_score || 0 },
-                  ].map((m, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: '8px 12px', borderLeft: '2px solid #DC2626' }}>
-                      <span style={{ fontSize: '10px', color: '#475569', fontWeight: '900', letterSpacing: '1px' }}>{m.label.toUpperCase()}</span>
-                      <span style={{ fontSize: '14px', color: '#0F172A', fontWeight: '900' }}>{m.val}<span style={{ color: '#94A3B8', fontSize: '10px' }}>/100</span></span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Lower Section Grid - High Density */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px', flex: 1 }}>
-                 {/* Exec Summary & Proctoring */}
-                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <h2 style={{ fontSize: '12px', color: '#0F172A', borderBottom: '2px solid #E2E8F0', paddingBottom: '4px', marginBottom: '8px', letterSpacing: '2px', fontWeight: '900' }}>[ EXECUTIVE SUMMARY ]</h2>
-                    <p style={{ fontSize: '11px', color: '#475569', lineHeight: '1.6', margin: '0 0 15px 0', textAlign: 'justify' }}>{iv.summary || 'No summary available.'}</p>
+                    { label: 'Technical Mastery', val: normalizedTech },
+                    { label: 'Problem Solving', val: iv.problem_solving_score || 0 },
+                    { label: 'Confidence Index', val: confScore },
+                    { label: 'Learning Potential', val: iv.learning_potential_score || 0 },
+                    { label: 'empty', val: null },
+                    { label: 'Role Alignment', val: 'title' },
+                    { label: 'Professionalism', val: iv.professionalism_score || 0 },
+                    { label: 'Learning Potential', val: iv.learning_potential_score || 0 },
+                    { label: 'Emotional Intell..', val: eqScore },
+                    { label: 'Behavioral Fit', val: iv.behavioral_score || 0 },
+                    { label: 'Communication', val: commScore },
+                  ].map((m, i) => {
+                    if (m.label === 'empty') return <div key={i} style={{ height: '10px' }}></div>;
+                    if (m.val === 'title') return <h3 key={i} style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', margin: '15px 0 5px 0', letterSpacing: '1px' }}>{m.label.toUpperCase()}</h3>;
                     
-                    <h2 style={{ fontSize: '12px', color: '#0F172A', borderBottom: '2px solid #E2E8F0', paddingBottom: '4px', marginBottom: '8px', letterSpacing: '2px', fontWeight: '900' }}>[ PROCTORING INTELLIGENCE ]</h2>
-                    <div style={{ background: iv.proctoring_warnings > 0 ? '#FEF2F2' : '#F0FDF4', padding: '10px', border: iv.proctoring_warnings > 0 ? '1px solid #FECACA' : '1px solid #BBF7D0', borderLeft: iv.proctoring_warnings > 0 ? '4px solid #EF4444' : '4px solid #10B981' }}>
-                      <p style={{ fontSize: '11px', color: '#0F172A', margin: '0 0 2px 0', fontWeight: '900' }}>Warnings: <span style={{ color: iv.proctoring_warnings > 0 ? '#EF4444' : '#10B981' }}>{iv.proctoring_warnings || 0}</span> / 3</p>
-                      <p style={{ fontSize: '10px', color: '#64748B', margin: 0, fontWeight: 'bold' }}>{(iv.proctoring_logs && iv.proctoring_logs.length > 0) ? 'Violations detected. Manual review required.' : 'No violations detected. Session secure.'}</p>
+                    return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
+                       <div style={{ width: '220px', background: '#0F172A', color: 'white', padding: '6px 15px', fontSize: '14px', fontWeight: 'bold', letterSpacing: '1px', borderTopRightRadius: '20px', borderBottomRightRadius: '20px' }}>
+                         {m.label.toUpperCase()}
+                       </div>
+                       <div style={{ flex: 1, background: '#E2E8F0', height: '28px', marginLeft: '10px' }}>
+                          <div style={{ width: `${m.val}%`, background: '#DC2626', height: '100%' }}></div>
+                       </div>
+                       <div style={{ width: '50px', textAlign: 'right', fontSize: '18px', fontWeight: '900', color: '#0F172A' }}>{m.val}</div>
                     </div>
-                 </div>
+                  )})}
+               </div>
 
-                 {/* Strengths & Weaknesses */}
-                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <h2 style={{ fontSize: '12px', color: '#10B981', borderBottom: '2px solid #10B981', paddingBottom: '4px', marginBottom: '8px', letterSpacing: '2px', fontWeight: '900' }}>[ KEY STRENGTHS ]</h2>
-                    <ul style={{ paddingLeft: '15px', margin: '0 0 15px 0', color: '#475569', fontSize: '11px', lineHeight: '1.5', fontWeight: 'bold' }}>
-                      {(iv.strengths || []).map((s, i) => <li key={i} style={{ marginBottom: '4px' }}>{s}</li>)}
-                    </ul>
-
-                    <h2 style={{ fontSize: '12px', color: '#DC2626', borderBottom: '2px solid #DC2626', paddingBottom: '4px', marginBottom: '8px', letterSpacing: '2px', fontWeight: '900' }}>[ CRITICAL WEAKNESSES ]</h2>
-                    <ul style={{ paddingLeft: '15px', margin: '0', color: '#475569', fontSize: '11px', lineHeight: '1.5', fontWeight: 'bold' }}>
-                      {(iv.weaknesses || []).map((w, i) => <li key={i} style={{ marginBottom: '4px' }}>{w}</li>)}
-                    </ul>
-                 </div>
-              </div>
-
-              {/* Spacer to guarantee footer is pushed to very bottom inside the 1123px height */}
-              <div style={{ flex: 1 }}></div>
-
-              {/* Footer */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid #0F172A', paddingTop: '10px', marginTop: '15px' }}>
-                 <div style={{ display: 'flex', gap: '5px' }}>
-                    <div style={{ width: '20px', height: '4px', background: '#DC2626' }}></div>
-                    <div style={{ width: '4px', height: '4px', background: '#DC2626' }}></div>
-                 </div>
-                 <p style={{ fontSize: '9px', color: '#94A3B8', letterSpacing: '4px', margin: 0, fontWeight: '900' }}>STERLING E-MOBILITY AI PLATFORM &copy; {new Date().getFullYear()} - ALL RIGHTS RESERVED</p>
-                 <div style={{ display: 'flex', gap: '5px' }}>
-                    <div style={{ width: '4px', height: '4px', background: '#DC2626' }}></div>
-                    <div style={{ width: '20px', height: '4px', background: '#DC2626' }}></div>
-                 </div>
-              </div>
+               <div style={{ flex: 1 }}></div>
+               {/* Footer Left */}
+               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #CBD5E1', paddingTop: '10px', marginTop: '30px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A' }}>STERLING E-MOBILITY AI DOSSIER [cite: 4]</span>
+                  <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A' }}>DOCUMENT ID: {iv.interview_id ? iv.interview_id.substring(0,8).toUpperCase() : 'N/A'} [cite: 4]</span>
+               </div>
             </div>
+
+            {/* CENTER DIVIDER */}
+            <div style={{ width: '2px', background: '#E2E8F0', height: '100%' }}></div>
+
+            {/* RIGHT COLUMN */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+               {/* Right Header */}
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #E2E8F0', paddingBottom: '15px', marginBottom: '30px' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                   <div style={{ background: '#DC2626', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px' }}>
+                      <img src={sterlingLogo} alt="Logo" style={{ width: '100%', filter: 'brightness(0) invert(1)' }} />
+                   </div>
+                   <h1 style={{ fontSize: '26px', fontWeight: '900', margin: 0, lineHeight: '1.1', color: '#0F172A', textTransform: 'uppercase' }}>STERLING<br/><span style={{ fontSize: '20px', color: '#64748B' }}>E-MOBILITY</span></h1>
+                 </div>
+                 <div style={{ textAlign: 'right' }}>
+                   <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold', color: '#0F172A', letterSpacing: '2px' }}>GENERATED DATE:</p>
+                   <p style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0F172A' }}>{new Date().toLocaleDateString()}</p>
+                 </div>
+               </div>
+
+               {/* Exec Summary */}
+               <div style={{ border: '3px solid #0F172A', borderRadius: '12px', padding: '25px', marginBottom: '20px', display: 'flex', gap: '20px', background: 'white' }}>
+                  <div style={{ flex: 1 }}>
+                     <h3 style={{ margin: '0 0 10px 0', fontSize: '22px', fontWeight: '900', color: '#0F172A' }}>EXECUTIVE SUMMARY <span style={{ fontSize: '14px', color: '#64748B' }}>[cite: 1, 2]</span></h3>
+                     <p style={{ margin: 0, fontSize: '18px', lineHeight: '1.5', color: '#0F172A' }}>{iv.summary || 'No summary available.'} <span style={{ fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>[cite: 2]</span></p>
+                  </div>
+                  <div style={{ width: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     <div style={{ fontSize: '60px' }}>👍</div>
+                  </div>
+               </div>
+
+               {/* Key Strengths */}
+               <div style={{ border: '3px solid #0F172A', borderRadius: '12px', padding: '25px', marginBottom: '20px', display: 'flex', gap: '20px', background: 'white' }}>
+                  <div style={{ flex: 1 }}>
+                     <h3 style={{ margin: '0 0 15px 0', fontSize: '22px', fontWeight: '900', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ display: 'inline-block', width: '24px', height: '24px', background: '#0F172A', color: 'white', borderRadius: '50%', textAlign: 'center', lineHeight: '24px', fontSize: '16px' }}>✓</span>
+                        KEY STRENGTHS
+                     </h3>
+                     <ul style={{ paddingLeft: '35px', margin: 0, fontSize: '18px', lineHeight: '1.6', color: '#0F172A' }}>
+                       {(iv.strengths || []).map((s, i) => <li key={i}>{s}</li>)}
+                     </ul>
+                     <p style={{ margin: '10px 0 0 35px', fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>[cite: 3]</p>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', borderLeft: '2px solid #E2E8F0', paddingLeft: '20px' }}>
+                     <span style={{ fontSize: '80px', fontWeight: '900', color: '#0F172A', lineHeight: 1 }}>{overall}</span>
+                     <span style={{ fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>[cite: 4]</span>
+                  </div>
+               </div>
+
+               {/* Critical Weaknesses */}
+               <div style={{ border: '3px solid #0F172A', borderRadius: '12px', padding: '25px', marginBottom: '20px', display: 'flex', gap: '20px', background: 'white' }}>
+                  <div style={{ flex: 1 }}>
+                     <h3 style={{ margin: '0 0 15px 0', fontSize: '22px', fontWeight: '900', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ display: 'inline-block', width: '24px', height: '24px', background: '#0F172A', color: 'white', borderRadius: '50%', textAlign: 'center', lineHeight: '24px', fontSize: '16px' }}>✓</span>
+                        CRITICAL WEAKNESSES
+                     </h3>
+                     <ul style={{ paddingLeft: '35px', margin: 0, fontSize: '18px', lineHeight: '1.6', color: '#0F172A' }}>
+                       {(iv.weaknesses || []).map((w, i) => <li key={i}>{w}</li>)}
+                     </ul>
+                     <p style={{ margin: '10px 0 0 35px', fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>[cite: 4]</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     <div style={{ width: '60px', height: '60px', background: '#0F172A', clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '30px', fontWeight: 'bold', paddingTop: '10px' }}>!</div>
+                  </div>
+               </div>
+
+               {/* Proctoring Log */}
+               <div style={{ border: '3px solid #0F172A', borderRadius: '12px', padding: '25px', display: 'flex', gap: '30px', alignItems: 'center', background: 'white' }}>
+                  <div style={{ width: '80px', height: '90px', border: '5px solid #0F172A', borderRadius: '0 0 40px 40px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     <div style={{ position: 'absolute', top: '-10px', width: '90%', height: '20px', border: '5px solid #0F172A', borderRadius: '10px 10px 0 0', borderBottom: 'none' }}></div>
+                     <span style={{ fontSize: '30px' }}>🔒</span>
+                  </div>
+                  <div>
+                     <h3 style={{ margin: '0 0 5px 0', fontSize: '20px', fontWeight: '900', color: '#0F172A' }}>PROCTORING LOG:</h3>
+                     <p style={{ margin: '0 0 2px 0', fontSize: '18px', color: '#0F172A' }}>SECURITY WARNINGS {iv.proctoring_warnings || 0}/3</p>
+                     <p style={{ margin: '0 0 5px 0', fontSize: '18px', color: '#0F172A' }}>{iv.proctoring_warnings > 0 ? 'Violations detected. Review required.' : 'Session completely secure.'}</p>
+                     <p style={{ margin: 0, fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>[cite: 3]</p>
+                  </div>
+               </div>
+
+               <div style={{ flex: 1 }}></div>
+               {/* Footer Right */}
+               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #CBD5E1', paddingTop: '10px', marginTop: '30px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A' }}>STERLING E-MOBILITY AI DOSSIER [cite: 4]</span>
+                  <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A' }}>DOCUMENT ID: {iv.interview_id ? iv.interview_id.substring(0,8).toUpperCase() : 'N/A'} [cite: 4]</span>
+               </div>
+            </div>
+
           </div>
         </div>
       </div>
