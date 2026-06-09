@@ -1626,7 +1626,7 @@ async def get_leaderboard(db: Session = Depends(get_db)):
             "global_score": latest.overall_score if latest else 0.0,
             "hiring_decision": getattr(latest.report, "hiring_decision", "PENDING") if (latest and getattr(latest, "report", None)) else "PENDING",
             "ai_recommendation": latest.recommendation if latest and latest.recommendation else "PENDING",
-            "interview_status": "completed" if latest and latest.completed_at else "pending",
+            "interview_status": "completed" if latest and (latest.completed_at or latest.overall_score > 0) else "pending",
             "proctoring_warnings": getattr(latest, "proctoring_warnings", 0) if latest else 0,
             # Sprint 4: Integrity fields for Triage Matrix
             "integrity_score": int(getattr(latest.report, "integrity_score", 100)) if (latest and latest.report) else 100,
@@ -2017,7 +2017,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
 async def get_dashboard_data(db: Session = Depends(get_db)):
     total = db.query(Candidate).count()
     # BUG-16 fix: Count only COMPLETED sessions (completed_at IS NOT NULL), not all sessions
-    complete = db.query(InterviewSession).filter(InterviewSession.completed_at.isnot(None)).count()
+    complete = db.query(InterviewSession).filter((InterviewSession.completed_at.isnot(None)) | (InterviewSession.overall_score > 0)).count()
     
     interviews = db.query(InterviewSession).all()
     avg_tech = sum(i.technical_score for i in interviews) / len(interviews) if interviews else 0.0  # type: ignore
