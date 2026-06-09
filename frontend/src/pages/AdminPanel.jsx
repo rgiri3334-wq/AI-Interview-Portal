@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Database, Plus, Trash2, ShieldAlert, ArrowRight, Settings2, RefreshCw, UploadCloud, Users, FileText, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Layout/Sidebar';
+import { apiClient } from '../api/apiClient';
 
 const customFetch = (url, options = {}) => {
   const token = sessionStorage.getItem('adminToken');
@@ -63,6 +64,66 @@ const ManageableSelect = ({ label, options, value, onChange, onAdd, onDelete }) 
     </div>
   );
 };
+
+// ── Decision Badge & Dropdown ─────────────────────────────────────────────
+const DECISION_STYLE = {
+  HIRED:        { bg: 'bg-emerald-50',  border: 'border-emerald-200',  color: 'text-emerald-700',  icon: '🏆' },
+  SHORTLISTED:  { bg: 'bg-red-50',  border: 'border-red-200',  color: 'text-red-700',  icon: '⭐' },
+  UNDER_REVIEW: { bg: 'bg-orange-50',  border: 'border-orange-200',  color: 'text-orange-700',  icon: '🔍' },
+  REJECTED:     { bg: 'bg-slate-100',  border: 'border-slate-300',  color: 'text-slate-700',  icon: '❌' },
+  PENDING:      { bg: 'bg-slate-50', border: 'border-slate-200', color: 'text-slate-500', icon: '⏳' },
+};
+
+function DecisionBadge({ decision }) {
+  const s = DECISION_STYLE[decision] || DECISION_STYLE.PENDING;
+  return (
+    <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${s.bg} border ${s.border} ${s.color} inline-flex items-center gap-1.5 shadow-sm whitespace-nowrap`}>
+      {s.icon} {decision?.replace('_', ' ') || 'PENDING'}
+    </span>
+  );
+}
+
+function DecisionDropdown({ candidate, onUpdate }) {
+  const adminRole = sessionStorage.getItem('adminRole') || 'sub_admin';
+  const currentDecision = candidate.hiring_decision || (candidate.interview_status === 'completed' ? 'UNDER_REVIEW' : 'PENDING');
+  
+  if (adminRole !== 'master_admin') {
+    return (
+      <div className="flex flex-col gap-2">
+        <DecisionBadge decision={currentDecision} />
+        {candidate.ai_recommendation && (
+          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+            AI: {candidate.ai_recommendation}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <select
+        value={currentDecision}
+        onChange={(e) => onUpdate(candidate.id, e.target.value)}
+        className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border shadow-sm outline-none transition-colors cursor-pointer appearance-none ${
+          DECISION_STYLE[currentDecision]?.bg || DECISION_STYLE.PENDING.bg
+        } ${DECISION_STYLE[currentDecision]?.color || DECISION_STYLE.PENDING.color} ${
+          DECISION_STYLE[currentDecision]?.border || DECISION_STYLE.PENDING.border
+        }`}
+      >
+        <option value="PENDING">⏳ PENDING</option>
+        <option value="SHORTLISTED">⭐ SHORTLISTED</option>
+        <option value="UNDER_REVIEW">🔍 UNDER REVIEW</option>
+        <option value="REJECTED">❌ REJECTED</option>
+      </select>
+      {candidate.ai_recommendation && (
+        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+          AI: {candidate.ai_recommendation}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -203,6 +264,18 @@ export default function AdminPanel() {
       }
     } catch (e) {
       console.error("Error fetching pipeline:", e);
+    }
+  };
+
+  const handleDecisionChange = async (candidateId, newDecision) => {
+    try {
+      await apiClient.updateHiringDecision(candidateId, newDecision);
+      setPipeline(prev => prev.map(c => 
+        c.id === candidateId ? { ...c, hiring_decision: newDecision } : c
+      ));
+    } catch (err) {
+      console.error('Failed to update decision:', err);
+      alert('Failed to update decision. Please try again.');
     }
   };
 
@@ -846,7 +919,7 @@ export default function AdminPanel() {
                       <tr className="bg-slate-50 border-b border-slate-100 text-[10px] uppercase tracking-widest text-slate-400 font-black">
                         <th className="p-5">Candidate</th>
                         <th className="p-5">Applied Role</th>
-                        <th className="p-5">Status</th>
+                        <th className="p-5">Decision</th>
                         <th className="p-5">Grade</th>
                         <th className="p-5">Global Score</th>
                         <th className="p-5 text-right">Action</th>
@@ -885,9 +958,7 @@ export default function AdminPanel() {
                                 <span className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-widest">{c.job_role}</span>
                               </td>
                               <td className="p-5">
-                                <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase border ${c.interview_status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                                  {c.interview_status === 'completed' ? 'COMPLETED' : 'PENDING'}
-                                </span>
+                                <DecisionDropdown candidate={c} onUpdate={handleDecisionChange} />
                               </td>
                               <td className="p-5">
                                 {c.interview_status === 'completed' ? (
