@@ -1967,14 +1967,15 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
         iv = {
             "technical_score": latest.technical_score,
             "eq_score": getattr(latest, "eq_score", 0), 
-            "confidence": latest.confidence_score, 
-            "communication": latest.communication_score,
-            "problem_solving": getattr(latest, "problem_solving_score", 0),
-            "role_alignment": getattr(latest, "role_alignment_score", 0),
-            "professionalism": getattr(latest, "professionalism_score", 0),
-            "learning_potential": getattr(latest, "learning_potential_score", 0),
+            "confidence_score": latest.confidence_score, 
+            "communication_score": latest.communication_score,
+            "problem_solving_score": getattr(latest, "problem_solving_score", 0),
+            "role_alignment_score": getattr(latest, "role_alignment_score", 0),
+            "professionalism_score": getattr(latest, "professionalism_score", 0),
+            "learning_potential_score": getattr(latest, "learning_potential_score", 0),
             "behavioral_score": latest.behavioral_score,
             "fluency_score": getattr(latest, "fluency_score", 0),
+            "overall_score": getattr(latest, "overall_score", 0),
             "summary": "Interview completed.", 
             "strengths": _safe_json_list(report.strengths if report else None), 
             "weaknesses": _safe_json_list(report.weaknesses if report else None),
@@ -1984,9 +1985,9 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
         }
     else:
         iv = {
-            "technical_score": 0, "eq_score": 0, "confidence": 0, "communication": 0,
-            "problem_solving": 0, "role_alignment": 0, "professionalism": 0, "learning_potential": 0,
-            "behavioral_score": 0, "fluency_score": 0,
+            "technical_score": 0, "eq_score": 0, "confidence_score": 0, "communication_score": 0,
+            "problem_solving_score": 0, "role_alignment_score": 0, "professionalism_score": 0, "learning_potential_score": 0,
+            "behavioral_score": 0, "fluency_score": 0, "overall_score": 0,
             "summary": "Interview pending.", "strengths": [], "weaknesses": [],
             "overall_rating": "N/A", "hiring_recommendation": "N/A", "readiness_score": 0,
             "proctoring_warnings": 0, "proctoring_logs": []
