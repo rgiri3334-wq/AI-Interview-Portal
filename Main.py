@@ -141,11 +141,19 @@ async def telemetry_worker():
                 except Exception:
                     latency = -1
                     
-                # 2. Count Active Sessions
-                active_sessions = db.query(InterviewSession).filter(InterviewSession.completed_at == None).count()
+                # 2. Count Active Sessions (exclude abandoned > 2 hours)
+                now = datetime.now(timezone.utc)
+                uncompleted = db.query(InterviewSession).filter(InterviewSession.completed_at == None).all()
+                active_sessions = 0
+                for s in uncompleted:
+                    try:
+                        started = datetime.fromisoformat(s.started_at.replace('Z', '+00:00'))
+                        if (now - started).total_seconds() < 7200:
+                            active_sessions += 1
+                    except:
+                        pass
                 
                 # 3. Base Platform Traffic on Real Interviews Started Today
-                now = datetime.now(timezone.utc)
                 today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
                 total_interviews = db.query(InterviewSession).filter(InterviewSession.started_at >= today_start).count()
                 
@@ -1437,9 +1445,6 @@ async def get_system_health(db: Session = Depends(get_db)):
         db_latency = -1
         db_status = "Disconnected"
 
-    # 2. Active Sessions
-    active_sessions_count = db.query(InterviewSession).filter(InterviewSession.completed_at == None).count()
-
     # 3. Live Streams (Active Candidates)
     live_sessions = db.query(InterviewSession, Candidate, JobRole).join(
         Candidate, InterviewSession.candidate_id == Candidate.candidate_id
@@ -1449,16 +1454,22 @@ async def get_system_health(db: Session = Depends(get_db)):
 
     live_sessions_data = []
     role_distribution_map = {}
+    active_sessions_count = 0
     
     for session, candidate, role in live_sessions:
         # Calculate duration
         try:
             started = datetime.fromisoformat(session.started_at.replace('Z', '+00:00'))
             dur_seconds = int((now - started).total_seconds())
-            mins, secs = divmod(dur_seconds, 60)
-            duration_str = f"{mins}m {secs}s"
         except:
-            duration_str = "Unknown"
+            dur_seconds = 0
+            
+        if dur_seconds > 7200:
+            continue
+            
+        active_sessions_count += 1
+        mins, secs = divmod(dur_seconds, 60)
+        duration_str = f"{mins}m {secs}s"
         
         stage = "In Progress"
 
