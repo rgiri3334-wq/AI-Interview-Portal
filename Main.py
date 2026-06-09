@@ -1977,10 +1977,10 @@ async def update_hiring_decision(candidate_id: str, req: DecisionUpdateRequest, 
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     
-    report.hiring_decision = req.decision
+    report.hiring_decision = getattr(req, "decision")
     db.commit()
     
-    return {"success": True, "decision": req.decision}
+    return {"success": True, "decision": getattr(req, "decision")}
 
 # ── Data: Report ──────────────────────────────────────────────────────────
 
