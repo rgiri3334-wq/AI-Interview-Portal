@@ -1,7 +1,7 @@
 # Checkpoint 2: The Sterling AI Interview Portal 
 
 **Date:** June 9, 2026
-**Commit Hash:** `d4a4a40`
+**Commit Hash:** `bcac3d3`
 
 This document serves as **Checkpoint 2** for the application. We have firmly established a beautifully designed, functional MVP with multiple high-level components integrated into a cohesive experience.
 
@@ -13,12 +13,17 @@ This document serves as **Checkpoint 2** for the application. We have firmly est
 *   **Interactive Modals:** The interactive dropdown for making hiring decisions has also been properly embedded inside the "Total Candidates" popup modal, resolving the static badge UI bug.
 *   **Security:** Enforced at the frontend and backend layer by reading the JWT/Role off the Supabase Session.
 
-### 2. Live Interview Integrity & Behavioral Tracking
+### 2. Multi-Candidate Master Report Viewer
+*   **Dynamic Tabs:** Re-architected the `/report` route to act as a Master Report Viewer, dynamically pulling all candidates with "Completed" interviews and rendering a horizontal navigation tab bar for them.
+*   **Smart Defaults:** Automatically highlights and opens the report for the candidate selected from the Dashboard, or defaults to the first completed candidate if accessed directly.
+*   **Instant Switching:** Instantly recalculates and renders AI analytics and proctoring metrics as the Admin switches between candidate tabs.
+
+### 3. Live Interview Integrity & Behavioral Tracking
 *   **Proctoring:** Tracks tab switching (Visibility API), copy-paste events, and mouse leaving the viewport.
 *   **Behavioral Engine:** Logs specific behavioral signals (e.g., eye contact, confidence, clarity) during the live session.
 *   **Backend Sync:** Syncs all logs to the `FinalReport` object.
 
-### 3. Dynamic Dashboard & Leaderboard
+### 4. Dynamic Dashboard & Leaderboard
 *   **KPI Cards:** Dynamically calculates metrics (Total Candidates, Interviews Done, Pending Review, Shortlisted). 
 *   **Fixes Applied:** 
     *   Resolved the "0 Interviews Done" bug by properly handling `completed_at` null states for old database entries and utilizing `overall_score > 0` as a fallback.
