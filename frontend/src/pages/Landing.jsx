@@ -113,50 +113,50 @@ export default function Landing() {
         </motion.div>
 
         {/* Right Side: Floating Dashboard Widgets (The Buttons) */}
-        <div className="flex-1 w-full relative h-[600px] hidden md:block z-20">
+        <div className="flex-1 w-full hidden md:flex flex-col gap-4 lg:gap-6 z-20 justify-center">
           {/* Widget 1: Control Panel (Red) */}
           <motion.div 
             initial={{ opacity: 0, x: 50, y: -20 }} animate={{ opacity: 1, x: 0, y: 0 }} transition={{ type: "spring", delay: 0.2 }}
-            whileHover={{ scale: 1.05, zIndex: 30 }}
-            className="absolute top-10 right-10 w-72 bg-gradient-to-br from-red-600 to-red-700 text-white p-8 rounded-[2rem] shadow-[0_20px_50px_rgba(239,68,68,0.3)] cursor-pointer border border-red-500/50 backdrop-blur-xl group"
+            whileHover={{ scale: 1.05 }}
+            className="self-end w-72 lg:w-80 bg-gradient-to-br from-red-600 to-red-700 text-white p-6 lg:p-8 rounded-[2rem] shadow-[0_20px_50px_rgba(239,68,68,0.3)] cursor-pointer border border-red-500/50 backdrop-blur-xl group"
             onClick={() => navigate('/admin')}
           >
-            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
-              <Layers size={28} className="text-white" />
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
+              <Layers size={24} className="text-white" />
             </div>
-            <h3 className="font-black text-2xl mb-2 tracking-tight">Control Panel</h3>
-            <p className="text-red-100 text-sm font-medium leading-relaxed">Access enterprise root controls and global configuration.</p>
-            <div className="mt-8 flex justify-end text-white"><ArrowRight className="group-hover:translate-x-2 transition-transform" /></div>
+            <h3 className="font-black text-xl lg:text-2xl mb-2 tracking-tight">Control Panel</h3>
+            <p className="text-red-100 text-xs lg:text-sm font-medium leading-relaxed">Access enterprise root controls and global configuration.</p>
+            <div className="mt-6 flex justify-end text-white"><ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" /></div>
           </motion.div>
 
           {/* Widget 2: HR Dashboard (White) */}
           <motion.div 
             initial={{ opacity: 0, x: 50, y: 20 }} animate={{ opacity: 1, x: 0, y: 0 }} transition={{ type: "spring", delay: 0.4 }}
-            whileHover={{ scale: 1.05, zIndex: 30 }}
-            className="absolute top-52 left-0 lg:left-10 w-72 bg-white text-slate-900 p-8 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.08)] cursor-pointer border border-slate-100 group"
+            whileHover={{ scale: 1.05 }}
+            className="self-center lg:self-start lg:ml-10 w-72 lg:w-80 bg-white text-slate-900 p-6 lg:p-8 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.08)] cursor-pointer border border-slate-100 group"
             onClick={() => navigate('/dashboard')}
           >
-            <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-6">
-              <Users size={28} className="text-slate-800" />
+            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mb-4">
+              <Users size={24} className="text-slate-800" />
             </div>
-            <h3 className="font-black text-2xl mb-2 tracking-tight">HR Dashboard</h3>
-            <p className="text-slate-500 text-sm font-medium leading-relaxed">Manage candidate pipelines and review AI-generated reports.</p>
-            <div className="mt-8 flex justify-end text-slate-300 group-hover:text-red-600 transition-colors"><ArrowRight className="group-hover:translate-x-2 transition-transform" /></div>
+            <h3 className="font-black text-xl lg:text-2xl mb-2 tracking-tight">HR Dashboard</h3>
+            <p className="text-slate-500 text-xs lg:text-sm font-medium leading-relaxed">Manage candidate pipelines and review AI-generated reports.</p>
+            <div className="mt-6 flex justify-end text-slate-300 group-hover:text-red-600 transition-colors"><ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" /></div>
           </motion.div>
 
           {/* Widget 3: System Health (Dark) */}
           <motion.div 
             initial={{ opacity: 0, x: 50, y: 40 }} animate={{ opacity: 1, x: 0, y: 0 }} transition={{ type: "spring", delay: 0.6 }}
-            whileHover={{ scale: 1.05, zIndex: 30 }}
-            className="absolute bottom-10 right-20 w-72 bg-slate-900 text-white p-8 rounded-[2rem] shadow-[0_20px_50px_rgba(15,23,42,0.4)] cursor-pointer border border-slate-700 group"
+            whileHover={{ scale: 1.05 }}
+            className="self-end lg:mr-16 w-72 lg:w-80 bg-slate-900 text-white p-6 lg:p-8 rounded-[2rem] shadow-[0_20px_50px_rgba(15,23,42,0.4)] cursor-pointer border border-slate-700 group"
             onClick={() => navigate('/system-health')}
           >
-            <div className="w-14 h-14 bg-red-500/20 rounded-2xl flex items-center justify-center mb-6">
-              <Activity size={28} className="text-red-500" />
+            <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center mb-4">
+              <Activity size={24} className="text-red-500" />
             </div>
-            <h3 className="font-black text-2xl mb-2 tracking-tight">System Health</h3>
-            <p className="text-slate-400 text-sm font-medium leading-relaxed">Monitor real-time latency, active sockets, and telemetry.</p>
-            <div className="mt-8 flex justify-end text-slate-500 group-hover:text-white transition-colors"><ArrowRight className="group-hover:translate-x-2 transition-transform" /></div>
+            <h3 className="font-black text-xl lg:text-2xl mb-2 tracking-tight">System Health</h3>
+            <p className="text-slate-400 text-xs lg:text-sm font-medium leading-relaxed">Monitor real-time latency, active sockets, and telemetry.</p>
+            <div className="mt-6 flex justify-end text-slate-500 group-hover:text-white transition-colors"><ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" /></div>
           </motion.div>
         </div>
 
@@ -259,27 +259,27 @@ export default function Landing() {
       </section>
 
       {/* ── EDGE TO EDGE CTA ── */}
-      <section className="py-32 px-6">
-        <div className="max-w-[90rem] mx-auto bg-slate-900 rounded-[4rem] p-12 md:p-24 flex flex-col items-center text-center relative overflow-hidden">
+      <section className="py-16 px-6">
+        <div className="max-w-[90rem] mx-auto bg-slate-900 rounded-[3rem] p-8 md:p-16 flex flex-col items-center text-center relative overflow-hidden">
           {/* Edge to Edge Red geometric shapes */}
           <div className="absolute -top-[50%] -right-[10%] w-[80%] h-[150%] bg-red-600 rounded-full blur-[100px] opacity-40 rotate-12" />
           <div className="absolute -bottom-[50%] -left-[10%] w-[60%] h-[100%] bg-red-800 rounded-full blur-[120px] opacity-60" />
           
-          <div className="w-24 h-24 bg-white/10 backdrop-blur-xl rounded-[2rem] flex items-center justify-center mb-10 relative z-10 border border-white/20 shadow-2xl">
-            <Zap size={48} className="text-white drop-shadow-md" />
+          <div className="w-16 h-16 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center mb-6 relative z-10 border border-white/20 shadow-2xl">
+            <Zap size={32} className="text-white drop-shadow-md" />
           </div>
           
-          <h2 className="text-5xl md:text-7xl font-black mb-8 tracking-tighter relative z-10 text-white leading-[1.1]">
+          <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tighter relative z-10 text-white leading-[1.1]">
             Ready to Manage Operations?
           </h2>
-          <p className="text-slate-300 text-xl md:text-2xl mb-14 max-w-3xl relative z-10 font-medium leading-relaxed">
+          <p className="text-slate-300 text-lg md:text-xl mb-8 max-w-2xl relative z-10 font-medium leading-relaxed">
             Access enterprise root controls, manage candidate pipelines, and review system telemetry in real-time.
           </p>
           
-          <div className="flex flex-wrap justify-center gap-6 md:gap-12 mb-16 relative z-10">
+          <div className="flex flex-wrap justify-center gap-4 md:gap-8 mb-10 relative z-10">
             {['Pipeline Control', 'System Telemetry', 'Role Configurator'].map((f) => (
-              <div key={f} className="flex items-center gap-3 text-lg text-white font-bold tracking-widest uppercase bg-white/5 px-6 py-3 rounded-full border border-white/10 backdrop-blur-sm">
-                <CheckCircle size={20} className="text-red-400" /> {f}
+              <div key={f} className="flex items-center gap-2 text-sm text-white font-bold tracking-widest uppercase bg-white/5 px-4 py-2 rounded-full border border-white/10 backdrop-blur-sm">
+                <CheckCircle size={16} className="text-red-400" /> {f}
               </div>
             ))}
           </div>
@@ -287,10 +287,10 @@ export default function Landing() {
           <motion.button 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-white text-slate-900 font-black py-6 px-14 rounded-[2rem] text-xl md:text-2xl transition-all shadow-[0_20px_50px_rgba(255,255,255,0.15)] hover:shadow-[0_20px_60px_rgba(255,255,255,0.3)] flex items-center gap-4 uppercase tracking-widest relative z-10 group" 
+            className="bg-white text-slate-900 font-black py-4 px-10 rounded-2xl text-lg md:text-xl transition-all shadow-[0_20px_50px_rgba(255,255,255,0.15)] hover:shadow-[0_20px_60px_rgba(255,255,255,0.3)] flex items-center gap-3 uppercase tracking-widest relative z-10 group" 
             onClick={() => navigate('/admin')}
           >
-            Open Control Panel <ArrowRight size={28} className="group-hover:translate-x-3 transition-transform" />
+            Open Control Panel <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform" />
           </motion.button>
         </div>
       </section>
