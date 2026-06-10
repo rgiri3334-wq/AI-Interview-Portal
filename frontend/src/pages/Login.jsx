@@ -93,16 +93,18 @@ export default function Login() {
               transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
             >
               <div className="relative flex flex-col items-center">
-                <img 
-                  src={logoUrl} 
-                  alt="Sterling Logo" 
-                  className="w-32 h-32 object-contain relative z-10 brightness-0 invert drop-shadow-2xl"
-                />
+                <div className="bg-white p-6 rounded-3xl shadow-2xl flex items-center justify-center">
+                  <img 
+                    src={logoUrl} 
+                    alt="Sterling Logo" 
+                    className="w-32 h-32 object-contain relative z-10"
+                  />
+                </div>
                 <motion.div
                   initial={{ width: 0, opacity: 0 }}
                   animate={{ width: "100%", opacity: 1 }}
                   transition={{ delay: 0.8, duration: 0.6, ease: "circOut" }}
-                  className="h-1 bg-white mt-6 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.8)]"
+                  className="h-1 bg-white mt-8 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.8)]"
                 />
               </div>
             </motion.div>
