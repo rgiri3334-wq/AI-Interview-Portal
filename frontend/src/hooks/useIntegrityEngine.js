@@ -72,6 +72,7 @@ export function useIntegrityEngine() {
   const tabSwitchCountRef = useRef(0);
   const gptSuspectedCountRef = useRef(0);
   const resumeFailStreakRef = useRef({});
+  const signalCountRef = useRef({});
 
   const [integrityScore, setIntegrityScore] = useState(100);
 
@@ -110,8 +111,32 @@ export function useIntegrityEngine() {
     }
 
     const weightInfo = SIGNAL_WEIGHTS[actualKey];
-    const deduction = weightInfo ? weightInfo.val : 0;
+    let deduction = weightInfo ? weightInfo.val : 0;
     const cat = weightInfo ? weightInfo.cat : null;
+
+    // ── Progressive / Lenient Deduction Logic ─────────────────────────────
+    // First time: 0 deduction (Grace Period)
+    // Second time: 2 marks max
+    // Third time: 3 marks max
+    // Fourth+ time: 5 marks max
+    if (cat && deduction > 0) {
+      if (!signalCountRef.current[actualKey]) {
+        signalCountRef.current[actualKey] = 0;
+      }
+      signalCountRef.current[actualKey] += 1;
+      const count = signalCountRef.current[actualKey];
+
+      if (count === 1) {
+        deduction = 0;
+        note = note + " (Grace Period: No marks deducted)";
+      } else if (count === 2) {
+        deduction = Math.min(deduction, 2);
+      } else if (count === 3) {
+        deduction = Math.min(deduction, 3);
+      } else {
+        deduction = Math.min(deduction, 5);
+      }
+    }
 
     if (cat && deduction > 0) {
       scoresRef.current[cat] = Math.max(0, scoresRef.current[cat] - deduction);
