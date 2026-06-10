@@ -67,23 +67,44 @@ export default function Login() {
         {!isIntroComplete && (
           <motion.div
             key="intro-overlay"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-red-600"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.1 }}
-            transition={{ duration: 0.8, ease: "easeInOut" }}
+            className="fixed inset-0 z-[100] flex"
           >
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
-              className="relative"
-            >
-              <div className="absolute inset-0 bg-white blur-3xl opacity-50 rounded-full scale-150"></div>
-              <img 
-                src={logoUrl} 
-                alt="Sterling Logo" 
-                className="w-32 h-32 object-contain relative z-10 brightness-0 invert"
+            {/* 5 Hardware-accelerated solid color columns for a cinematic staggered wipe */}
+            {[...Array(5)].map((_, i) => (
+              <motion.div
+                key={`col-${i}`}
+                className="h-full bg-red-600 flex-1 origin-top"
+                initial={{ scaleY: 1 }}
+                exit={{ scaleY: 0 }}
+                transition={{ 
+                  duration: 0.8, 
+                  ease: [0.77, 0, 0.175, 1], // Custom sleek easing curve
+                  delay: i * 0.1 // Stagger effect
+                }}
               />
+            ))}
+
+            {/* Centered Logo that glides in and flies out smoothly without heavy blur filters */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -50, scale: 0.9 }}
+              transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
+            >
+              <div className="relative flex flex-col items-center">
+                <img 
+                  src={logoUrl} 
+                  alt="Sterling Logo" 
+                  className="w-32 h-32 object-contain relative z-10 brightness-0 invert drop-shadow-2xl"
+                />
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: "100%", opacity: 1 }}
+                  transition={{ delay: 0.8, duration: 0.6, ease: "circOut" }}
+                  className="h-1 bg-white mt-6 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.8)]"
+                />
+              </div>
             </motion.div>
           </motion.div>
         )}
