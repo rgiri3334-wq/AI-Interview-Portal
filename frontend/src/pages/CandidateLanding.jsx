@@ -1,21 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Zap, Brain, Eye, Mic, BarChart3, ArrowRight, CheckCircle, Shield } from 'lucide-react';
-import ParticleCanvas from '../components/UI/ParticleCanvas';
-import logoUrl from '../assets/sterling_logo.png'; 
+import { Shield, ArrowDown } from 'lucide-react';
+import logoUrl from '../assets/sterling_logo.png';
 
-const features = [
-  { icon: Brain, title: 'AI Question Engine', desc: 'AI-powered dynamic questions tailored to each role and skill level.' },
-  { icon: Eye, title: 'Emotion Detection', desc: 'Real-time facial expression and eye-contact analysis via computer vision.' },
-  { icon: Mic, title: 'Voice Analytics', desc: 'Detects filler words, speech pace, clarity, and confidence patterns.' },
-  { icon: BarChart3, title: 'Live Scorecards', desc: 'Instant technical & EQ scores with detailed feedback per question.' },
-  { icon: Shield, title: 'Anti-Cheat Monitoring', desc: 'Eye gaze tracking and tab-switch detection for integrity assurance.' },
-  { icon: Zap, title: 'Sterling-Grade Reports', desc: 'Enterprise-quality PDF-ready interview reports with AI summaries.' },
-];
-const stack = ['Sterling AI', 'FastAPI', 'React', 'WebRTC', 'SQLite', 'WebSocket'];
+// ── Re-use the same shared premium components as Landing.jsx ─────────────────
+import InteractiveBrain3D from '../components/landing/InteractiveBrain3D';
+import ScrollFeatures from '../components/landing/ScrollFeatures';
+import DeepDiveTabs from '../components/landing/DeepDiveTabs';
+import InteractiveFAQ from '../components/landing/InteractiveFAQ';
+import DynamicFooter from '../components/landing/DynamicFooter';
 
-// Animated typewriter hook
+// ── Candidate-only CTA Section ───────────────────────────────────────────────
+import CandidateCTASection from '../components/landing/CandidateCTASection';
+
+// ── Typewriter hook (same words as admin landing for brand consistency) ───────
 function useTypewriter(words, speed = 100) {
   const [index, setIndex] = useState(0);
   const [subIndex, setSubIndex] = useState(0);
@@ -42,7 +41,8 @@ function useTypewriter(words, speed = 100) {
   return text;
 }
 
-export default function CandidateLanding() {
+// ── Candidate Hero Section ───────────────────────────────────────────────────
+function CandidateHeroSection() {
   const navigate = useNavigate();
   const typed = useTypewriter([
     'Technical Interviews',
@@ -52,169 +52,167 @@ export default function CandidateLanding() {
   ]);
 
   return (
-    <div className="min-h-screen w-full bg-white text-slate-900 overflow-x-hidden font-sans relative">
-      {/* ── HERO ── */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center text-center p-8 overflow-hidden bg-slate-50">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-100 via-white to-white opacity-70" />
-
-        {/* Top nav bar */}
-        <div className="absolute top-0 left-0 right-0 px-10 py-5 flex items-center justify-between border-b border-slate-200 bg-white/80 backdrop-blur-md z-50 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-md border border-slate-800">
-              <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain mix-blend-screen" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
-              <div className="hidden w-9 h-9 bg-[#EF4444] text-white flex items-center justify-center font-bold text-sm">Sterling</div>
-            </div>
-            <span className="font-extrabold text-lg tracking-wide text-slate-900">
-              Spark-<span className="text-[#EF4444]">Hire</span>
-              <span className="text-slate-500 text-xs ml-3 tracking-[0.2em] font-mono">by Sterling E-Mobility</span>
-            </span>
-          </div>
-          <div className="flex gap-4">
-            <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded text-sm transition-all shadow-md shadow-red-600/20" onClick={() => navigate('/candidate')}>
-              Start Interview
-            </button>
-          </div>
-        </div>
-
-        {/* Hero content */}
+    <section className="relative min-h-[95vh] flex flex-col items-center justify-center text-center p-8 z-10 pt-24 border-b border-slate-200/50">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, type: 'spring', bounce: 0.4 }}
+        className="max-w-5xl w-full mx-auto flex flex-col items-center"
+      >
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="relative z-10 max-w-4xl w-full mx-auto flex flex-col items-center mt-16"
+          initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 backdrop-blur border border-red-100 text-red-600 text-xs font-bold uppercase tracking-widest mb-8 shadow-sm"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-50 border border-red-100 text-red-600 text-xs font-bold uppercase tracking-widest mb-8 shadow-sm">
-            <Shield size={14} /> Spark-Hire · Powered by Sterling E-Mobility
-          </div>
-
-          <h1 className="text-5xl md:text-7xl font-black leading-tight mb-6 tracking-tight text-slate-900">
-            The Future of<br />
-            <span className="text-red-600">{typed}</span>
-            <span className="text-slate-300 animate-pulse">|</span>
-          </h1>
-
-          <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-            The definitive AI hiring engine for EV Powertrains and Embedded Systems Engineering. Context-aware, privacy-safe, and infinitely scalable.
-          </p>
-
-          <div className="flex gap-6 items-center justify-center flex-wrap">
-            <motion.button
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-lg text-lg transition-all shadow-xl shadow-red-600/30 flex items-center gap-3 uppercase tracking-wider"
-              onClick={() => navigate('/candidate')}
-            >
-              Begin Interview <ArrowRight size={20} />
-            </motion.button>
-          </div>
+          <Shield size={14} /> Candidate Portal · Powered by Sterling
         </motion.div>
 
-        {/* Animated bottom border */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-px bg-gradient-to-r from-transparent via-red-200 to-transparent" />
-      </section>
+        <h1 className="text-5xl md:text-7xl font-black leading-tight mb-8 tracking-tight text-slate-900 drop-shadow-sm mix-blend-multiply">
+          The Future of<br />
+          <span className="text-red-600 bg-clip-text">{typed}</span>
+          <span className="text-red-400 animate-pulse font-light">|</span>
+        </h1>
 
-      {/* ── FEATURES GRID ── */}
-      <section className="py-24 px-8 max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-4xl font-extrabold mb-4 tracking-tight text-slate-900">
-            Platform <span className="text-red-600">Capabilities</span>
-          </h2>
-          <p className="text-slate-600 text-lg max-w-2xl mx-auto">
-            Every layer of the interview process, supercharged with AI.
-          </p>
-        </motion.div>
+        <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
+          The definitive AI hiring engine for EV Powertrains and Embedded Systems Engineering. Context-aware, privacy-safe, and infinitely scalable.
+        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map(({ icon: Icon, title, desc }, i) => (
-            <motion.div
-              key={title}
-              className="bg-white border border-slate-200 rounded-2xl p-8 transition-all duration-300 hover:border-red-200 hover:shadow-lg shadow-sm cursor-default"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              whileHover={{ y: -5 }}
-            >
-              <div className="w-12 h-12 rounded-xl mb-6 bg-red-50 border border-red-100 flex items-center justify-center shadow-sm">
-                <Icon size={24} className="text-red-600" />
-              </div>
-              <h3 className="text-xl font-bold mb-3 text-slate-900 tracking-wide">{title}</h3>
-              <p className="text-slate-600 text-sm leading-relaxed">{desc}</p>
-            </motion.div>
-          ))}
+        <div className="flex gap-4 items-center justify-center flex-wrap w-full">
+          <motion.button
+            whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(220, 38, 38, 0.4)' }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-red-600 text-white font-bold py-4 px-10 rounded-full text-base transition-all flex items-center justify-center uppercase tracking-wide min-w-[220px]"
+            onClick={() => navigate('/candidate')}
+          >
+            Begin Interview
+          </motion.button>
+          <motion.button
+            whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-white text-slate-800 font-bold py-4 px-10 rounded-full text-base transition-all border border-slate-200 flex items-center justify-center uppercase tracking-wide hover:border-red-200 min-w-[220px]"
+            onClick={() => document.getElementById('features-section')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            How It Works
+          </motion.button>
         </div>
-      </section>
+      </motion.div>
 
-      {/* ── HOW IT WORKS ── */}
-      <section className="py-24 px-8 text-center bg-slate-50 flex flex-col items-center border-y border-slate-200">
-        <h2 className="text-4xl font-extrabold mb-16 tracking-tight text-slate-900">
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 1 }}
+        className="absolute bottom-10 animate-bounce text-slate-300 pointer-events-none"
+      >
+        <ArrowDown size={28} />
+      </motion.div>
+    </section>
+  );
+}
+
+// ── "How It Works" steps for candidates ─────────────────────────────────────
+function HowItWorksSection() {
+  const steps = [
+    { step: '01', title: 'Register', desc: 'Fill in your candidate details and securely upload your resume for AI-powered context generation.' },
+    { step: '02', title: 'Interview', desc: 'The AI avatar conducts a live video and audio interview, dynamically adapting to your responses.' },
+    { step: '03', title: 'Analyse', desc: 'Real-time EQ, technical depth, and voice confidence scoring happens as you speak.' },
+    { step: '04', title: 'Report', desc: 'An instant enterprise-grade PDF assessment report is generated for your hiring outcome.' },
+  ];
+
+  return (
+    <section id="features-section" className="py-24 px-8 text-center bg-slate-50 flex flex-col items-center border-y border-slate-200">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="mb-16"
+      >
+        <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tight text-slate-900">
           How It <span className="text-red-600">Works</span>
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto w-full">
-          {[
-            { step: '01', title: 'Register', desc: 'Fill candidate details and upload resume' },
-            { step: '02', title: 'Interview', desc: 'AI conducts live video + audio interview' },
-            { step: '03', title: 'Analyse', desc: 'Real-time EQ, voice & technical scoring' },
-            { step: '04', title: 'Report', desc: 'Instant AI-generated assessment report' },
-          ].map(({ step, title, desc }, i) => (
-            <motion.div
-              key={step}
-              className="bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-sm"
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.15 }}
-            >
-              <div className="text-5xl font-black mb-4 text-slate-200">
-                {step}
-              </div>
-              <h4 className="text-lg font-bold mb-2 text-slate-900">{title}</h4>
-              <p className="text-slate-600 text-sm leading-relaxed">{desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+        <p className="text-slate-500 text-lg max-w-2xl mx-auto font-medium">
+          A seamless, automated pipeline from registration to final interview report.
+        </p>
+      </motion.div>
 
-      {/* ── CTA ── */}
-      <section className="py-24 px-8 text-center flex justify-center">
-        <motion.div
-          className="bg-red-600 rounded-3xl p-12 max-w-3xl w-full flex flex-col items-center shadow-2xl shadow-red-600/30 text-white relative overflow-hidden"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-black opacity-10 rounded-full blur-3xl" />
-          
-          <Zap size={48} className="text-white mb-6 relative z-10" />
-          <h2 className="text-3xl md:text-4xl font-extrabold mb-4 tracking-tight relative z-10 text-white">
-            Ready to Transform Hiring?
-          </h2>
-          <p className="text-red-100 text-lg mb-8 max-w-lg relative z-10">
-            Start your first AI interview in under 60 seconds. No setup required.
-          </p>
-          <div className="flex flex-wrap justify-center gap-6 mb-10 relative z-10">
-            {['Technical Scoring', 'Emotion Analysis', 'Voice Analytics'].map((f) => (
-              <div key={f} className="flex items-center gap-2 text-sm text-red-50 font-bold tracking-wide">
-                <CheckCircle size={16} className="text-white" /> {f}
-              </div>
-            ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto w-full">
+        {steps.map(({ step, title, desc }, i) => (
+          <motion.div
+            key={step}
+            className="bg-white border border-slate-200 rounded-3xl p-8 text-center shadow-sm hover:border-red-200 hover:shadow-md transition-all group"
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: i * 0.15 }}
+            whileHover={{ y: -4 }}
+          >
+            <div className="text-6xl font-black mb-5 text-slate-100 group-hover:text-red-50 transition-colors">
+              {step}
+            </div>
+            <h4 className="text-lg font-bold mb-2 text-slate-900">{title}</h4>
+            <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
+          </motion.div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+export default function CandidateLanding() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen w-full bg-slate-50 text-slate-900 overflow-x-hidden font-sans relative selection:bg-red-200 selection:text-red-900">
+
+      {/* Dynamic 3D Background */}
+      <InteractiveBrain3D />
+
+      {/* ── TOP NAV ── */}
+      <nav className="fixed top-0 left-0 right-0 px-6 py-4 flex items-center justify-between z-50 bg-white/70 backdrop-blur-xl border-b border-white/20 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center shrink-0 shadow-md">
+            <img
+              src={logoUrl}
+              alt="Sterling Logo"
+              className="w-7 h-7 object-contain mix-blend-screen"
+              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
+            />
+            <div className="hidden w-7 h-7 bg-red-600 text-white flex items-center justify-center font-bold text-xs rounded">St</div>
           </div>
-          <button className="bg-white hover:bg-slate-50 text-red-700 font-black py-4 px-10 rounded-lg text-lg transition-all shadow-lg flex items-center gap-3 uppercase tracking-wider relative z-10" onClick={() => navigate('/candidate')}>
-            Launch Interview <ArrowRight size={20} />
+          <span className="font-extrabold text-base tracking-wide text-slate-900">
+            Spark-<span className="text-red-600">Hire</span>
+            <span className="hidden sm:inline text-slate-400 text-[10px] ml-2 tracking-[0.2em] font-mono uppercase">by Sterling E-Mobility</span>
+          </span>
+        </div>
+        <div className="flex gap-4 items-center">
+          <button
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-5 rounded-full text-sm transition-all shadow-[0_4px_14px_0_rgba(220,38,38,0.39)] hover:-translate-y-[1px]"
+            onClick={() => navigate('/candidate')}
+          >
+            Begin Interview
           </button>
-        </motion.div>
-      </section>
+        </div>
+      </nav>
+
+      {/* ── SECTIONS ── */}
+      {/* Hero — candidate-specific copy & routing */}
+      <CandidateHeroSection />
+
+      {/* How It Works — candidate journey steps */}
+      <HowItWorksSection />
+
+      {/* Capabilities — shared, all features visible to candidate */}
+      <ScrollFeatures />
+
+      {/* Deep Dive Tabs — Voice, Vision, Reasoning — candidate-facing explanation */}
+      <DeepDiveTabs />
+
+      {/* FAQ — candidate-relevant questions (privacy, how it works, etc.) */}
+      <InteractiveFAQ />
+
+      {/* CTA — candidate-only: Begin Interview, not admin panel */}
+      <CandidateCTASection />
 
       {/* Footer */}
-      <footer className="text-center py-8 border-t border-slate-200 text-slate-500 text-xs tracking-widest uppercase font-mono bg-white">
-        Spark-Hire &copy; 2025 &middot; Sterling E-Mobility
-      </footer>
+      <DynamicFooter />
     </div>
   );
 }
