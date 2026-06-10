@@ -68,7 +68,10 @@ export default function LiveInterview() {
 
   const [question, setQuestion] = useState('System Initializing...');
   const [overlayMsg, setOverlayMsg] = useState('');
+  const [postureHint, setPostureHint] = useState('');  // Candidate-facing posture hint
+  const postureHintTimerRef = useRef(null);
   const displayedQuestion = useTypewriter(question, 10);
+
   const [qIndex, setQIndex] = useState(0);
   const [history, setHistory] = useState([]);
   const historyRef = useRef(history);
@@ -96,15 +99,32 @@ export default function LiveInterview() {
   const {
     integrityScore,
     recordSignal: recordIntegritySignal,
+    checkGptSyntax,
     checkBehavioral,
     computeFinal: computeIntegrityFinal,
   } = useIntegrityEngine();
 
   const onVisionSignal = useCallback((signalKey, meta) => {
+    // All vision signals feed integrity engine SILENTLY — never shown to candidate
     recordIntegritySignal(signalKey, meta);
   }, [recordIntegritySignal]);
 
-  const { getMetrics, stop: stopHuman } = useHumanBehavior(videoRef, onVisionSignal, { enabled: phase === 'interviewing' });
+  // [STRICT] Candidate-facing posture/gaze hint — phrased as ergonomic guidance, NOT proctoring
+  const onPostureHint = useCallback((type, message) => {
+    // Only show if interview is active and message is new
+    setPostureHint(message);
+    // Auto-dismiss after 4 seconds
+    if (postureHintTimerRef.current) clearTimeout(postureHintTimerRef.current);
+    postureHintTimerRef.current = setTimeout(() => setPostureHint(''), 4000);
+  }, []);
+
+  const { getMetrics, stop: stopHuman } = useHumanBehavior(
+    videoRef,
+    onVisionSignal,
+    { enabled: phase === 'interviewing' },
+    onPostureHint   // 4th arg: candidate-facing hint callback
+  );
+
 
   // Fix #15: Use a ref for phase so useHumanBehavior always sees the latest value without stale closure lag
   const phaseRef = useRef(phase);
@@ -515,6 +535,33 @@ export default function LiveInterview() {
         setQIndex(i => i + 1);
         // Fix #9: Reset question timer for the next question
         questionStartTimeRef.current = Date.now();
+
+        // ── Silent AI/Plagiarism Detection (invisible to candidate) ──────
+        // Layer A: Process server-side multi-layer detection result
+        const det = res.ai_detection || {};
+        if (det.integrity_signals && det.integrity_signals.length > 0) {
+          det.integrity_signals.forEach(sig => {
+            recordIntegritySignal(sig, {
+              note: `[Backend AI Detection] Q#${qIndex + 1} | probability=${det.ai_probability?.toFixed(2)} | patterns=${(det.matched_patterns || []).join(', ')}`,
+              ai_probability: det.ai_probability,
+              matched_patterns: det.matched_patterns,
+            });
+          });
+          console.warn(
+            `[Integrity] AI detection fired Q#${qIndex + 1}:`,
+            `probability=${det.ai_probability?.toFixed(3)}`,
+            det.matched_patterns
+          );
+        }
+
+        // Layer B: Client-side GPT syntax check on transcribed text (second opinion)
+        if (resolvedAnswer && resolvedAnswer.length > 40) {
+          const clientCheck = checkGptSyntax(resolvedAnswer, qIndex + 1);
+          if (clientCheck?.challenge_required) {
+            console.warn('[Integrity] Client-side GPT syntax detected:', clientCheck.matched_patterns);
+          }
+        }
+
       }
 
       resetTranscript();
@@ -848,7 +895,27 @@ export default function LiveInterview() {
                 {camOn ? 'Stop Video' : 'Start Video'}
               </button>
             </div>
+
+            {/* Posture Hint — subtle ergonomic nudge, no proctoring language */}
+            <AnimatePresence>
+              {postureHint && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                  className="absolute top-3 left-3 right-3 z-30 flex items-center gap-2 bg-slate-900/90 backdrop-blur-md text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg border border-slate-700/50 pointer-events-none"
+                >
+                  {/* Small camera icon — looks like a video quality tip, not surveillance */}
+                  <svg className="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                  </svg>
+                  <span className="leading-snug">{postureHint}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
+
 
           {/* Transcript Box */}
           <div className="bg-sterling-surface/50 backdrop-blur-md border border-sterling-border rounded-2xl flex-1 p-6 flex flex-col shadow-xl">

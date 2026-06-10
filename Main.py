@@ -382,6 +382,8 @@ class AssessResponse(BaseModel):
     answer_quality:          str   = Field(default="average")
     final_verdict:           str   = Field(default="")
     model_used:              str   = Field(default="sterling ai")
+    # ── Silent AI/Plagiarism Detection (invisible to candidate) ──────────
+    ai_detection:            dict  = Field(default_factory=dict, description="Multi-layer silent AI/plagiarism analysis result")
 
 class SaveInterviewRequest(BaseModel):
     interview_data: list[dict]
@@ -1778,6 +1780,175 @@ async def websocket_stt_endpoint(websocket: WebSocket):
 
 # ── AI Engine: Answer Assessment ──────────────────────────────────────────
 
+# ── Silent AI/Plagiarism Detection Engine ─────────────────────────────────────
+# Runs on every answer server-side. Completely invisible to the candidate.
+# Returns a structured detection report the frontend integrity engine scores.
+
+_AI_SYNTAX_PATTERNS = [
+    # Classic AI opener phrases
+    (r"\bCertainly[,!]?\b",                          "opener:certainly"),
+    (r"\bAbsolutely[,!]?\b",                          "opener:absolutely"),
+    (r"\bGreat question\b",                           "opener:great_question"),
+    (r"\bOf course[,!]?\b",                           "opener:of_course"),
+    (r"\bSure[,!]? here('s| is)\b",                  "opener:sure_here"),
+    # Robotic structure markers
+    (r"\bFirstly\b.{0,120}\bSecondly\b",              "structure:firstly_secondly"),
+    (r"\bIn conclusion\b",                            "structure:in_conclusion"),
+    (r"\bTo summarize\b",                             "structure:to_summarize"),
+    (r"\bIn summary\b",                               "structure:in_summary"),
+    (r"\bIt is worth noting that\b",                  "structure:worth_noting"),
+    (r"\bIt is important to note that\b",             "structure:important_to_note"),
+    (r"\bFurthermore\b.{0,80}\bMoreover\b",          "structure:furthermore_moreover"),
+    (r"\bThere are (three|four|five|several|multiple) (types|ways|approaches|key|main)\b", "structure:n_types"),
+    # Textbook / encyclopedia phrasing
+    (r"\bis defined as\b",                            "academic:is_defined_as"),
+    (r"\bin the context of\b",                        "academic:in_context_of"),
+    (r"\bplays a crucial role\b",                     "academic:crucial_role"),
+    (r"\bplays a key role\b",                         "academic:key_role"),
+    (r"\bsignificant impact\b",                       "academic:significant_impact"),
+    (r"\bin today's (world|environment|landscape|digital age)\b", "academic:todays_world"),
+    (r"\b(leverag|utiliz|optim)(e|ing|ed|es)\b",      "academic:leverage_utilize"),
+    (r"\bensur(e|ing) (that|the|a|an)\b",             "academic:ensuring_that"),
+    # AI list enumeration
+    (r"(1\.|2\.|3\.).{0,30}(1\.|2\.|3\.)",          "format:numbered_list"),
+    (r"(• |\* |– |— ).{0,60}(• |\* |– |— )",        "format:bullet_list"),
+    # Suspiciously formal vocabulary in spoken context
+    (r"\b(aforementioned|notwithstanding|henceforth|heretofore|therein)\b", "vocab:formal_spoken"),
+    (r"\b(paradigm shift|holistic approach|synerg|ecosystem approach)\b",   "vocab:buzzword_heavy"),
+]
+
+_HUMAN_HEDGE_WORDS = [
+    "um", "uh", "like", "you know", "kind of", "sort of", "i mean",
+    "honestly", "basically", "actually", "so", "right", "hmm", "well",
+    "i think", "i believe", "i guess", "maybe", "probably", "personally"
+]
+
+def _detect_ai_answer(answer: str, wpm: float, question_index: int) -> dict:
+    """
+    Multi-layer, server-side AI/plagiarism detection.
+    Silent — never exposed to candidate.
+
+    Layers:
+      1. GPT Syntax Pattern Scan     — direct regex match on known AI phrases
+      2. Human Hedge Word Ratio      — humans say 'um/uh/like' naturally; AI never does
+      3. Lexical Diversity (TTR)     — AI uses wider, more formal vocabulary per sentence
+      4. Sentence Length Uniformity  — AI answers have suspiciously uniform sentence lengths
+      5. WPM + Structure Correlation — very fast WPM + perfect structure = likely pre-written
+
+    Returns:
+      {
+        ai_probability: float (0.0–1.0)  — combined suspicion score
+        is_suspected: bool               — True if ai_probability >= 0.50
+        is_confirmed: bool               — True if ai_probability >= 0.80
+        layers: dict                     — per-layer scores for audit log
+        matched_patterns: list[str]      — specific patterns triggered
+        integrity_signals: list[str]     — signal keys to feed into IntegrityEngine
+      }
+    """
+    if not answer or len(answer.strip()) < 40:
+        return {
+            "ai_probability": 0.0, "is_suspected": False, "is_confirmed": False,
+            "layers": {}, "matched_patterns": [], "integrity_signals": []
+        }
+
+    text = answer.strip()
+    words = re.findall(r"\b[a-z']+\b", text.lower())
+    sentences = [s.strip() for s in re.split(r'[.!?]+', text) if len(s.strip()) > 5]
+    total_words = len(words)
+    total_sentences = max(len(sentences), 1)
+
+    signals = []
+    matched_patterns = []
+
+    # ── Layer 1: GPT Syntax Pattern Scan ──────────────────────────────────
+    pattern_hits = 0
+    for pattern, label in _AI_SYNTAX_PATTERNS:
+        if re.search(pattern, text, re.IGNORECASE):
+            pattern_hits += 1
+            matched_patterns.append(label)
+    # Score: 0 hits = 0.0, 1 hit = 0.2, 2 hits = 0.45, 3+ = 0.75+
+    pattern_score = min(1.0, pattern_hits * 0.20 + max(0, pattern_hits - 2) * 0.15)
+
+    # ── Layer 2: Human Hedge Word Ratio ───────────────────────────────────
+    hedge_count = sum(1 for w in words if any(h in w or h == w for h in _HUMAN_HEDGE_WORDS))
+    hedge_ratio = hedge_count / max(total_words, 1)
+    # Humans: hedge_ratio typically 0.02–0.08. AI: near 0.
+    # Score: 0 = very suspicious (no hedges), 1 = clearly human
+    hedge_score_raw = min(1.0, hedge_ratio / 0.05)   # normalized
+    hedge_suspicion = max(0.0, 1.0 - hedge_score_raw) # invert: no hedges = high suspicion
+    # Reduce weight for very short answers (< 30 words)
+    if total_words < 30:
+        hedge_suspicion *= 0.5
+
+    # ── Layer 3: Lexical Diversity (Type-Token Ratio) ──────────────────────
+    unique_words = len(set(words))
+    ttr = unique_words / max(total_words, 1)
+    # AI tends to have higher TTR (more varied, formal vocabulary)
+    # Humans in speech: TTR 0.4–0.65. AI: 0.65–0.85
+    ttr_suspicion = max(0.0, min(1.0, (ttr - 0.60) / 0.25)) if ttr > 0.60 else 0.0
+
+    # ── Layer 4: Sentence Length Uniformity ───────────────────────────────
+    sent_lengths = [len(s.split()) for s in sentences]
+    if len(sent_lengths) >= 3:
+        avg_len = sum(sent_lengths) / len(sent_lengths)
+        variance = sum((l - avg_len) ** 2 for l in sent_lengths) / len(sent_lengths)
+        std_dev = variance ** 0.5
+        # Human speech: high variance (std_dev > 8). AI: very uniform (std_dev < 4)
+        uniformity_suspicion = max(0.0, min(1.0, (6.0 - std_dev) / 6.0)) if std_dev < 6 else 0.0
+    else:
+        uniformity_suspicion = 0.0
+
+    # ── Layer 5: WPM + Structure Correlation ──────────────────────────────
+    wpm_suspicion = 0.0
+    if wpm > 220 and pattern_hits >= 1:    # Fast + AI phrases = scripted
+        wpm_suspicion = 0.6
+    elif wpm > 280:                        # Extreme speed alone
+        wpm_suspicion = 0.5
+        signals.append("abnormally_fast_wpm")
+    elif wpm < 20 and total_words > 50:   # Copy-pasted (no time correlation)
+        wpm_suspicion = 0.4
+
+    # ── Weighted Combination ───────────────────────────────────────────────
+    # Weights: patterns are strongest signal, hedge ratio second
+    ai_probability = min(1.0,
+        pattern_score       * 0.40 +
+        hedge_suspicion     * 0.25 +
+        uniformity_suspicion * 0.15 +
+        ttr_suspicion        * 0.10 +
+        wpm_suspicion        * 0.10
+    )
+
+    # ── Map to integrity signals ───────────────────────────────────────────
+    if ai_probability >= 0.80:
+        signals.append("gpt_syntax_confirmed")
+    elif ai_probability >= 0.50:
+        signals.append("gpt_syntax_suspected")
+
+    if pattern_hits >= 2 and hedge_suspicion > 0.7:
+        signals.append("perfect_structure_every")
+
+    logger.info(
+        f"[AIDetect] Q#{question_index} | probability={ai_probability:.2f} | "
+        f"patterns={pattern_hits} | hedge={hedge_ratio:.3f} | TTR={ttr:.2f} | "
+        f"wpm={wpm:.0f} | signals={signals}"
+    )
+
+    return {
+        "ai_probability":  round(ai_probability, 3),
+        "is_suspected":    ai_probability >= 0.50,
+        "is_confirmed":    ai_probability >= 0.80,
+        "layers": {
+            "pattern_score":        round(pattern_score, 3),
+            "hedge_suspicion":      round(hedge_suspicion, 3),
+            "ttr_suspicion":        round(ttr_suspicion, 3),
+            "uniformity_suspicion": round(uniformity_suspicion, 3),
+            "wpm_suspicion":        round(wpm_suspicion, 3),
+        },
+        "matched_patterns":  matched_patterns,
+        "integrity_signals": signals,
+    }
+
+
 @app.post("/api/interview/assess", response_model=AssessResponse, tags=["AI Engine"])
 async def assess_candidate(data: AssessRequest):
     """Full context-aware answer evaluation with multi-LLM orchestration."""
@@ -1791,6 +1962,13 @@ async def assess_candidate(data: AssessRequest):
     combined_answer = data.spoken_answer
     if data.workspace_code.strip():
         combined_answer += f"\n\n[Candidate submitted the following code]:\n```\n{data.workspace_code}\n```"
+
+    # ── Run silent AI/plagiarism detection FIRST (never visible to candidate) ──
+    ai_detection = _detect_ai_answer(
+        answer=data.spoken_answer,
+        wpm=data.wpm,
+        question_index=data.question_index,
+    )
 
     result = await assess_answer(
         candidate_id=data.candidate_id,
@@ -1840,6 +2018,7 @@ async def assess_candidate(data: AssessRequest):
         answer_quality=          result.get("answer_quality", "average"),
         final_verdict=           result.get("final_verdict", ""),
         model_used=              "sterling ai-2.0-flash",
+        ai_detection=            ai_detection,   # ← silent detection payload
     )
 
 # ── Audio Transcription (Sterling Analysis Engine) ───────────────────────────────────
