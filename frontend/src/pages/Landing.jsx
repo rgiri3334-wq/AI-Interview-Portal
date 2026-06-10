@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Zap, Brain, Eye, Mic, BarChart3, ArrowRight, CheckCircle, Shield } from 'lucide-react';
 import ParticleCanvas from '../components/UI/ParticleCanvas';
-import logoUrl from '../assets/sterling_logo.png'; // BUG-06 fix: Use bundled asset, not absolute machine path
+import logoUrl from '../assets/sterling_logo.png';
 
 const features = [
   { icon: Brain, title: 'AI Question Engine', desc: 'AI-powered dynamic questions tailored to each role and skill level.' },
@@ -42,6 +42,25 @@ function useTypewriter(words, speed = 100) {
   return text;
 }
 
+// Framer motion variants for staggered animations
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.15, delayChildren: 0.1 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 30 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 70, damping: 15 } },
+};
+
+const fadeUpVariants = {
+  hidden: { opacity: 0, y: 40 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
+};
+
 export default function Landing() {
   const navigate = useNavigate();
   const typed = useTypewriter([
@@ -52,186 +71,251 @@ export default function Landing() {
   ]);
 
   return (
-    <div className="min-h-screen w-full bg-white text-slate-900 overflow-x-hidden font-sans relative">
-      {/* ── HERO ── */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center text-center p-8 overflow-hidden bg-slate-50">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-100 via-white to-white opacity-70" />
-
-        {/* Top nav bar */}
-        <div className="absolute top-0 left-0 right-0 px-10 py-5 flex items-center justify-between border-b border-slate-200 bg-white/80 backdrop-blur-md z-50 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-md border border-slate-800">
-              <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain mix-blend-screen" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
-              <div className="hidden w-9 h-9 bg-[#EF4444] text-white flex items-center justify-center font-bold text-sm">Sterling</div>
-            </div>
-            <span className="font-extrabold text-lg tracking-wide text-slate-900">
-              Spark-<span className="text-[#EF4444]">Hire</span>
-              <span className="text-slate-500 text-xs ml-3 tracking-[0.2em] font-mono">by Sterling E-Mobility</span>
-            </span>
+    <div className="min-h-screen w-full bg-[#fcfcfc] text-slate-900 overflow-x-hidden font-sans relative selection:bg-red-200 selection:text-red-900">
+      
+      {/* ── FLOATING NAVBAR ── */}
+      <motion.div 
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 50, damping: 20, delay: 0.2 }}
+        className="fixed top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl px-6 py-3 flex items-center justify-between bg-white/80 backdrop-blur-xl border border-slate-200/50 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.04)] z-50 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
+      >
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center shrink-0 shadow-inner overflow-hidden border-2 border-transparent group-hover:border-red-100 transition-all">
+            <img src={logoUrl} alt="Sterling Logo" className="w-6 h-6 object-contain mix-blend-screen" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+            <div className="hidden w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center font-bold text-xs">ST</div>
           </div>
-          <div className="flex gap-4">
-            <button className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors" onClick={() => navigate('/dashboard')}>
-              Dashboard
-            </button>
-            <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded text-sm transition-all shadow-md shadow-red-600/20" onClick={() => navigate('/admin')}>
-              Control Panel
-            </button>
-          </div>
+          <span className="font-extrabold text-lg tracking-tight text-slate-900">
+            Spark-<span className="text-red-600">Hire</span>
+            <span className="hidden sm:inline text-slate-400 text-[0.65rem] ml-3 tracking-[0.2em] font-mono uppercase">by Sterling E-Mobility</span>
+          </span>
         </div>
+        <div className="flex gap-2 sm:gap-4 items-center">
+          <button className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors px-4 py-2 rounded-full hover:bg-slate-100" onClick={() => navigate('/dashboard')}>
+            Dashboard
+          </button>
+          <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-full text-sm transition-all shadow-lg shadow-red-600/20 hover:shadow-red-600/40 hover:-translate-y-0.5 active:translate-y-0" onClick={() => navigate('/admin')}>
+            Control Panel
+          </button>
+        </div>
+      </motion.div>
 
-        {/* Hero content */}
+      {/* ── HERO ── */}
+      <section className="relative min-h-[100svh] flex flex-col items-center justify-center text-center p-8 overflow-hidden bg-white">
+        {/* Ambient glowing background shapes */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-red-50 rounded-full blur-[120px] opacity-60 pointer-events-none animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-slate-50 rounded-full blur-[100px] opacity-80 pointer-events-none" />
+
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="relative z-10 max-w-4xl w-full mx-auto flex flex-col items-center mt-16"
+          variants={fadeUpVariants}
+          initial="hidden"
+          animate="show"
+          className="relative z-10 max-w-5xl w-full mx-auto flex flex-col items-center mt-20"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-50 border border-red-100 text-red-600 text-xs font-bold uppercase tracking-widest mb-8 shadow-sm">
-            <Shield size={14} /> Spark-Hire · Powered by Sterling E-Mobility
-          </div>
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white border border-red-100/60 text-red-600 text-xs font-bold uppercase tracking-widest mb-10 shadow-[0_4px_20px_rgb(239,68,68,0.1)] backdrop-blur-sm cursor-default"
+          >
+            <Shield size={14} className="text-red-500" /> Spark-Hire · Powered by Sterling E-Mobility
+          </motion.div>
 
-          <h1 className="text-5xl md:text-7xl font-black leading-tight mb-6 tracking-tight text-slate-900">
+          <h1 className="text-5xl sm:text-6xl md:text-8xl font-black leading-[1.1] mb-8 tracking-tighter text-slate-900">
             The Future of<br />
-            <span className="text-red-600">{typed}</span>
-            <span className="text-slate-300 animate-pulse">|</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-400">{typed}</span>
+            <span className="text-red-200 ml-1 font-light animate-pulse">|</span>
           </h1>
 
-          <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-            The definitive AI hiring engine for EV Powertrains and Embedded Systems Engineering. Context-aware, privacy-safe, and infinitely scalable.
+          <p className="text-lg sm:text-xl md:text-2xl text-slate-500 max-w-3xl mx-auto mb-14 leading-relaxed font-medium">
+            The definitive AI hiring engine for EV Powertrains and Embedded Systems Engineering. <span className="text-slate-800">Context-aware, privacy-safe, and infinitely scalable.</span>
           </p>
 
-          <div className="flex gap-6 items-center justify-center flex-wrap">
+          <motion.div 
+            className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center justify-center w-full"
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+          >
             <motion.button
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-lg text-lg transition-all shadow-xl shadow-red-600/30 flex items-center gap-3 uppercase tracking-wider"
+              variants={itemVariants}
+              whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
+              className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-red-500 text-white font-bold py-4 px-10 rounded-2xl text-lg transition-all shadow-xl shadow-red-600/25 flex items-center justify-center gap-3 uppercase tracking-wider group border border-red-400/50"
               onClick={() => navigate('/admin')}
             >
-              Control Panel <ArrowRight size={20} />
+              Control Panel <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </motion.button>
             <motion.button
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-              className="bg-white hover:bg-slate-50 text-slate-900 font-bold py-4 px-10 rounded-lg text-lg transition-all border border-slate-200 shadow-sm flex items-center gap-3 uppercase tracking-wider"
+              variants={itemVariants}
+              whileHover={{ scale: 1.03, y: -2, backgroundColor: '#f8fafc' }} whileTap={{ scale: 0.97 }}
+              className="w-full sm:w-auto bg-white text-slate-900 font-bold py-4 px-10 rounded-2xl text-lg transition-all border border-slate-200 shadow-md shadow-slate-200/50 flex items-center justify-center gap-3 uppercase tracking-wider"
               onClick={() => navigate('/dashboard')}
             >
               HR Dashboard
             </motion.button>
             <motion.button
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-10 rounded-lg text-lg transition-all shadow-xl shadow-slate-900/30 flex items-center gap-3 uppercase tracking-wider"
+              variants={itemVariants}
+              whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
+              className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-10 rounded-2xl text-lg transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-3 uppercase tracking-wider"
               onClick={() => navigate('/system-health')}
             >
               System Health
             </motion.button>
-          </div>
-
-
+          </motion.div>
         </motion.div>
 
-        {/* Animated bottom border */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-px bg-gradient-to-r from-transparent via-red-200 to-transparent" />
+        {/* Scroll indicator */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2, duration: 1 }}
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-slate-400"
+        >
+          <span className="text-[10px] font-bold tracking-widest uppercase">Explore</span>
+          <div className="w-px h-12 bg-gradient-to-b from-slate-300 to-transparent" />
+        </motion.div>
       </section>
 
       {/* ── FEATURES GRID ── */}
-      <section className="py-24 px-8 max-w-6xl mx-auto">
+      <section className="py-32 px-6 max-w-7xl mx-auto relative">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+          className="text-center mb-20"
         >
-          <h2 className="text-4xl font-extrabold mb-4 tracking-tight text-slate-900">
+          <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight text-slate-900">
             Platform <span className="text-red-600">Capabilities</span>
           </h2>
-          <p className="text-slate-600 text-lg max-w-2xl mx-auto">
-            Every layer of the interview process, supercharged with AI.
+          <p className="text-slate-500 text-lg md:text-xl max-w-2xl mx-auto font-medium">
+            Every layer of the interview process, perfectly architected and supercharged with AI.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map(({ icon: Icon, title, desc }, i) => (
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+        >
+          {features.map(({ icon: Icon, title, desc }) => (
             <motion.div
               key={title}
-              className="bg-white border border-slate-200 rounded-2xl p-8 transition-all duration-300 hover:border-red-200 hover:shadow-lg shadow-sm cursor-default"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              whileHover={{ y: -5 }}
+              variants={itemVariants}
+              whileHover={{ y: -8, scale: 1.02 }}
+              className="group bg-white rounded-[2rem] p-8 sm:p-10 transition-all duration-500 hover:shadow-[0_20px_40px_rgb(239,68,68,0.08)] border border-slate-100 hover:border-red-100 relative overflow-hidden"
             >
-              <div className="w-12 h-12 rounded-xl mb-6 bg-red-50 border border-red-100 flex items-center justify-center shadow-sm">
-                <Icon size={24} className="text-red-600" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-red-50 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              <div className="w-16 h-16 rounded-2xl mb-8 bg-white border border-slate-100 shadow-sm flex items-center justify-center group-hover:border-red-200 group-hover:bg-red-50 transition-colors duration-500 relative z-10">
+                <Icon size={28} className="text-slate-400 group-hover:text-red-600 transition-colors duration-500" />
               </div>
-              <h3 className="text-xl font-bold mb-3 text-slate-900 tracking-wide">{title}</h3>
-              <p className="text-slate-600 text-sm leading-relaxed">{desc}</p>
+              <h3 className="text-xl sm:text-2xl font-extrabold mb-4 text-slate-900 tracking-tight relative z-10">{title}</h3>
+              <p className="text-slate-500 text-sm sm:text-base leading-relaxed font-medium relative z-10">{desc}</p>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section className="py-24 px-8 text-center bg-slate-50 flex flex-col items-center border-y border-slate-200">
-        <h2 className="text-4xl font-extrabold mb-16 tracking-tight text-slate-900">
-          How It <span className="text-red-600">Works</span>
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto w-full">
-          {[
-            { step: '01', title: 'Register', desc: 'Fill candidate details and upload resume' },
-            { step: '02', title: 'Interview', desc: 'AI conducts live video + audio interview' },
-            { step: '03', title: 'Analyse', desc: 'Real-time EQ, voice & technical scoring' },
-            { step: '04', title: 'Report', desc: 'Instant AI-generated assessment report' },
-          ].map(({ step, title, desc }, i) => (
-            <motion.div
-              key={step}
-              className="bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-sm"
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.15 }}
+      <section className="py-32 px-6 bg-slate-50 relative overflow-hidden border-y border-slate-100">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-red-50/50 rounded-full blur-[100px] opacity-60 pointer-events-none" />
+        
+        <div className="relative z-10 max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-24"
+          >
+            <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight text-slate-900">
+              How It <span className="text-red-600">Works</span>
+            </h2>
+          </motion.div>
+
+          <div className="relative">
+            {/* Horizontal line for desktop connecting the steps */}
+            <div className="hidden lg:block absolute top-12 left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-transparent via-red-200 to-transparent" />
+            
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-100px" }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 relative"
             >
-              <div className="text-5xl font-black mb-4 text-slate-200">
-                {step}
-              </div>
-              <h4 className="text-lg font-bold mb-2 text-slate-900">{title}</h4>
-              <p className="text-slate-600 text-sm leading-relaxed">{desc}</p>
+              {[
+                { step: '01', title: 'Register', desc: 'Fill candidate details and upload resume' },
+                { step: '02', title: 'Interview', desc: 'AI conducts live video + audio interview' },
+                { step: '03', title: 'Analyse', desc: 'Real-time EQ, voice & technical scoring' },
+                { step: '04', title: 'Report', desc: 'Instant AI-generated assessment report' },
+              ].map(({ step, title, desc }, i) => (
+                <motion.div
+                  key={step}
+                  variants={itemVariants}
+                  className="relative group flex flex-col items-center text-center"
+                >
+                  {/* Circle Number */}
+                  <div className="w-24 h-24 rounded-full bg-white border-4 border-slate-100 flex items-center justify-center text-3xl font-black text-slate-300 mb-8 relative z-10 group-hover:border-red-500 group-hover:bg-red-500 group-hover:text-white transition-all duration-500 shadow-lg group-hover:shadow-red-500/30">
+                    {step}
+                  </div>
+                  <h4 className="text-xl sm:text-2xl font-bold mb-3 text-slate-900 tracking-wide">{title}</h4>
+                  <p className="text-slate-500 text-sm sm:text-base leading-relaxed font-medium max-w-[200px]">{desc}</p>
+                </motion.div>
+              ))}
             </motion.div>
-          ))}
+          </div>
         </div>
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-24 px-8 text-center flex justify-center">
-        <motion.div
-          className="bg-red-600 rounded-3xl p-12 max-w-3xl w-full flex flex-col items-center shadow-2xl shadow-red-600/30 text-white relative overflow-hidden"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-black opacity-10 rounded-full blur-3xl" />
-          
-          <Zap size={48} className="text-white mb-6 relative z-10" />
-          <h2 className="text-3xl md:text-4xl font-extrabold mb-4 tracking-tight relative z-10 text-white">
-            Ready to Manage Operations?
-          </h2>
-          <p className="text-red-100 text-lg mb-8 max-w-lg relative z-10">
-            Access enterprise root controls, manage candidate pipelines, and review system telemetry in real-time.
-          </p>
-          <div className="flex flex-wrap justify-center gap-6 mb-10 relative z-10">
-            {['Pipeline Control', 'System Telemetry', 'Role Configurator'].map((f) => (
-              <div key={f} className="flex items-center gap-2 text-sm text-red-50 font-bold tracking-wide">
-                <CheckCircle size={16} className="text-white" /> {f}
-              </div>
-            ))}
-          </div>
-          <button className="bg-white hover:bg-slate-50 text-red-700 font-black py-4 px-10 rounded-lg text-lg transition-all shadow-lg flex items-center gap-3 uppercase tracking-wider relative z-10" onClick={() => navigate('/admin')}>
-            Open Control Panel <ArrowRight size={20} />
-          </button>
-        </motion.div>
+      <section className="py-32 px-6 bg-white relative">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 40 }}
+            whileInView={{ opacity: 1, scale: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, type: "spring", stiffness: 60 }}
+            className="bg-gradient-to-br from-red-600 to-red-700 rounded-[3rem] p-12 md:p-20 flex flex-col items-center text-center shadow-2xl shadow-red-600/30 text-white relative overflow-hidden border border-red-500/50"
+          >
+            {/* Glass effect background artifacts */}
+            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-black/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
+            
+            <div className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 relative z-10 border border-white/20 shadow-inner">
+              <Zap size={40} className="text-white drop-shadow-md" />
+            </div>
+            
+            <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight relative z-10 text-white leading-tight">
+              Ready to Manage Operations?
+            </h2>
+            <p className="text-red-100/90 text-lg md:text-xl mb-12 max-w-2xl relative z-10 font-medium leading-relaxed">
+              Access enterprise root controls, manage candidate pipelines, and review system telemetry in real-time.
+            </p>
+            
+            <div className="flex flex-wrap justify-center gap-6 md:gap-10 mb-14 relative z-10">
+              {['Pipeline Control', 'System Telemetry', 'Role Configurator'].map((f) => (
+                <div key={f} className="flex items-center gap-3 text-sm sm:text-base text-red-50 font-bold tracking-widest uppercase">
+                  <CheckCircle size={20} className="text-red-200" /> {f}
+                </div>
+              ))}
+            </div>
+            
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-white text-red-700 font-black py-4 sm:py-5 px-8 sm:px-12 rounded-2xl text-lg sm:text-xl transition-all shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_40px_rgba(255,255,255,0.2)] flex items-center gap-4 uppercase tracking-widest relative z-10 group" 
+              onClick={() => navigate('/admin')}
+            >
+              Open Control Panel <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform" />
+            </motion.button>
+          </motion.div>
+        </div>
       </section>
 
       {/* Footer */}
-      <footer className="text-center py-8 border-t border-slate-200 text-slate-500 text-xs tracking-widest uppercase font-mono bg-white">
+      <footer className="text-center py-10 text-slate-400 text-xs sm:text-sm tracking-[0.3em] font-mono bg-white uppercase">
         Spark-Hire &copy; 2025 &middot; Sterling E-Mobility
       </footer>
     </div>
