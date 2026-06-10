@@ -32,50 +32,54 @@ export default function AdminLoginForm({ email, setEmail, password, setPassword,
         </div>
 
         <form className="space-y-8" onSubmit={handleLogin}>
-          <div className="relative group">
-            <motion.input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="peer w-full px-4 py-4 border-b-2 border-slate-200 bg-transparent text-slate-900 font-bold focus:outline-none placeholder-transparent"
-              placeholder="Email"
-              variants={inputVariants}
-              initial="initial"
-              whileFocus="focus"
-            />
-            <label className="absolute left-4 top-4 text-slate-400 font-bold text-sm transition-all duration-300 peer-focus:-top-3 peer-focus:text-xs peer-focus:text-red-500 peer-valid:-top-3 peer-valid:text-xs peer-valid:text-red-500 pointer-events-none bg-white/80 px-1 rounded">
+          <div className="flex flex-col text-left group">
+            <label className="text-slate-500 font-bold text-sm mb-2 px-1 transition-colors group-focus-within:text-red-500">
               Corporate Email
             </label>
-            <motion.div 
-              className="absolute bottom-0 left-0 h-[2px] bg-red-500 origin-left"
-              initial={{ scaleX: 0 }}
-              transition={{ duration: 0.4 }}
-              whileHover={{ scaleX: 1 }}
-            />
+            <div className="relative">
+              <motion.input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-4 border-b-2 border-slate-200 bg-slate-50/50 text-slate-900 font-bold focus:outline-none"
+                placeholder="Enter your email"
+                variants={inputVariants}
+                initial="initial"
+                whileFocus="focus"
+              />
+              <motion.div 
+                className="absolute bottom-0 left-0 h-[2px] bg-red-500 origin-left"
+                initial={{ scaleX: 0 }}
+                transition={{ duration: 0.4 }}
+                whileHover={{ scaleX: 1 }}
+              />
+            </div>
           </div>
 
-          <div className="relative group">
-            <motion.input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="peer w-full px-4 py-4 border-b-2 border-slate-200 bg-transparent text-slate-900 font-bold focus:outline-none placeholder-transparent"
-              placeholder="Password"
-              variants={inputVariants}
-              initial="initial"
-              whileFocus="focus"
-            />
-            <label className="absolute left-4 top-4 text-slate-400 font-bold text-sm transition-all duration-300 peer-focus:-top-3 peer-focus:text-xs peer-focus:text-red-500 peer-valid:-top-3 peer-valid:text-xs peer-valid:text-red-500 pointer-events-none bg-white/80 px-1 rounded">
+          <div className="flex flex-col text-left group">
+            <label className="text-slate-500 font-bold text-sm mb-2 px-1 transition-colors group-focus-within:text-red-500">
               Password
             </label>
-             <motion.div 
-              className="absolute bottom-0 left-0 h-[2px] bg-red-500 origin-left"
-              initial={{ scaleX: 0 }}
-              transition={{ duration: 0.4 }}
-              whileHover={{ scaleX: 1 }}
-            />
+            <div className="relative">
+              <motion.input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-4 border-b-2 border-slate-200 bg-slate-50/50 text-slate-900 font-bold focus:outline-none"
+                placeholder="Enter password"
+                variants={inputVariants}
+                initial="initial"
+                whileFocus="focus"
+              />
+              <motion.div 
+                className="absolute bottom-0 left-0 h-[2px] bg-red-500 origin-left"
+                initial={{ scaleX: 0 }}
+                transition={{ duration: 0.4 }}
+                whileHover={{ scaleX: 1 }}
+              />
+            </div>
           </div>
 
           {error && (

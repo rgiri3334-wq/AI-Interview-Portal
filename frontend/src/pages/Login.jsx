@@ -5,7 +5,6 @@ import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png';
 
 // Import new modular components
-import InteractiveCursor from '../components/login/InteractiveCursor';
 import LoginBackground from '../components/login/LoginBackground';
 import AdminLoginForm from '../components/login/AdminLoginForm';
 import CandidateOptions from '../components/login/CandidateOptions';
@@ -59,8 +58,7 @@ export default function Login() {
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-white text-slate-900 font-sans cursor-none selection:bg-red-500 selection:text-white">
-      <InteractiveCursor />
+    <div className="relative min-h-screen w-full overflow-hidden bg-white text-slate-900 font-sans selection:bg-red-500 selection:text-white">
       
       {/* Dynamic Animated Background */}
       <LoginBackground />
