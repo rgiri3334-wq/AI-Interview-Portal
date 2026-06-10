@@ -231,19 +231,33 @@ app.add_middleware(
 
 @app.middleware("http")
 async def verify_admin_jwt(request: Request, call_next):
+    # ── Helper: build a CORS-safe 401 response ────────────────────────────
+    # CORSMiddleware only injects headers on responses that pass through call_next.
+    # Early-return JSONResponses bypass it, causing browser CORS errors.
+    # We manually inject the CORS header here to fix that.
+    def _cors_401(detail: str) -> JSONResponse:
+        origin = request.headers.get("origin", "")
+        resp = JSONResponse(status_code=401, content={"detail": detail})
+        if origin:
+            resp.headers["Access-Control-Allow-Origin"] = origin
+            resp.headers["Access-Control-Allow-Credentials"] = "true"
+            resp.headers["Access-Control-Allow-Methods"] = "*"
+            resp.headers["Access-Control-Allow-Headers"] = "*"
+        return resp
+
     if request.url.path.startswith("/api/admin") and request.method != "OPTIONS":
         # Allow public read access to company structure for candidate registration
         if request.url.path == "/api/admin/config/global/company_structure" and request.method == "GET":
             return await call_next(request)
-            
+
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
-            return JSONResponse(status_code=401, content={"detail": "Missing or invalid Authorization header"})
+            return _cors_401("Missing or invalid Authorization header")
         token = auth_header.split(" ")[1]
         try:
             jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         except Exception as e:
-            return JSONResponse(status_code=401, content={"detail": f"Invalid JWT Token: {str(e)}"})
+            return _cors_401(f"Invalid JWT Token: {str(e)}")
     return await call_next(request)
 
 # ── Global Exception Handlers ─────────────────────────────────────────────
