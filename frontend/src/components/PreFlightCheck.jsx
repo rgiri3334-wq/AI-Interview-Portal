@@ -467,6 +467,41 @@ export default function PreFlightCheck({ onPass, candidateName = 'Candidate', jo
             )}
           </AnimatePresence>
 
+          {/* ── Interview Rules ─────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm"
+          >
+            {/* Header bar */}
+            <div className="bg-gradient-to-r from-red-600 to-red-700 px-5 py-3 flex items-center gap-2">
+              <span className="text-white text-base">📋</span>
+              <h3 className="text-sm font-extrabold text-white uppercase tracking-widest">Interview Rules</h3>
+            </div>
+            <ul className="px-5 py-4 space-y-2.5">
+              {[
+                { num: '01', text: 'Remain clearly visible in the camera frame at all times.' },
+                { num: '02', text: 'Do not use secondary devices (phone, tablet, extra monitor).' },
+                { num: '03', text: 'Eye movements, posture & gaze are actively monitored.' },
+                { num: '04', text: 'Switching browser tabs or using DevTools is strictly prohibited.' },
+                { num: '05', text: 'Sit in a quiet, well-lit room with no other individuals present.' },
+                { num: '06', text: 'Speak clearly and at a natural pace — the AI transcribes live.' },
+                { num: '07', text: 'Do not read from notes or use AI-assistance tools during the interview.' },
+              ].map(({ num, text }) => (
+                <li key={num} className="flex items-start gap-3 text-xs text-slate-700 font-medium leading-relaxed">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-red-50 border border-red-100 text-red-600 text-[10px] font-black flex items-center justify-center mt-0.5">{num}</span>
+                  {text}
+                </li>
+              ))}
+            </ul>
+            <div className="px-5 pb-4">
+              <p className="text-[10px] text-slate-400 font-medium border-t border-slate-100 pt-3">
+                Violations are flagged automatically. Serious breaches may result in disqualification.
+              </p>
+            </div>
+          </motion.div>
+
           {/* Begin Interview Button */}
           <motion.button
             onClick={() => {
