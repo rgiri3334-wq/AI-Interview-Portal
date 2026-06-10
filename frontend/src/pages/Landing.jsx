@@ -5,7 +5,7 @@ import logoUrl from '../assets/sterling_logo.png';
 // Import new components
 import InteractiveBrain3D from '../components/landing/InteractiveBrain3D';
 import HeroSection from '../components/landing/HeroSection';
-import TestimonialsCarousel from '../components/landing/TestimonialsCarousel';
+
 import LiveDashboardPreview from '../components/landing/LiveDashboardPreview';
 import ScrollFeatures from '../components/landing/ScrollFeatures';
 import DeepDiveTabs from '../components/landing/DeepDiveTabs';
@@ -49,7 +49,7 @@ export default function Landing() {
 
       {/* ── SECTIONS ── */}
       <HeroSection />
-      <TestimonialsCarousel />
+
       <ScrollFeatures />
       <LiveDashboardPreview />
       <DeepDiveTabs />

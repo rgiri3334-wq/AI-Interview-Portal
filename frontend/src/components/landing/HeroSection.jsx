@@ -67,15 +67,15 @@ export default function HeroSection() {
           <motion.button
             whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(220, 38, 38, 0.4)' }} 
             whileTap={{ scale: 0.98 }}
-            className="bg-red-600 text-white font-bold py-4 px-10 rounded-full text-base transition-all flex items-center gap-3 uppercase tracking-wide"
+            className="bg-red-600 text-white font-bold py-4 px-10 rounded-full text-base transition-all flex items-center justify-center uppercase tracking-wide min-w-[220px]"
             onClick={() => navigate('/admin')}
           >
-            Control Panel <ArrowRight size={18} />
+            Control Panel
           </motion.button>
           <motion.button
             whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }} 
             whileTap={{ scale: 0.98 }}
-            className="bg-white text-slate-800 font-bold py-4 px-10 rounded-full text-base transition-all border border-slate-200 flex items-center gap-3 uppercase tracking-wide hover:border-red-200"
+            className="bg-white text-slate-800 font-bold py-4 px-10 rounded-full text-base transition-all border border-slate-200 flex items-center justify-center uppercase tracking-wide hover:border-red-200 min-w-[220px]"
             onClick={() => navigate('/dashboard')}
           >
             HR Dashboard
