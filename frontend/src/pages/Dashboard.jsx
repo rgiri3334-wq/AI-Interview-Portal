@@ -868,16 +868,26 @@ export default function Dashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                  {Object.entries(INTEGRITY_BANDS).map(([bandKey, cfg]) => {
-                    // PROCTORING_ACT sessions are always HIGH_RISK regardless of integrity score
-                    const bandCandidates = leaderboard.filter(c => {
-                      const isProctoringAct = c.termination_reason === 'PROCTORING_ACT' || c.hiring_decision === 'PROCTORING_ACT';
-                      if (isProctoringAct) return bandKey === 'HIGH_RISK';
-                      return getIntegrityBand(c.integrity_score ?? 100) === bandKey;
+                  {(() => {
+                    // Deduplicate by email + job_role, keeping the latest attempt
+                    const seenForTriage = new Set();
+                    const uniqueTriageCandidates = [...leaderboard].reverse().filter(c => {
+                       const key = `${c.email?.toLowerCase()}-${c.job_role}`;
+                       if (seenForTriage.has(key)) return false;
+                       seenForTriage.add(key);
+                       return true;
                     });
-                    const BandIcon = cfg.icon;
-                    return (
-                      <div key={bandKey} className={`rounded-3xl border ${cfg.colBorder} ${cfg.colBg} p-6 min-h-[300px] flex flex-col shadow-sm`}>
+
+                    return Object.entries(INTEGRITY_BANDS).map(([bandKey, cfg]) => {
+                      // PROCTORING_ACT sessions are always HIGH_RISK regardless of integrity score
+                      const bandCandidates = uniqueTriageCandidates.filter(c => {
+                        const isProctoringAct = c.termination_reason === 'PROCTORING_ACT' || c.hiring_decision === 'PROCTORING_ACT';
+                        if (isProctoringAct) return bandKey === 'HIGH_RISK';
+                        return getIntegrityBand(c.integrity_score ?? 100) === bandKey;
+                      });
+                      const BandIcon = cfg.icon;
+                      return (
+                        <div key={bandKey} className={`rounded-3xl border ${cfg.colBorder} ${cfg.colBg} p-6 min-h-[300px] flex flex-col shadow-sm`}>
                         <div className="flex items-center justify-between mb-5">
                           <div className="flex items-center gap-2.5">
                             <BandIcon size={18} color={cfg.iconColor} />
@@ -901,7 +911,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                     );
-                  })}
+                  })()}
                 </div>
               </motion.div>
             )}
