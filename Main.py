@@ -2182,7 +2182,7 @@ def _detect_ai_answer(answer: str, wpm: float, question_index: int) -> dict:
 
 
 @app.post("/api/interview/assess", response_model=AssessResponse, tags=["AI Engine"])
-async def assess_candidate(data: AssessRequest):
+async def assess_candidate(data: AssessRequest, db: Session = Depends(get_db)):
     """Full context-aware answer evaluation with multi-LLM orchestration."""
     filler_words = detect_filler_words(data.spoken_answer)
 
@@ -2227,6 +2227,51 @@ async def assess_candidate(data: AssessRequest):
                 "role": "candidate_code",
                 "content": data.workspace_code[:2000],  # cap at 2000 chars
             })
+
+    # ── Sprint 4: Persist telemetry to PostgreSQL ──
+    try:
+        from database.models import ConversationHistory, QuestionEvaluation, CandidateAnswer
+        from database.db_utils import generate_enterprise_id
+        
+        iv = db.query(InterviewSession).filter_by(candidate_id=data.candidate_id).order_by(InterviewSession.started_at.desc()).first()
+        if iv:
+            # Log AI Question
+            db.add(ConversationHistory(
+                conversation_id=generate_enterprise_id(db, "CONV"),
+                interview_id=iv.interview_id,
+                speaker="AI",
+                message=data.current_question
+            ))
+            # Log Candidate Answer
+            db.add(ConversationHistory(
+                conversation_id=generate_enterprise_id(db, "CONV"),
+                interview_id=iv.interview_id,
+                speaker="Candidate",
+                message=combined_answer
+            ))
+            # Log CandidateAnswer
+            db.add(CandidateAnswer(
+                answer_id=generate_enterprise_id(db, "ANS"),
+                candidate_id=data.candidate_id,
+                interview_id=iv.interview_id,
+                candidate_answer=combined_answer,
+                response_duration_seconds=float(data.wpm)
+            ))
+            # Log Evaluation
+            db.add(QuestionEvaluation(
+                evaluation_id=generate_enterprise_id(db, "EVALQ"),
+                candidate_id=data.candidate_id,
+                interview_id=iv.interview_id,
+                technical_score=float(result.get("technical_score", 0)),
+                communication_score=float(result.get("communication_score", 60)),
+                behavior_score=float(result.get("behavioral_score", 60)),
+                confidence_score=float(result.get("confidence_score", 60)),
+                feedback=result.get("eq_feedback") or result.get("feedback") or ""
+            ))
+            db.commit()
+    except Exception as db_e:
+        logger.error(f"Failed to persist assessment data to database: {db_e}")
+        db.rollback()
 
     # Safe feedback key resolution (handles both 'feedback' and 'eq_feedback' from parsers)
     feedback_text = result.get("eq_feedback") or result.get("feedback") or "Assessment complete."

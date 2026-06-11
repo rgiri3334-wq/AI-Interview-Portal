@@ -144,7 +144,7 @@ class CandidateAnswer(Base):
     answer_id = Column(String, primary_key=True, index=True) # e.g. ANS1
     candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
     interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
-    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=False)
+    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=True)
     candidate_answer = Column(Text, nullable=False)
     answer_timestamp = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
     response_duration_seconds = Column(Float, default=0.0)
@@ -159,7 +159,7 @@ class KeywordEvaluation(Base):
     keyword_eval_id = Column(String, primary_key=True, index=True) # e.g. EVALK1
     candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
     interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
-    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=False)
+    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=True)
     expected_keywords = Column(Text, default="[]")
     matched_keywords = Column(Text, default="[]")
     missing_keywords = Column(Text, default="[]")
@@ -175,7 +175,7 @@ class QuestionEvaluation(Base):
     evaluation_id = Column(String, primary_key=True, index=True) # e.g. EVALQ1
     candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
     interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
-    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=False)
+    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=True)
     technical_score = Column(Float, default=0.0)
     communication_score = Column(Float, default=0.0)
     behavior_score = Column(Float, default=0.0)
@@ -193,7 +193,7 @@ class UnifiedInterviewData(Base):
     unified_id = Column(String, primary_key=True, index=True) # e.g. ANSLOG1
     candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
     interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
-    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=False)
+    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=True)
     question_text = Column(Text, nullable=False)
     expected_keywords = Column(Text, default="[]")
     matched_keywords = Column(Text, default="[]")
