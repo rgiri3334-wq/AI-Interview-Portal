@@ -32,12 +32,13 @@ function Counter({ target, suffix = '', decimals = 0 }) {
 
 // ── Decision Badge ────────────────────────────────────────────────────────
 const DECISION_STYLE = {
-  HIRED:        { bg: 'bg-emerald-50',  border: 'border-emerald-200',  color: 'text-emerald-700',  icon: '🏆' },
-  SHORTLISTED:  { bg: 'bg-red-50',  border: 'border-red-200',  color: 'text-red-700',  icon: '⭐' },
-  UNDER_REVIEW: { bg: 'bg-orange-50',  border: 'border-orange-200',  color: 'text-orange-700',  icon: '🔍' },
-  REJECTED:     { bg: 'bg-slate-100',  border: 'border-slate-300',  color: 'text-slate-700',  icon: '❌' },
-  PENDING:      { bg: 'bg-slate-50', border: 'border-slate-200', color: 'text-slate-500', icon: '⏳' },
-  IN_PROGRESS:  { bg: 'bg-blue-50', border: 'border-blue-200', color: 'text-blue-600', icon: '📝' },
+  HIRED:          { bg: 'bg-emerald-50',  border: 'border-emerald-200',  color: 'text-emerald-700',  icon: '🏆' },
+  SHORTLISTED:    { bg: 'bg-red-50',  border: 'border-red-200',  color: 'text-red-700',  icon: '⭐' },
+  UNDER_REVIEW:   { bg: 'bg-orange-50',  border: 'border-orange-200',  color: 'text-orange-700',  icon: '🔍' },
+  REJECTED:       { bg: 'bg-slate-100',  border: 'border-slate-300',  color: 'text-slate-700',  icon: '❌' },
+  PENDING:        { bg: 'bg-slate-50', border: 'border-slate-200', color: 'text-slate-500', icon: '⏳' },
+  IN_PROGRESS:    { bg: 'bg-blue-50', border: 'border-blue-200', color: 'text-blue-600', icon: '📝' },
+  PROCTORING_ACT: { bg: 'bg-red-100', border: 'border-red-300',  color: 'text-red-700',  icon: '⛔' },
 };
 
 function DecisionBadge({ decision }) {
@@ -256,32 +257,53 @@ function IntegritySignalModal({ candidate, onClose }) {
 
 // ── Sprint 4: Triage Candidate Card ──────────────────────────────────────
 function TriageCard({ candidate, onClick }) {
-  const score = candidate.integrity_score ?? 100;
+  const isProctoringAct = candidate.termination_reason === 'PROCTORING_ACT' || candidate.hiring_decision === 'PROCTORING_ACT';
+  const score = isProctoringAct ? 0 : (candidate.integrity_score ?? 100);
   const band = getIntegrityBand(score);
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.02 }}
       onClick={() => onClick(candidate)}
-      className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md hover:border-red-200 transition-all group"
+      className={`bg-white border rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all group ${
+        isProctoringAct ? 'border-red-300 hover:border-red-500' : 'border-slate-100 hover:border-red-200'
+      }`}
     >
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-sm font-black text-red-600 shrink-0 group-hover:bg-red-50 group-hover:border-red-100 transition-colors">
-          {candidate.name?.[0]}
+        <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-sm font-black shrink-0 transition-colors ${
+          isProctoringAct ? 'bg-red-100 border-red-200 text-red-700' : 'bg-slate-50 border-slate-100 text-red-600 group-hover:bg-red-50 group-hover:border-red-100'
+        }`}>
+          {isProctoringAct ? '⛔' : candidate.name?.[0]}
         </div>
         <div className="min-w-0">
           <p className="font-bold text-sm text-slate-900 truncate">{candidate.name}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 truncate mt-0.5">{candidate.job_role}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 truncate mt-0.5">
+            {candidate.job_role}
+            {candidate.attempt_label && candidate.attempt_label !== 'Interview' && (
+              <span className="ml-1 text-slate-300">· {candidate.attempt_label}</span>
+            )}
+          </p>
         </div>
       </div>
-      <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-100">
-        <IntegrityBadge score={score} />
-        <span className={`text-xl font-black tracking-tight ${candidate.global_score >= 75 ? 'text-emerald-600' : candidate.global_score >= 55 ? 'text-red-600' : 'text-slate-400'}`}>
-          {Number(candidate.global_score || 0).toFixed(0)}
-          <span className="text-xs font-bold text-slate-400">/100</span>
-        </span>
-      </div>
-      {candidate.proctoring_warnings > 0 && (
+
+      {isProctoringAct ? (
+        <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-xl p-3">
+          <ShieldAlert size={14} className="text-red-600 shrink-0" />
+          <div>
+            <p className="text-[10px] font-black text-red-700 uppercase tracking-widest">⛔ Proctoring Act</p>
+            <p className="text-[10px] font-medium text-red-500 mt-0.5">Interview forcibly terminated · Grade F</p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-100">
+          <IntegrityBadge score={score} />
+          <span className={`text-xl font-black tracking-tight ${candidate.global_score >= 75 ? 'text-emerald-600' : candidate.global_score >= 55 ? 'text-red-600' : 'text-slate-400'}`}>
+            {Number(candidate.global_score || 0).toFixed(0)}
+            <span className="text-xs font-bold text-slate-400">/100</span>
+          </span>
+        </div>
+      )}
+      {!isProctoringAct && candidate.proctoring_warnings > 0 && (
         <p className="mt-3 text-[10px] text-orange-600 font-bold flex items-center gap-1.5 bg-orange-50 px-2 py-1 rounded border border-orange-100 w-fit">
           <AlertTriangle size={12} /> {candidate.proctoring_warnings} warnings
         </p>
@@ -737,18 +759,37 @@ export default function Dashboard() {
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                           {leaderboard.map((c, i) => (
-                            <motion.tr key={c.id} className="hover:bg-slate-50 transition-colors group">
+                            <motion.tr key={`${c.id}-${c.interview_id || i}`} className="hover:bg-slate-50 transition-colors group">
                               <td className="py-5 px-4 font-black text-xl" style={{ color: i === 0 ? '#dc2626' : i === 1 ? '#475569' : i === 2 ? '#b45309' : '#94a3b8' }}>
                                 {i < 3 ? ['🥇','🥈','🥉'][i] : `#${c.rank || i + 1}`}
                               </td>
                               <td className="py-5 px-4">
                                 <div className="flex items-center gap-4">
-                                  <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-sm font-black text-slate-700 shrink-0 group-hover:bg-red-50 group-hover:text-red-600 group-hover:border-red-100 transition-colors">
-                                    {c.name?.[0]}
+                                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-sm font-black shrink-0 transition-colors ${
+                                    (c.termination_reason === 'PROCTORING_ACT' || c.hiring_decision === 'PROCTORING_ACT')
+                                      ? 'bg-red-100 border-red-200 text-red-700'
+                                      : 'bg-slate-50 border-slate-200 text-slate-700 group-hover:bg-red-50 group-hover:text-red-600 group-hover:border-red-100'
+                                  }`}>
+                                    {(c.termination_reason === 'PROCTORING_ACT' || c.hiring_decision === 'PROCTORING_ACT') ? '⛔' : c.name?.[0]}
                                   </div>
                                   <div>
                                     <p className="font-bold text-sm text-slate-900 leading-tight">{c.name}</p>
-                                    <p className="text-xs text-slate-500 font-medium mt-1">{c.email}</p>
+                                    <p className="text-xs text-slate-500 font-medium mt-0.5">{c.email}</p>
+                                    {/* Attempt label + timestamp */}
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                      {c.attempt_label && c.attempt_label !== 'Interview' && (
+                                        <span className="text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{c.attempt_label}</span>
+                                      )}
+                                      {c.session_timestamp && (
+                                        <span className="text-[9px] font-bold text-slate-400">{c.session_timestamp}</span>
+                                      )}
+                                      {(c.termination_reason === 'PROCTORING_ACT' || c.hiring_decision === 'PROCTORING_ACT') && (
+                                        <span className="text-[9px] font-black uppercase bg-red-100 text-red-700 px-1.5 py-0.5 rounded border border-red-200">⛔ Proctoring Act</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
                                   </div>
                                 </div>
                               </td>
@@ -808,7 +849,12 @@ export default function Dashboard() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                   {Object.entries(INTEGRITY_BANDS).map(([bandKey, cfg]) => {
-                    const bandCandidates = leaderboard.filter(c => getIntegrityBand(c.integrity_score ?? 100) === bandKey);
+                    // PROCTORING_ACT sessions are always HIGH_RISK regardless of integrity score
+                    const bandCandidates = leaderboard.filter(c => {
+                      const isProctoringAct = c.termination_reason === 'PROCTORING_ACT' || c.hiring_decision === 'PROCTORING_ACT';
+                      if (isProctoringAct) return bandKey === 'HIGH_RISK';
+                      return getIntegrityBand(c.integrity_score ?? 100) === bandKey;
+                    });
                     const BandIcon = cfg.icon;
                     return (
                       <div key={bandKey} className={`rounded-3xl border ${cfg.colBorder} ${cfg.colBg} p-6 min-h-[300px] flex flex-col shadow-sm`}>
@@ -830,7 +876,7 @@ export default function Dashboard() {
                               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No candidates</p>
                             </div>
                           ) : (
-                            bandCandidates.map(c => <TriageCard key={c.id} candidate={c} onClick={setTriageCandidate} />)
+                            bandCandidates.map((c, i) => <TriageCard key={`${c.id}-${c.interview_id || i}`} candidate={c} onClick={setTriageCandidate} />)
                           )}
                         </div>
                       </div>

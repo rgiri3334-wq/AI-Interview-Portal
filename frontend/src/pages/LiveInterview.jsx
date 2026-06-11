@@ -192,7 +192,7 @@ export default function LiveInterview() {
           setWarnings(w => {
             const newW = w + 1;
             setOverlayMsg(`PROCTORING WARNING (${newW}/3): Defocus Violation — Focus Must Remain on the Interview`);
-            if (newW >= 3) doEndInterview(historyRef.current);
+            if (newW >= 3) doEndInterview(historyRef.current, 'Candidate repeatedly switched tabs or defocused the interview window');
             return newW;
           });
         }
@@ -205,7 +205,7 @@ export default function LiveInterview() {
           setWarnings(w => {
             const newW = w + 1;
             setOverlayMsg(`PROCTORING WARNING (${newW}/3): Mouse left the secure window boundaries.`);
-            if (newW >= 3) doEndInterview(historyRef.current);
+            if (newW >= 3) doEndInterview(historyRef.current, 'Candidate repeatedly moved mouse outside interview window boundaries');
             return newW;
           });
         }
@@ -262,7 +262,7 @@ export default function LiveInterview() {
           addProctoringLog("Exited fullscreen.");
           setWarnings(w => {
             const newW = w + 1;
-            if (newW >= 3) doEndInterview(historyRef.current);
+            if (newW >= 3) doEndInterview(historyRef.current, 'Candidate exited fullscreen mode 3 or more times');
             return newW;
           });
           setFullscreenLock(true);
@@ -271,7 +271,7 @@ export default function LiveInterview() {
           fullscreenExitTimeout = setTimeout(() => {
             if (!document.fullscreenElement) {
               addProctoringLog("Did not return to fullscreen within 10s. Auto terminating.");
-              doEndInterview(historyRef.current);
+              doEndInterview(historyRef.current, 'Candidate did not return to fullscreen within 10 seconds after exiting');
             }
           }, 10000);
         } else {
@@ -289,7 +289,7 @@ export default function LiveInterview() {
           addProctoringLog("DevTools opened (dimensions check).");
           setWarnings(w => {
             const newW = w + 1;
-            if (newW >= 3) doEndInterview(historyRef.current);
+            if (newW >= 3) doEndInterview(historyRef.current, 'Developer tools were detected open during the interview');
             return newW;
           });
           setOverlayMsg("PROCTORING WARNING: Developer Tools detected.");
@@ -652,13 +652,35 @@ export default function LiveInterview() {
     }
   };
 
-  const doEndInterview = async (h) => {
+  const doEndInterview = async (h, terminationReason = null) => {
     setPhase('ending');
     stopHuman();
     // Do not call stopVoice() here so the final goodbye message can play.
 
     const avgScore = (key) => h.length ? Math.round(h.reduce((s, x) => s + (x[key] || 0), 0) / h.length) : 0;
 
+    // ── Proctoring-terminated path ────────────────────────────────────────
+    if (terminationReason) {
+      // This interview was forcibly ended by a proctoring violation.
+      // Call terminate-proctoring endpoint directly — it saves grade F + PROCTORING_ACT.
+      try {
+        const integrityReport = computeIntegrityFinal();
+        await apiClient.terminateProctoring({
+          candidate_id: candidateId,
+          proctoring_logs: proctoringLogsRef.current,
+          integrity_data: integrityReport,
+          termination_reason: terminationReason,
+          proctoring_warnings: warnings,
+        });
+        console.info('[Proctoring] Interview terminated and saved as PROCTORING_ACT:', terminationReason);
+      } catch (e) {
+        console.error('[Proctoring] Failed to save proctoring termination to backend:', e);
+      }
+      navigate('/report');
+      return;
+    }
+
+    // ── Normal end path ───────────────────────────────────────────────────
     let aiReport = {};
     try {
       const reportRes = await apiClient.getAIReport(candidateId);

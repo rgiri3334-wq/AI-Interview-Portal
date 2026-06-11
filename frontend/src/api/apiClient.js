@@ -159,6 +159,12 @@ export const apiClient = {
   // Dashboard & Admin
   getDashboardData:   () => api.get('/api/dashboard'),
   getLeaderboard:     () => api.get('/api/leaderboard'),
+
+  // ── Proctoring Termination ────────────────────────────────────────────
+  terminateProctoring: (data) => withRetry(() => api.post('/api/interviews/terminate-proctoring', data)),
+
+  // ── All Reports for a Candidate ───────────────────────────────────────
+  getAllCandidateReports: (candidateId) => api.get(`/api/reports/${candidateId}/all`),
 };
 
 // ── WebSocket Factory ──────────────────────────────────────────────────────

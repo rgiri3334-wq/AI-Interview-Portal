@@ -1629,62 +1629,237 @@ async def get_audit_logs(db: Session = Depends(get_db)):
 
 @app.get("/api/leaderboard", tags=["Recruiter"])
 async def get_leaderboard(db: Session = Depends(get_db)):
-    """Return all candidates ranked by global score. The recruiter's shortlist view."""
+    """
+    Return ONE ROW PER INTERVIEW SESSION so admins see every attempt a candidate made,
+    including proctoring-terminated sessions with grade F and PROCTORING_ACT status.
+    """
     cands = db.query(Candidate).order_by(Candidate.registration_date.desc()).all()
-    candidates = []
-    
-    for c in cands:
-        interviews = sorted(c.interviews, key=lambda i: i.started_at, reverse=True)  # type: ignore
-        latest = interviews[0] if interviews else None
-        resume = db.query(Resume).filter_by(candidate_id=c.candidate_id).order_by(Resume.resume_id.desc()).first()
-        
-        d = {
-            "id": c.candidate_id,
-            "name": c.name,
-            "email": c.email,
-            "job_role": (latest.role.role_name if (latest and latest.role) else ""),
-            "experience": resume.experience_years if resume else "",
-            "resume_score": getattr(resume, "resume_score", 0) if resume else 0,  # BUG-04 fix: ats_score → resume_score
-            "resume_status": 200 if resume else 100,
-            "technical_score": latest.technical_score if latest else 0.0,
-            "communication_score": latest.communication_score if latest else 0.0,
-            "confidence_score": latest.confidence_score if latest else 0.0,
-            "problem_solving_score": getattr(latest, "problem_solving_score", 0.0) if latest else 0.0,
-            "role_alignment_score": getattr(latest, "role_alignment_score", 0.0) if latest else 0.0,
-            "professionalism_score": getattr(latest, "professionalism_score", 0.0) if latest else 0.0,
-            "learning_potential_score": getattr(latest, "learning_potential_score", 0.0) if latest else 0.0,
-            "behavioral_score": latest.behavioral_score if latest else 0.0,
-            "fluency_score": getattr(latest, "fluency_score", 0.0) if latest else 0.0,
-            "eq_score": getattr(latest, "eq_score", 0.0) if latest else 0.0,
-            "global_score": latest.overall_score if latest else 0.0,
-            "hiring_decision": getattr(latest.report, "hiring_decision", "PENDING") if (latest and getattr(latest, "report", None)) else None,
-            "ai_recommendation": latest.recommendation if latest and latest.recommendation else None,
-            "interview_status": "completed" if latest and (latest.completed_at or latest.overall_score > 0) else "pending",
-            "proctoring_warnings": getattr(latest, "proctoring_warnings", 0) if latest else 0,
-            # Sprint 4: Integrity fields for Triage Matrix
-            "integrity_score": int(getattr(latest.report, "integrity_score", 100)) if (latest and latest.report) else 100,
-            "integrity_verdict": getattr(latest.report, "integrity_verdict", "CLEAN") if (latest and latest.report) else "CLEAN",
-            "integrity_data": {
-                "signal_log": json.loads(getattr(latest.report, "integrity_signals", "[]") or "[]") if (latest and latest.report) else []
-            },
-            "created_at": c.registration_date
-        }
-        
-        if float(d.get("global_score", 0.0)) == 0.0 and float(d.get("technical_score", 0.0)) > 0.0:  # type: ignore
-            d["global_score"] = calculate_global_score(
-                resume_score=float(d["resume_score"]),  # type: ignore
-                technical_score=float(d["technical_score"]),  # type: ignore
-                communication_score=float(d["communication_score"]),  # type: ignore
-                confidence_score=float(d["confidence_score"]),  # type: ignore
-                behavioral_score=float(d["behavioral_score"]),  # type: ignore
-                fluency_score=float(d["fluency_score"]),  # type: ignore
-                eq_score=float(d["eq_score"]),  # type: ignore
-                job_role=str(d["job_role"]),  # type: ignore
-            )
-        candidates.append(d)
+    rows = []
 
-    ranked = rank_candidates(candidates)
+    for c in cands:
+        resume = db.query(Resume).filter_by(candidate_id=c.candidate_id).order_by(Resume.resume_id.desc()).first()
+        resume_score = getattr(resume, "resume_score", 0) if resume else 0
+
+        # Sort all interviews oldest→newest so attempt numbers are stable
+        all_interviews = sorted(c.interviews, key=lambda i: i.started_at)  # type: ignore
+
+        if not all_interviews:
+            # Candidate registered but never started any interview — show one pending row
+            rows.append({
+                "id": c.candidate_id,
+                "interview_id": None,
+                "attempt_number": 0,
+                "attempt_label": "No Interview Yet",
+                "name": c.name,
+                "email": c.email,
+                "job_role": "",
+                "experience": resume.experience_years if resume else "",
+                "resume_score": resume_score,
+                "resume_status": 200 if resume else 100,
+                "technical_score": 0.0,
+                "communication_score": 0.0,
+                "confidence_score": 0.0,
+                "problem_solving_score": 0.0,
+                "role_alignment_score": 0.0,
+                "professionalism_score": 0.0,
+                "learning_potential_score": 0.0,
+                "behavioral_score": 0.0,
+                "fluency_score": 0.0,
+                "eq_score": 0.0,
+                "global_score": 0.0,
+                "hiring_decision": None,
+                "ai_recommendation": None,
+                "interview_status": "pending",
+                "proctoring_warnings": 0,
+                "integrity_score": 100,
+                "integrity_verdict": "CLEAN",
+                "integrity_data": {"signal_log": []},
+                "termination_reason": None,
+                "session_started_at": c.registration_date,
+                "created_at": c.registration_date,
+            })
+            continue
+
+        for attempt_idx, iv in enumerate(all_interviews, start=1):
+            report = getattr(iv, "report", None)
+
+            # Determine termination reason from report hiring_decision or status
+            termination_reason = None
+            hiring_decision = getattr(report, "hiring_decision", "PENDING") if report else "PENDING"
+            if hiring_decision == "PROCTORING_ACT":
+                termination_reason = "PROCTORING_ACT"
+            elif iv.status_id == 500:  # FAILED status
+                termination_reason = "TERMINATED"
+
+            # Format attempt label with timestamp
+            try:
+                ts_obj = datetime.fromisoformat(iv.started_at.replace('Z', '+00:00'))
+                ts_str = ts_obj.strftime("%d %b %Y, %I:%M %p")
+            except Exception:
+                ts_str = iv.started_at[:16] if iv.started_at else "Unknown"
+
+            attempt_label = f"Attempt #{attempt_idx}" if len(all_interviews) > 1 else "Interview"
+
+            is_completed = bool(iv.completed_at or iv.overall_score > 0 or hiring_decision == "PROCTORING_ACT")
+
+            d = {
+                "id": c.candidate_id,
+                "interview_id": iv.interview_id,
+                "attempt_number": attempt_idx,
+                "attempt_label": attempt_label,
+                "session_timestamp": ts_str,
+                "session_started_at": iv.started_at,
+                "name": c.name,
+                "email": c.email,
+                "job_role": iv.role.role_name if iv.role else "",
+                "experience": resume.experience_years if resume else "",
+                "resume_score": resume_score,
+                "resume_status": 200 if resume else 100,
+                "technical_score": float(iv.technical_score or 0),
+                "communication_score": float(iv.communication_score or 0),
+                "confidence_score": float(iv.confidence_score or 0),
+                "problem_solving_score": float(getattr(iv, "problem_solving_score", 0) or 0),
+                "role_alignment_score": float(getattr(iv, "role_alignment_score", 0) or 0),
+                "professionalism_score": float(getattr(iv, "professionalism_score", 0) or 0),
+                "learning_potential_score": float(getattr(iv, "learning_potential_score", 0) or 0),
+                "behavioral_score": float(iv.behavioral_score or 0),
+                "fluency_score": float(getattr(iv, "fluency_score", 0) or 0),
+                "eq_score": 0.0,
+                "global_score": float(iv.overall_score or 0),
+                "hiring_decision": hiring_decision,
+                "ai_recommendation": iv.recommendation if iv.recommendation else None,
+                "interview_status": "completed" if is_completed else "pending",
+                "proctoring_warnings": getattr(iv, "proctoring_warnings", 0) or 0,
+                "integrity_score": int(getattr(report, "integrity_score", 100)) if report else 100,
+                "integrity_verdict": getattr(report, "integrity_verdict", "CLEAN") if report else "CLEAN",
+                "integrity_data": {
+                    "signal_log": json.loads(getattr(report, "integrity_signals", "[]") or "[]") if report else []
+                },
+                "termination_reason": termination_reason,
+                "created_at": c.registration_date,
+            }
+
+            rows.append(d)
+
+    # Sort: PROCTORING_ACT first (most urgent), then by session_started_at desc
+    def sort_key(r):
+        is_proct = 1 if r.get("termination_reason") == "PROCTORING_ACT" else 0
+        return (-is_proct, r.get("session_started_at", "") or "")
+
+    rows.sort(key=lambda r: r.get("session_started_at", "") or "", reverse=True)
+    ranked = rank_candidates(rows)
     return {"total": len(ranked), "candidates": ranked}
+
+
+# ── Proctoring Termination Endpoint ──────────────────────────────────────────
+
+class ProctoringTerminationRequest(BaseModel):
+    candidate_id: str
+    interview_id: str = Field(default="")
+    proctoring_logs: list[dict] = Field(default_factory=list)
+    integrity_data: dict = Field(default_factory=dict)
+    termination_reason: str = Field(default="Proctoring violation threshold exceeded")
+    proctoring_warnings: int = Field(default=3)
+
+@app.post("/api/interviews/terminate-proctoring", tags=["Data"])
+async def terminate_proctoring(req: ProctoringTerminationRequest, db: Session = Depends(get_db)):
+    """
+    Called by the frontend when a proctoring violation terminates an interview.
+    Creates a FinalReport with grade=F, score=0, hiring_decision=PROCTORING_ACT.
+    This ensures the terminated session always appears in admin views.
+    """
+    ts = datetime.now(timezone.utc).isoformat()
+
+    c = db.query(Candidate).filter_by(candidate_id=req.candidate_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    # Find the active (uncompleted) interview session to terminate
+    iv = None
+    if req.interview_id:
+        iv = db.query(InterviewSession).filter_by(interview_id=req.interview_id).first()
+    if not iv:
+        # Fall back to latest uncompleted session for this candidate
+        iv = db.query(InterviewSession).filter_by(candidate_id=req.candidate_id).order_by(
+            InterviewSession.started_at.desc()
+        ).first()
+
+    if not iv:
+        raise HTTPException(status_code=404, detail="No active interview session found")
+
+    # Only terminate if not already completed with a real report
+    existing_report = db.query(FinalReport).filter_by(interview_id=iv.interview_id).first()
+    if existing_report and existing_report.hiring_decision != "PROCTORING_ACT":
+        # Already has a legitimate report — do not overwrite
+        return {"status": "already_completed", "interview_id": iv.interview_id}
+
+    # Mark interview session as FAILED
+    iv.status_id = 500  # type: ignore
+    iv.completed_at = ts  # type: ignore
+    iv.overall_score = 0.0  # type: ignore
+    if hasattr(iv, 'proctoring_warnings'):
+        iv.proctoring_warnings = req.proctoring_warnings  # type: ignore
+
+    proctoring_act_signals = json.dumps([
+        {
+            "signal": "proctoring_termination",
+            "note": req.termination_reason,
+            "deduction": 100,
+            "timestamp": ts,
+            "category": "proctoring"
+        }
+    ] + req.integrity_data.get("signal_log", []))
+
+    if existing_report:
+        # Update the existing proctoring report
+        existing_report.grade = "F"  # type: ignore
+        existing_report.overall_score = 0.0  # type: ignore
+        existing_report.hiring_decision = "PROCTORING_ACT"  # type: ignore
+        existing_report.integrity_score = 0  # type: ignore
+        existing_report.integrity_verdict = "HIGH_RISK"  # type: ignore
+        existing_report.integrity_signals = proctoring_act_signals  # type: ignore
+        existing_report.summary = f"Interview terminated by proctoring system. Reason: {req.termination_reason}"  # type: ignore
+        existing_report.strengths = json.dumps([])  # type: ignore
+        existing_report.weaknesses = json.dumps([req.termination_reason])  # type: ignore
+    else:
+        new_report = FinalReport(
+            report_id=generate_enterprise_id(db, "REP"),
+            candidate_id=req.candidate_id,
+            interview_id=iv.interview_id,
+            overall_score=0.0,
+            grade="F",
+            recommendation="PROCTORING_ACT",
+            strengths=json.dumps([]),
+            weaknesses=json.dumps([req.termination_reason]),
+            summary=f"Interview terminated by proctoring system. Reason: {req.termination_reason}",
+            hiring_decision="PROCTORING_ACT",
+            integrity_score=0,
+            integrity_verdict="HIGH_RISK",
+            integrity_signals=proctoring_act_signals,
+            posture_score=0.0,
+            movement_score=0.0,
+            eye_tracking_score=0.0,
+            authenticity_score=0.0,
+            environment_score=0.0,
+        )
+        db.add(new_report)
+
+    try:
+        db.commit()
+        logger.info(f"[Proctoring] Interview {iv.interview_id} terminated for candidate {req.candidate_id}. Reason: {req.termination_reason}")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save proctoring termination: {str(e)}")
+
+    clear_session(req.candidate_id)
+    return {
+        "status": "terminated",
+        "interview_id": iv.interview_id,
+        "grade": "F",
+        "hiring_decision": "PROCTORING_ACT",
+        "created_at": ts,
+    }
+
 
 @app.delete("/api/candidates/{candidate_id}", tags=["Admin"])
 async def delete_candidate(candidate_id: str, db: Session = Depends(get_db)):
@@ -2177,58 +2352,82 @@ async def update_hiring_decision(candidate_id: str, req: DecisionUpdateRequest, 
 
 # ── Data: Report ──────────────────────────────────────────────────────────
 
+def _build_interview_dict(iv_session, report):
+    """Helper: build a consistent interview dict from a session + its report."""
+    def _safe_json_list(val):
+        if not val: return []
+        if isinstance(val, list): return val
+        try: return json.loads(val)
+        except Exception: return []
+
+    hiring_decision = getattr(report, "hiring_decision", "PENDING") if report else "PENDING"
+    is_proctoring_terminated = hiring_decision == "PROCTORING_ACT"
+
+    try:
+        ts_obj = datetime.fromisoformat(iv_session.started_at.replace('Z', '+00:00'))
+        session_ts = ts_obj.strftime("%d %b %Y, %I:%M %p")
+    except Exception:
+        session_ts = iv_session.started_at[:16] if iv_session.started_at else "Unknown"
+
+    return {
+        "interview_id": iv_session.interview_id,
+        "session_timestamp": session_ts,
+        "session_started_at": iv_session.started_at,
+        "technical_score": float(iv_session.technical_score or 0),
+        "eq_score": float(getattr(iv_session, "eq_score", 0) or 0),
+        "confidence_score": float(iv_session.confidence_score or 0),
+        "communication_score": float(iv_session.communication_score or 0),
+        "problem_solving_score": float(getattr(iv_session, "problem_solving_score", 0) or 0),
+        "role_alignment_score": float(getattr(iv_session, "role_alignment_score", 0) or 0),
+        "professionalism_score": float(getattr(iv_session, "professionalism_score", 0) or 0),
+        "learning_potential_score": float(getattr(iv_session, "learning_potential_score", 0) or 0),
+        "behavioral_score": float(iv_session.behavioral_score or 0),
+        "fluency_score": float(getattr(iv_session, "fluency_score", 0) or 0),
+        "overall_score": float(getattr(iv_session, "overall_score", 0) or 0),
+        "summary": (
+            report.summary if report and report.summary
+            else ("Interview terminated by proctoring system." if is_proctoring_terminated else "Interview completed.")
+        ),
+        "strengths": _safe_json_list(report.strengths if report else None),
+        "weaknesses": _safe_json_list(report.weaknesses if report else None),
+        "overall_rating": "N/A",
+        "hiring_recommendation": getattr(report, "recommendation", "N/A") if report else "N/A",
+        "readiness_score": 0,
+        "hiring_decision": hiring_decision,
+        "proctoring_warnings": getattr(iv_session, "proctoring_warnings", 0) or 0,
+        "proctoring_logs": [],
+        "termination_reason": "PROCTORING_ACT" if is_proctoring_terminated else None,
+        "integrity_score": int(getattr(report, "integrity_score", 100) if report else 100),
+        "integrity_verdict": getattr(report, "integrity_verdict", "CLEAN") if report else "CLEAN",
+        "integrity_signals": _safe_json_list(report.integrity_signals if report else None),
+        "posture_score": float(getattr(report, "posture_score", 100) if report else 100),
+        "movement_score": float(getattr(report, "movement_score", 100) if report else 100),
+        "eye_tracking_score": float(getattr(report, "eye_tracking_score", 100) if report else 100),
+        "authenticity_score": float(getattr(report, "authenticity_score", 100) if report else 100),
+        "environment_score": float(getattr(report, "environment_score", 100) if report else 100),
+        "grade": getattr(report, "grade", "F" if is_proctoring_terminated else "N/A") if report else ("F" if is_proctoring_terminated else "N/A"),
+    }
+
 @app.get("/api/reports/{candidate_id}", tags=["Data"])
 async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db)):
+    """Return the MOST RECENT interview report for a candidate (backward compat)."""
     c = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
     if not c: raise HTTPException(status_code=404, detail="Candidate not found")
-    
+
     interviews = sorted(c.interviews, key=lambda i: i.started_at, reverse=True)  # type: ignore
     latest = interviews[0] if interviews else None
     job_role_name = (latest.role.role_name if (latest and latest.role) else "")
-    
+
     c_dict = {
         "id": c.candidate_id,
         "name": c.name,
         "email": c.email,
         "job_role": job_role_name,
+        "total_attempts": len(interviews),
     }
-    
+
     if latest:
-        report = latest.report
-        # BUG-10/BUG-27 fix: Safe JSON parse — stored value could be empty string, None, or valid JSON
-        def _safe_json_list(val):
-            if not val: return []
-            if isinstance(val, list): return val
-            try: return json.loads(val)
-            except Exception: return []
-        iv = {
-            "technical_score": latest.technical_score,
-            "eq_score": getattr(latest, "eq_score", 0), 
-            "confidence_score": latest.confidence_score, 
-            "communication_score": latest.communication_score,
-            "problem_solving_score": getattr(latest, "problem_solving_score", 0),
-            "role_alignment_score": getattr(latest, "role_alignment_score", 0),
-            "professionalism_score": getattr(latest, "professionalism_score", 0),
-            "learning_potential_score": getattr(latest, "learning_potential_score", 0),
-            "behavioral_score": latest.behavioral_score,
-            "fluency_score": getattr(latest, "fluency_score", 0),
-            "overall_score": getattr(latest, "overall_score", 0),
-            "summary": report.summary if report and report.summary else "Interview completed.", 
-            "strengths": _safe_json_list(report.strengths if report else None), 
-            "weaknesses": _safe_json_list(report.weaknesses if report else None),
-            "overall_rating": "N/A", "hiring_recommendation": report.recommendation if report else "N/A", "readiness_score": 0,
-            "hiring_decision": getattr(report, "hiring_decision", "PENDING") if report else "PENDING",
-            "proctoring_warnings": getattr(latest, "proctoring_warnings", 0), 
-            "proctoring_logs": [],
-            "integrity_score": getattr(report, "integrity_score", 100) if report else 100,
-            "integrity_verdict": getattr(report, "integrity_verdict", "CLEAN") if report else "CLEAN",
-            "integrity_signals": _safe_json_list(report.integrity_signals if report else None),
-            "posture_score": getattr(report, "posture_score", 100) if report else 100,
-            "movement_score": getattr(report, "movement_score", 100) if report else 100,
-            "eye_tracking_score": getattr(report, "eye_tracking_score", 100) if report else 100,
-            "authenticity_score": getattr(report, "authenticity_score", 100) if report else 100,
-            "environment_score": getattr(report, "environment_score", 100) if report else 100,
-        }
+        iv = _build_interview_dict(latest, getattr(latest, "report", None))
     else:
         iv = {
             "technical_score": 0, "eq_score": 0, "confidence_score": 0, "communication_score": 0,
@@ -2236,9 +2435,45 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
             "behavioral_score": 0, "fluency_score": 0, "overall_score": 0,
             "summary": "Interview pending.", "strengths": [], "weaknesses": [],
             "overall_rating": "N/A", "hiring_recommendation": "N/A", "readiness_score": 0, "hiring_decision": "PENDING",
-            "proctoring_warnings": 0, "proctoring_logs": []
+            "proctoring_warnings": 0, "proctoring_logs": [], "integrity_score": 100, "integrity_verdict": "CLEAN",
+            "integrity_signals": [], "posture_score": 100, "movement_score": 100,
+            "eye_tracking_score": 100, "authenticity_score": 100, "environment_score": 100,
+            "termination_reason": None, "grade": "N/A",
         }
     return {"candidate": c_dict, "interview": iv}
+
+
+@app.get("/api/reports/{candidate_id}/all", tags=["Data"])
+async def get_all_candidate_reports(candidate_id: str, db: Session = Depends(get_db)):
+    """
+    Return ALL interview sessions for a candidate as a list, newest first.
+    Each item includes session timestamp, attempt number, grade, termination_reason,
+    and full integrity data. Used by admin report section.
+    """
+    c = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
+    if not c: raise HTTPException(status_code=404, detail="Candidate not found")
+
+    interviews = sorted(c.interviews, key=lambda i: i.started_at)  # type: ignore  oldest first for numbering
+    total = len(interviews)
+
+    c_dict = {
+        "id": c.candidate_id,
+        "name": c.name,
+        "email": c.email,
+        "total_attempts": total,
+    }
+
+    all_ivs = []
+    for idx, iv_session in enumerate(reversed(interviews), start=1):  # newest first, attempt# reversed
+        attempt_number = total - idx + 1  # newest = highest attempt number
+        report = getattr(iv_session, "report", None)
+        iv_dict = _build_interview_dict(iv_session, report)
+        iv_dict["attempt_number"] = attempt_number
+        iv_dict["attempt_label"] = f"Attempt #{attempt_number}" if total > 1 else "Interview"
+        iv_dict["job_role"] = iv_session.role.role_name if iv_session.role else ""
+        all_ivs.append(iv_dict)
+
+    return {"candidate": c_dict, "interviews": all_ivs}
 
 # ── Data: Dashboard ───────────────────────────────────────────────────────
 
