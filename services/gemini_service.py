@@ -5,7 +5,6 @@ Author: Aditya Singh
 """
 import os
 import logging
-import sqlite3
 from typing import Optional
 
 from utils.retry_handler import async_retry
@@ -59,68 +58,58 @@ async def _call_gemini(client, prompt: str) -> str:
 
 def _get_admin_question_data(job_role: str, asked_questions: list[str], current_question: Optional[str] = None):
     """
-    Fetch admin question bank data using the CORRECT schema tables:
-    - question_bank (not admin_questions)
-    - job_roles (not role_config)
+    Fetch admin question bank data using SQLAlchemy (works on both SQLite and Supabase).
+    Uses the same DB session engine as Main.py — fully production-safe.
     """
-    DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "database.db")
     keywords = ""
     next_q = ""
     persona = "Strictly Technical (System Design)"
     company_context = ""
-    
+
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        
-        # 1. Resolve role_id for this job_role name
-        role_row = conn.execute(
-            "SELECT role_id, persona FROM job_roles WHERE role_name = ?", (job_role,)
-        ).fetchone()
-        role_id = role_row["role_id"] if role_row else None
-        if role_row and role_row["persona"]:
-            persona = role_row["persona"]
-        
-        # 2. Get keywords for CURRENT question (if assessing)
-        if current_question and role_id:
-            q_row = conn.execute(
-                "SELECT keywords FROM question_bank WHERE question_text = ? AND role_id = ?",
-                (current_question, role_id)
-            ).fetchone()
-            if q_row:
-                keywords = q_row["keywords"]
-                
-        # 3. Get NEXT unasked question for this role
-        if role_id:
-            rows = conn.execute(
-                "SELECT question_text, keywords FROM question_bank WHERE role_id = ?", (role_id,)
-            ).fetchall()
-        else:
-            rows = []
-        if not rows:
-            # Fallback to any questions if role has no specific questions
-            rows = conn.execute(
-                "SELECT question_text, keywords FROM question_bank LIMIT 20"
-            ).fetchall()
-            
-        for r in rows:
-            q_text = r["question_text"]
-            if q_text not in asked_questions and q_text != current_question:
-                next_q = q_text
-                # Also pick up keywords for this question if not already set
-                if not keywords and r["keywords"]:
-                    pass  # keywords for current question only
-                break
-                
-        # 4. Get Company Context
-        c_row = conn.execute("SELECT value FROM global_config WHERE key = 'company_context'").fetchone()
-        if c_row:
-            company_context = c_row["value"]
-            
-        conn.close()
+        from database.database import SessionLocal
+        from database.models import JobRole, QuestionBank, GlobalConfig
+
+        db = SessionLocal()
+        try:
+            # 1. Resolve role for this job_role name
+            role_row = db.query(JobRole).filter(JobRole.role_name == job_role).first()
+            role_id = role_row.role_id if role_row else None
+            if role_row and getattr(role_row, "persona", None):
+                persona = role_row.persona
+
+            # 2. Get keywords for CURRENT question (if assessing)
+            if current_question and role_id:
+                q_row = db.query(QuestionBank).filter(
+                    QuestionBank.question_text == current_question,
+                    QuestionBank.role_id == role_id
+                ).first()
+                if q_row and q_row.keywords:
+                    keywords = q_row.keywords
+
+            # 3. Get NEXT unasked question for this role
+            if role_id:
+                rows = db.query(QuestionBank).filter(QuestionBank.role_id == role_id).all()
+            else:
+                rows = db.query(QuestionBank).limit(20).all()
+
+            for r in rows:
+                q_text = r.question_text
+                if q_text not in asked_questions and q_text != current_question:
+                    next_q = q_text
+                    break
+
+            # 4. Get Company Context
+            c_row = db.query(GlobalConfig).filter(GlobalConfig.key == "company_context").first()
+            if c_row and c_row.value:
+                company_context = c_row.value
+
+        finally:
+            db.close()
+
     except Exception as e:
-        logger.error(f"Admin DB lookup failed: {e}")
-        
+        logger.error(f"Admin DB lookup failed (SQLAlchemy): {e}")
+
     return keywords, next_q, persona, company_context
 
 
