@@ -67,12 +67,12 @@ function DecisionDropdown({ candidate, onUpdate }) {
     );
   }
 
-  // If no interview exists yet, they can't have a hiring decision
-  if (!candidate.interview_id) {
+  // If no interview exists yet, or it's still in progress, they can't have a hiring decision
+  if (!candidate.interview_id || candidate.interview_status !== 'completed') {
     return (
       <div className="flex flex-col gap-2 opacity-50 cursor-not-allowed">
         <span className="px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border shadow-sm bg-slate-100 text-slate-500 border-slate-200 w-fit">
-          ⏳ PENDING
+          ⏳ {candidate.interview_status === 'pending' ? 'IN PROGRESS' : 'PENDING'}
         </span>
       </div>
     );
@@ -328,9 +328,19 @@ function CandidateListModal({ filter, leaderboard, onClose, onNavigate, onDecisi
   if (!filter) return null;
 
   let filtered = leaderboard;
-  let title = "All Interview Sessions";
+  let title = "Total Candidates";
   
-  if (filter === 'INTERVIEWED') {
+  if (filter === 'ALL') {
+    // The card says "Total Candidates", so only show unique profiles
+    const seen = new Set();
+    filtered = leaderboard.filter(c => {
+      const email = c.email?.toLowerCase();
+      if (seen.has(email)) return false;
+      seen.add(email);
+      return true;
+    });
+    title = "Total Candidates";
+  } else if (filter === 'INTERVIEWED') {
     filtered = leaderboard.filter(c => c.interview_status === 'completed' || c.global_score > 0);
     title = "Completed Interviews";
   } else if (filter === 'PENDING') {
@@ -355,7 +365,9 @@ function CandidateListModal({ filter, leaderboard, onClose, onNavigate, onDecisi
         <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <div>
             <h2 className="font-extrabold text-slate-900 text-xl tracking-tight">{title}</h2>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1">{filtered.length} session{filtered.length !== 1 ? 's' : ''} found</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1">
+              {filtered.length} {title === "Total Candidates" ? 'candidate' : 'session'}{filtered.length !== 1 ? 's' : ''} found
+            </p>
           </div>
           <button onClick={onClose} className="w-10 h-10 rounded-full bg-white hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors font-bold shadow-sm border border-slate-200">✕</button>
         </div>
