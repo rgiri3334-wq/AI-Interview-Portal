@@ -1701,7 +1701,16 @@ async def get_leaderboard(db: Session = Depends(get_db)):
             })
             continue
 
-        for attempt_idx, iv in enumerate(all_interviews, start=1):
+        from collections import Counter
+        role_totals = Counter(iv.role.role_name if iv.role else "" for iv in all_interviews)
+        role_current_counts = {}
+
+        for iv in all_interviews:
+            role_name = iv.role.role_name if iv.role else ""
+            role_current_counts[role_name] = role_current_counts.get(role_name, 0) + 1
+            attempt_idx = role_current_counts[role_name]
+            total_attempts = role_totals[role_name]
+
             report = getattr(iv, "report", None)
 
             # Determine termination reason from report hiring_decision or status
@@ -1719,7 +1728,7 @@ async def get_leaderboard(db: Session = Depends(get_db)):
             except Exception:
                 ts_str = iv.started_at[:16] if iv.started_at else "Unknown"
 
-            attempt_label = f"Attempt #{attempt_idx}" if len(all_interviews) > 1 else "Interview"
+            attempt_label = f"Attempt #{attempt_idx}" if total_attempts > 1 else "Interview"
 
             is_completed = bool(iv.completed_at or iv.overall_score > 0 or hiring_decision == "PROCTORING_ACT")
 
