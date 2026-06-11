@@ -67,11 +67,22 @@ function DecisionDropdown({ candidate, onUpdate }) {
     );
   }
 
+  // If no interview exists yet, they can't have a hiring decision
+  if (!candidate.interview_id) {
+    return (
+      <div className="flex flex-col gap-2 opacity-50 cursor-not-allowed">
+        <span className="px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border shadow-sm bg-slate-100 text-slate-500 border-slate-200 w-fit">
+          ⏳ PENDING
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <select
         value={currentDecision}
-        onChange={(e) => onUpdate(candidate.id, e.target.value)}
+        onChange={(e) => onUpdate(candidate.interview_id, e.target.value)}
         className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border shadow-sm outline-none transition-colors cursor-pointer appearance-none ${
           DECISION_STYLE[currentDecision]?.bg || DECISION_STYLE.PENDING.bg
         } ${DECISION_STYLE[currentDecision]?.color || DECISION_STYLE.PENDING.color} ${
@@ -317,11 +328,11 @@ function CandidateListModal({ filter, leaderboard, onClose, onNavigate, onDecisi
   if (!filter) return null;
 
   let filtered = leaderboard;
-  let title = "Total Candidates";
+  let title = "All Interview Sessions";
   
   if (filter === 'INTERVIEWED') {
     filtered = leaderboard.filter(c => c.interview_status === 'completed' || c.global_score > 0);
-    title = "Interviews Done";
+    title = "Completed Interviews";
   } else if (filter === 'PENDING') {
     filtered = leaderboard.filter(c => c.interview_status === 'completed' && (!c.hiring_decision || c.hiring_decision === 'PENDING' || c.hiring_decision === 'UNDER_REVIEW'));
     title = "Pending Review";
@@ -344,7 +355,7 @@ function CandidateListModal({ filter, leaderboard, onClose, onNavigate, onDecisi
         <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <div>
             <h2 className="font-extrabold text-slate-900 text-xl tracking-tight">{title}</h2>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1">{filtered.length} candidate{filtered.length !== 1 ? 's' : ''} found</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1">{filtered.length} session{filtered.length !== 1 ? 's' : ''} found</p>
           </div>
           <button onClick={onClose} className="w-10 h-10 rounded-full bg-white hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors font-bold shadow-sm border border-slate-200">✕</button>
         </div>
@@ -440,11 +451,11 @@ export default function Dashboard() {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleDecisionChange = async (candidateId, newDecision) => {
+  const handleDecisionChange = async (interviewId, newDecision) => {
     try {
-      await apiClient.updateHiringDecision(candidateId, newDecision);
+      await apiClient.updateHiringDecision(interviewId, newDecision);
       setLeaderboard(prev => prev.map(c => 
-        c.id === candidateId ? { ...c, hiring_decision: newDecision } : c
+        c.interview_id === interviewId ? { ...c, hiring_decision: newDecision } : c
       ));
     } catch (err) {
       console.error('Failed to update decision:', err);

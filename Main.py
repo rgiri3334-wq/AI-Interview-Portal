@@ -2356,13 +2356,13 @@ async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Ses
         "hiring_label": hiring.get("label", "Under Review"),
     }
 
-@app.patch("/api/interviews/{candidate_id}/decision", tags=["Data"])
-async def update_hiring_decision(candidate_id: str, req: DecisionUpdateRequest, db: Session = Depends(get_db)):
-    iv = db.query(InterviewSession).filter_by(candidate_id=candidate_id).order_by(InterviewSession.started_at.desc()).first()
+@app.patch("/api/interviews/{interview_id}/decision", tags=["Data"])
+async def update_hiring_decision(interview_id: str, req: DecisionUpdateRequest, db: Session = Depends(get_db)):
+    iv = db.query(InterviewSession).filter_by(interview_id=interview_id).first()
     if not iv:
         raise HTTPException(status_code=404, detail="Interview not found")
         
-    report = db.query(FinalReport).filter_by(interview_id=iv.interview_id).first()
+    report = db.query(FinalReport).filter_by(interview_id=interview_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     
