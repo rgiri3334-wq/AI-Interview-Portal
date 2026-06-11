@@ -1768,7 +1768,17 @@ async def get_leaderboard(db: Session = Depends(get_db)):
         return (-is_proct, r.get("session_started_at", "") or "")
 
     rows.sort(key=lambda r: r.get("session_started_at", "") or "", reverse=True)
-    ranked = rank_candidates(rows)
+
+    # Deduplicate globally by Email + Job Role, keeping only the most recent attempt
+    seen_roles = set()
+    unique_rows = []
+    for r in rows:
+        key = (r.get("email", "").lower(), r.get("job_role", ""))
+        if key not in seen_roles:
+            seen_roles.add(key)
+            unique_rows.append(r)
+
+    ranked = rank_candidates(unique_rows)
     return {"total": len(ranked), "candidates": ranked}
 
 
