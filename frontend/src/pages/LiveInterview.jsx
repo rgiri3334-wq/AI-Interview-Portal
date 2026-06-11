@@ -38,8 +38,8 @@ function useTypewriter(text, speed = 30) {
 export default function LiveInterview() {
   const navigate = useNavigate();
 
-  const candidateId = localStorage.getItem('candidate_id') || 'DEMO-001';
-  const candidateName = localStorage.getItem('candidate_name') || 'Candidate';
+  const candidateId = sessionStorage.getItem('candidateId') || localStorage.getItem('candidate_id') || 'DEMO-001';
+  const candidateName = sessionStorage.getItem('candidateName') || localStorage.getItem('candidate_name') || 'Candidate';
   const jobRole = localStorage.getItem('job_role') || 'Software Engineer';
   const experience = localStorage.getItem('experience') || 'Fresher (0 years)';
   const skills = localStorage.getItem('skills') || '';
