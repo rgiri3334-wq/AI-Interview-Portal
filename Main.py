@@ -1056,12 +1056,15 @@ async def add_admin_questions_bulk(file: UploadFile = File(...), db: Session = D
         
     import csv, io
     reader = csv.DictReader(io.StringIO(text_content))
-    required_cols = {"department", "role", "question", "keywords", "difficulty"}
+    required_cols = {"role", "question", "keywords", "difficulty"}
+    fields = set([f.strip().lower() for f in reader.fieldnames]) if reader.fieldnames else set()
     
-    if not reader.fieldnames or not required_cols.issubset(set([f.strip().lower() for f in reader.fieldnames])):
-        raise HTTPException(status_code=400, detail=f"CSV must contain columns: {', '.join(required_cols)}")
+    has_dept = "dept" in fields or "department" in fields
+    if not reader.fieldnames or not has_dept or not required_cols.issubset(fields):
+        raise HTTPException(status_code=400, detail="CSV must contain columns: dept (or department), role, question, keywords, difficulty")
         
     col_map = {f.strip().lower(): f for f in reader.fieldnames}
+    dept_key = col_map.get("dept") or col_map.get("department")
     
     imported_count = 0
     skipped_count = 0
@@ -1073,7 +1076,7 @@ async def add_admin_questions_bulk(file: UploadFile = File(...), db: Session = D
     
     for idx, row in enumerate(reader, start=1):
         try:
-            dept_name = row[col_map["department"]].strip() or "General"
+            dept_name = row[dept_key].strip() if dept_key else "General"
             role_name = row[col_map["role"]].strip() or "Any"
             question_text = row[col_map["question"]].strip()
             keywords = row[col_map["keywords"]].strip()
