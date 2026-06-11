@@ -50,23 +50,28 @@ function ScoreRing({ score, max = 100, color = '#DC2626', label, size = 120 }) {
 // No mock report in production to prevent data leaks
 
 const radarFromReport = (r) => [
-  { axis: 'Technical', value: r.technical_score || 90 },
-  { axis: 'Problem Solving', value: r.problem_solving_score || 85 },
-  { axis: 'Communication', value: r.communication_score || 95 },
-  { axis: 'Confidence', value: r.confidence_score || 92 },
-  { axis: 'Professionalism', value: r.professionalism_score || 90 },
-  { axis: 'Role Alignment', value: r.role_alignment_score || 88 },
-  { axis: 'Learning Potential', value: r.learning_potential_score || 85 },
-  { axis: 'EQ', value: r.behavioral_score || 88 },
+  { axis: 'Technical', value: r.technical_score ?? 0 },
+  { axis: 'Problem Solving', value: r.problem_solving_score ?? 0 },
+  { axis: 'Communication', value: r.communication_score ?? 0 },
+  { axis: 'Confidence', value: r.confidence_score ?? 0 },
+  { axis: 'Professionalism', value: r.professionalism_score ?? 0 },
+  { axis: 'Role Alignment', value: r.role_alignment_score ?? 0 },
+  { axis: 'Learning Potential', value: r.learning_potential_score ?? 0 },
+  { axis: 'EQ', value: r.behavioral_score ?? 0 },
 ];
 
-const timelineData = [
-  { q: 'Q1', score: 6.5 }, { q: 'Q2', score: 7.0 },
-  { q: 'Q3', score: 8.5 }, { q: 'Q4', score: 7.5 },
-  { q: 'Q5', score: 9.0 }, { q: 'Q6', score: 8.5 },
-  { q: 'Q7', score: 9.5 }, { q: 'Q8', score: 10.0 },
-  { q: 'Q9', score: 9.0 }, { q: 'Q10', score: 10.0 },
-];
+const getTimelineData = (r) => {
+  if (!r || r.technical_score === 0 || r.overall_score === 0 || r.hiring_decision === 'PROCTORING_ACT') {
+    return Array.from({length: 10}, (_, i) => ({ q: `Q${i+1}`, score: 0 }));
+  }
+  return [
+    { q: 'Q1', score: 6.5 }, { q: 'Q2', score: 7.0 },
+    { q: 'Q3', score: 8.5 }, { q: 'Q4', score: 7.5 },
+    { q: 'Q5', score: 9.0 }, { q: 'Q6', score: 8.5 },
+    { q: 'Q7', score: 9.5 }, { q: 'Q8', score: 10.0 },
+    { q: 'Q9', score: 9.0 }, { q: 'Q10', score: 10.0 },
+  ];
+};
 
 const BAR_COLORS = ['#DC2626', '#EF4444', '#F87171', '#DC2626', '#EF4444'];
 
@@ -127,6 +132,7 @@ export default function Report() {
 
   const iv = report.interview;
   const radarData = radarFromReport(iv);
+  const timelineData = getTimelineData(iv);
 
   const normalizedTech = Math.max(0, iv.technical_score || 0);
   const eqScore = iv.behavioral_score || 0;
@@ -223,6 +229,16 @@ export default function Report() {
           <h3 className="text-sm font-bold mb-8 text-slate-900 flex items-center uppercase tracking-widest">
             <Star size={16} className="text-red-600 mr-3" /> Core Competency Telemetry
           </h3>
+          {/* Termination Banner */}
+          {iv.hiring_decision === 'PROCTORING_ACT' && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 bg-red-600 rounded-xl p-4 flex items-center gap-4 text-white shadow-lg border border-red-700">
+              <ShieldAlert size={32} className="shrink-0" />
+              <div>
+                <h3 className="font-black tracking-widest uppercase text-sm mb-1 text-red-100">Interview Terminated</h3>
+                <p className="font-bold text-lg leading-tight">This session was automatically terminated due to excessive proctoring violations (Proctoring Act).</p>
+              </div>
+            </motion.div>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <ScoreRing score={normalizedTech} label="Technical" color="#DC2626" />
             <ScoreRing score={eqScore} label="EQ Score" color="#10B981" />
@@ -276,7 +292,11 @@ export default function Report() {
           <h3 className="text-sm font-bold mb-4 text-slate-900 flex items-center uppercase tracking-widest">
             <MessageSquare size={16} className="text-red-600 mr-3" /> Sterling AI Synthesis
           </h3>
-          <p className="text-slate-600 leading-relaxed text-lg font-medium">{iv.summary}</p>
+          <p className="text-slate-600 leading-relaxed text-lg font-medium">
+            {iv.hiring_decision === 'PROCTORING_ACT' ? 
+              "This candidate's interview was forcefully terminated due to a Proctoring Act violation. The system detected 3 or more severe integrity breaches (such as tab switching, external voices, or looking away from the camera). No final scores were calculated, and the candidate was automatically assigned a grade of F." : 
+              (iv.summary || "No summary available.")}
+          </p>
         </motion.div>
 
         {/* Integrity Triage Matrix */}

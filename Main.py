@@ -1636,17 +1636,38 @@ async def get_leaderboard(db: Session = Depends(get_db)):
     cands = db.query(Candidate).order_by(Candidate.registration_date.desc()).all()
     rows = []
 
+    # Group candidates by email to handle redundancy if they register multiple times
+    from collections import defaultdict
+    candidates_by_email = defaultdict(list)
     for c in cands:
-        resume = db.query(Resume).filter_by(candidate_id=c.candidate_id).order_by(Resume.resume_id.desc()).first()
+        candidates_by_email[c.email.lower()].append(c)
+
+    for email, group in candidates_by_email.items():
+        # Get the most recent candidate record for profile info
+        latest_c = group[0]
+
+        # Combine all interviews across all duplicate records
+        all_interviews = []
+        for c in group:
+            all_interviews.extend(c.interviews)
+        
+        # Sort them chronologically so attempt numbering is correct
+        all_interviews = sorted(all_interviews, key=lambda i: getattr(i, 'started_at', ''))
+
+        # Get the most recent resume across all records
+        resume = None
+        for c in group:
+            res = db.query(Resume).filter_by(candidate_id=c.candidate_id).order_by(Resume.resume_id.desc()).first()
+            if res:
+                resume = res
+                break
+                
         resume_score = getattr(resume, "resume_score", 0) if resume else 0
 
-        # Sort all interviews oldest→newest so attempt numbers are stable
-        all_interviews = sorted(c.interviews, key=lambda i: i.started_at)  # type: ignore
-
         if not all_interviews:
-            # Candidate registered but never started any interview — show one pending row
+            # Candidate registered but never started any interview
             rows.append({
-                "id": c.candidate_id,
+                "id": latest_c.candidate_id,
                 "interview_id": None,
                 "attempt_number": 0,
                 "attempt_label": "No Interview Yet",
@@ -1703,14 +1724,14 @@ async def get_leaderboard(db: Session = Depends(get_db)):
             is_completed = bool(iv.completed_at or iv.overall_score > 0 or hiring_decision == "PROCTORING_ACT")
 
             d = {
-                "id": c.candidate_id,
+                "id": latest_c.candidate_id,
                 "interview_id": iv.interview_id,
                 "attempt_number": attempt_idx,
                 "attempt_label": attempt_label,
                 "session_timestamp": ts_str,
                 "session_started_at": iv.started_at,
-                "name": c.name,
-                "email": c.email,
+                "name": latest_c.name,
+                "email": latest_c.email,
                 "job_role": iv.role.role_name if iv.role else "",
                 "experience": resume.experience_years if resume else "",
                 "resume_score": resume_score,
@@ -1736,7 +1757,7 @@ async def get_leaderboard(db: Session = Depends(get_db)):
                     "signal_log": json.loads(getattr(report, "integrity_signals", "[]") or "[]") if report else []
                 },
                 "termination_reason": termination_reason,
-                "created_at": c.registration_date,
+                "created_at": latest_c.registration_date,
             }
 
             rows.append(d)
