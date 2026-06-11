@@ -539,9 +539,69 @@ export default function Report() {
             {/* Footer */}
             <div style={{ borderTop: '2px solid #E2E8F0', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>STERLING E-MOBILITY • CANDIDATE ASSESSMENT REPORT</span>
-               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#94A3B8' }}>PAGE 2 OF 2</span>
+               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#94A3B8' }}>PAGE 2</span>
             </div>
           </div>
+
+          {/* PAGE 3: TRANSCRIPT */}
+          {iv.transcript && iv.transcript.length > 0 && (
+            <div 
+              style={{
+                width: '100%', 
+                maxWidth: '850px', 
+                minHeight: '1100px', 
+                background: '#ffffff',
+                boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)',
+                margin: '0 auto', 
+                padding: '50px 60px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '30px',
+                boxSizing: 'border-box'
+              }}
+            >
+               {/* Header Page 3 */}
+               <div style={{ borderBottom: '2px solid #0F172A', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                 <div>
+                    <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.5px' }}>Interview Transcript</h1>
+                    <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>{c.name} • {c.job_role}</p>
+                 </div>
+               </div>
+
+               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {iv.transcript.map((t, idx) => {
+                     let highlightedText = t.answer || "";
+                     const allKeywords = [
+                        ...(t.positive_keywords || []).map(k => ({ word: k, type: 'positive' })),
+                        ...(t.negative_keywords || []).map(k => ({ word: k, type: 'negative' }))
+                     ].sort((a, b) => b.word.length - a.word.length);
+
+                     allKeywords.forEach(({ word, type }) => {
+                        if (!word || !word.trim()) return;
+                        // Escape regex characters
+                        const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(`\\b(${safeWord})\\b`, 'gi');
+                        const bg = type === 'positive' ? '#dcfce7' : '#fee2e2';
+                        const col = type === 'positive' ? '#166534' : '#991b1b';
+                        highlightedText = highlightedText.replace(regex, `<mark style="background-color: ${bg}; color: ${col}; padding: 0 4px; border-radius: 4px; font-weight: 600;">$1</mark>`);
+                     });
+
+                     return (
+                        <div key={idx} style={{ padding: '20px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                           <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: '900', color: '#0F172A' }}>Q{idx + 1}: {t.question}</h4>
+                           <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: '#334155' }} dangerouslySetInnerHTML={{ __html: highlightedText }} />
+                        </div>
+                     );
+                  })}
+               </div>
+
+               {/* Footer Page 3 */}
+               <div style={{ borderTop: '2px solid #E2E8F0', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>STERLING E-MOBILITY • CANDIDATE ASSESSMENT REPORT</span>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#94A3B8' }}>PAGE 3</span>
+               </div>
+            </div>
+          )}
 
         </div>
       </div>

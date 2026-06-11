@@ -78,6 +78,8 @@ def safe_parse_assessment_response(text: str) -> dict:
             "final_verdict":        str(data.get("final_verdict") or "Evaluation complete."),
             "next_technical_question": str(data.get("next_technical_question") or ""),
             "answer_quality":       str(data.get("answer_quality") or "average").lower(),
+            "positive_keywords":    list(data.get("positive_keywords") or []),
+            "negative_keywords":    list(data.get("negative_keywords") or []),
         }
     logger.warning("JSON parse failed for assessment response. Using safe defaults.")
     return {
@@ -90,4 +92,5 @@ def safe_parse_assessment_response(text: str) -> dict:
         "repeated_words": [], "follow_up_question": "",
         "next_topic": "", "final_verdict": "Evaluation pending.",
         "next_technical_question": "", "answer_quality": "weak",
+        "positive_keywords": [], "negative_keywords": []
     }

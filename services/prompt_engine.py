@@ -394,7 +394,9 @@ Return ONLY this exact JSON (no explanation, no markdown):
   "repeated_words_detected": {fillers_json_str},
   "follow_up_question": "<Optional: deeper follow-up on THIS specific answer if weak/average>",
   "next_technical_question": "<Optional: next main interview question OR the repeated question if action is 'repeat'>",
-  "answer_quality": "<strong|average|weak|none>"
+  "answer_quality": "<strong|average|weak|none>",
+  "positive_keywords": ["<correct technical term used by candidate>"],
+  "negative_keywords": ["<factually incorrect term or red flag used>"]
 }}
 """.strip()
 

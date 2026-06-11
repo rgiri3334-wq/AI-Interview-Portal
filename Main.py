@@ -2230,7 +2230,7 @@ async def assess_candidate(data: AssessRequest, db: Session = Depends(get_db)):
 
     # ── Sprint 4: Persist telemetry to PostgreSQL ──
     try:
-        from database.models import ConversationHistory, QuestionEvaluation, CandidateAnswer
+        from database.models import ConversationHistory, QuestionEvaluation, CandidateAnswer, KeywordEvaluation
         from database.db_utils import generate_enterprise_id
         
         iv = db.query(InterviewSession).filter_by(candidate_id=data.candidate_id).order_by(InterviewSession.started_at.desc()).first()
@@ -2267,6 +2267,14 @@ async def assess_candidate(data: AssessRequest, db: Session = Depends(get_db)):
                 behavior_score=float(result.get("behavioral_score", 60)),
                 confidence_score=float(result.get("confidence_score", 60)),
                 feedback=result.get("eq_feedback") or result.get("feedback") or ""
+            ))
+            # Log Keyword Evaluation
+            db.add(KeywordEvaluation(
+                keyword_eval_id=generate_enterprise_id(db, "EVALK"),
+                candidate_id=data.candidate_id,
+                interview_id=iv.interview_id,
+                matched_keywords=json.dumps(result.get("positive_keywords", [])),
+                missing_keywords=json.dumps(result.get("negative_keywords", []))
             ))
             db.commit()
     except Exception as db_e:
@@ -2471,6 +2479,32 @@ def _build_interview_dict(iv_session, report):
     except Exception:
         session_ts = iv_session.started_at[:16] if iv_session.started_at else "Unknown"
 
+    # Build transcript
+    transcript = []
+    convos = sorted(iv_session.conversation, key=lambda c: c.timestamp) if hasattr(iv_session, "conversation") else []
+    # Using autoincrement sequence ID or insert order assumption for keyword evals
+    key_evals = list(iv_session.keyword_evals) if hasattr(iv_session, "keyword_evals") else []
+    
+    questions = [c.message for c in convos if c.speaker == "AI"]
+    answers = [c.message for c in convos if c.speaker == "Candidate"]
+    
+    for i in range(len(questions)):
+        positive_kws = []
+        negative_kws = []
+        if i < len(key_evals):
+            try:
+                positive_kws = json.loads(key_evals[i].matched_keywords or "[]")
+                negative_kws = json.loads(key_evals[i].missing_keywords or "[]")
+            except:
+                pass
+        
+        transcript.append({
+            "question": questions[i],
+            "answer": answers[i] if i < len(answers) else "",
+            "positive_keywords": positive_kws,
+            "negative_keywords": negative_kws
+        })
+
     return {
         "interview_id": iv_session.interview_id,
         "session_timestamp": session_ts,
@@ -2508,6 +2542,7 @@ def _build_interview_dict(iv_session, report):
         "authenticity_score": float(getattr(report, "authenticity_score", 100) if report else 100),
         "environment_score": float(getattr(report, "environment_score", 100) if report else 100),
         "grade": getattr(report, "grade", "F" if is_proctoring_terminated else "N/A") if report else ("F" if is_proctoring_terminated else "N/A"),
+        "transcript": transcript,
     }
 
 @app.get("/api/reports/{candidate_id}", tags=["Data"])
