@@ -564,10 +564,9 @@ export default function Dashboard() {
               <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-700 text-white rounded-2xl flex items-center justify-center shadow-[0_8px_30px_rgb(220,38,38,0.3)]">
                 <Brain size={32} />
               </div>
-              <div>
-                <h1 className="text-4xl font-black text-slate-900 tracking-tight">AI Recruiter <span className="text-red-600">CRM</span></h1>
-                <p className="text-slate-500 mt-1 font-bold text-sm uppercase tracking-widest">{leaderboard.length} Candidates Tracked</p>
-              </div>
+                <div>
+                  <h1 className="text-4xl font-black text-slate-900 tracking-tight">AI Recruiter <span className="text-red-600">CRM</span></h1>
+                </div>
             </div>
             <div className="flex gap-3">
               <button className="px-5 py-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold flex items-center gap-2 transition-colors text-slate-700 shadow-sm" onClick={load}>
