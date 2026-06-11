@@ -38,11 +38,11 @@ function useTypewriter(text, speed = 30) {
 export default function LiveInterview() {
   const navigate = useNavigate();
 
-  const candidateId = sessionStorage.getItem('candidateId') || localStorage.getItem('candidate_id') || 'DEMO-001';
-  const candidateName = sessionStorage.getItem('candidateName') || localStorage.getItem('candidate_name') || 'Candidate';
-  const jobRole = localStorage.getItem('job_role') || 'Software Engineer';
-  const experience = localStorage.getItem('experience') || 'Fresher (0 years)';
-  const skills = localStorage.getItem('skills') || '';
+  const candidateId = sessionStorage.getItem('candidateId') || 'DEMO-001';
+  const candidateName = sessionStorage.getItem('candidateName') || 'Candidate';
+  const jobRole = sessionStorage.getItem('job_role') || 'Software Engineer';
+  const experience = sessionStorage.getItem('experience') || 'Fresher (0 years)';
+  const skills = sessionStorage.getItem('skills') || '';
 
   // Sprint 2: 'preflight' is the initial gate phase.
   // Flow: preflight → ready → initializing → interviewing → ending

@@ -2,9 +2,9 @@
 =============================================================================
 AI Virtual Interview Platform — Enterprise Backend v4.0
 =============================================================================
-Author:       Aditya Singh (Principal Architect)
-Architecture: FastAPI + Sterling AI 2.0 Flash + SQLite + WebSockets
-AI Layer:     services/sterling ai_service.py (context-aware, adaptive, memory-backed)
+Architecture: FastAPI + Sterling AI 2.0 Flash + Supabase PostgreSQL + WebSockets
+AI Layer:     services/gemini_service.py (context-aware, adaptive, memory-backed)
+Database:     Supabase PostgreSQL (21 tables) via SQLAlchemy ORM
 =============================================================================
 """
 
@@ -860,7 +860,7 @@ async def verify_candidate_otp(
         db.commit()
         raise HTTPException(
             status_code=410,
-            detail=f"This OTP has expired. exp={otp_record.expires_at}, now={now_iso}, e_dt={expires_dt}, n_dt={now_dt}"
+            detail="This OTP has expired. Please request a new verification code."
         )
 
     # ── Brute-force guard: max 5 attempts ────────────────────────────────
@@ -2245,26 +2245,26 @@ async def assess_candidate(data: AssessRequest, db: Session = Depends(get_db)):
 
     # ── Sprint 4: Persist telemetry to PostgreSQL ──
     try:
-        from database.models import ConversationHistory, QuestionEvaluation, CandidateAnswer, KeywordEvaluation
+        from database.models import ConversationHistory, QuestionEvaluation, CandidateAnswer, KeywordEvaluation, UnifiedInterviewData, InterviewQuestionsLog
         from database.db_utils import generate_enterprise_id
         
         iv = db.query(InterviewSession).filter_by(candidate_id=data.candidate_id).order_by(InterviewSession.started_at.desc()).first()
         if iv:
-            # Log AI Question
+            # ── 1. Log AI Question to ConversationHistory ──
             db.add(ConversationHistory(
                 conversation_id=generate_enterprise_id(db, "CONV"),
                 interview_id=iv.interview_id,
                 speaker="AI",
                 message=data.current_question
             ))
-            # Log Candidate Answer
+            # ── 2. Log Candidate Answer to ConversationHistory ──
             db.add(ConversationHistory(
                 conversation_id=generate_enterprise_id(db, "CONV"),
                 interview_id=iv.interview_id,
                 speaker="Candidate",
                 message=combined_answer
             ))
-            # Log CandidateAnswer
+            # ── 3. Log CandidateAnswer ──
             db.add(CandidateAnswer(
                 answer_id=generate_enterprise_id(db, "ANS"),
                 candidate_id=data.candidate_id,
@@ -2272,7 +2272,7 @@ async def assess_candidate(data: AssessRequest, db: Session = Depends(get_db)):
                 candidate_answer=combined_answer,
                 response_duration_seconds=float(data.wpm)
             ))
-            # Log Evaluation
+            # ── 4. Log Per-Question Evaluation ──
             db.add(QuestionEvaluation(
                 evaluation_id=generate_enterprise_id(db, "EVALQ"),
                 candidate_id=data.candidate_id,
@@ -2283,14 +2283,50 @@ async def assess_candidate(data: AssessRequest, db: Session = Depends(get_db)):
                 confidence_score=float(result.get("confidence_score", 60)),
                 feedback=result.get("eq_feedback") or result.get("feedback") or ""
             ))
-            # Log Keyword Evaluation
+            # ── 5. Log Keyword Evaluation (with expected keywords) ──
+            expected_kws = result.get("positive_keywords", []) + result.get("negative_keywords", [])
+            matched_kws  = result.get("positive_keywords", [])
+            missing_kws  = result.get("negative_keywords", [])
+            kw_match_pct = (len(matched_kws) / max(len(expected_kws), 1)) * 100
             db.add(KeywordEvaluation(
                 keyword_eval_id=generate_enterprise_id(db, "EVALK"),
                 candidate_id=data.candidate_id,
                 interview_id=iv.interview_id,
-                matched_keywords=json.dumps(result.get("positive_keywords", [])),
-                missing_keywords=json.dumps(result.get("negative_keywords", []))
+                expected_keywords=json.dumps(expected_kws),
+                matched_keywords=json.dumps(matched_kws),
+                missing_keywords=json.dumps(missing_kws),
+                keyword_match_percentage=round(kw_match_pct, 1)
             ))
+            # ── 6. Log to UnifiedInterviewData (single-row audit log per Q&A) ──
+            db.add(UnifiedInterviewData(
+                unified_id=generate_enterprise_id(db, "ANSLOG"),
+                candidate_id=data.candidate_id,
+                interview_id=iv.interview_id,
+                question_text=data.current_question,
+                expected_keywords=json.dumps(expected_kws),
+                matched_keywords=json.dumps(matched_kws),
+                missing_keywords=json.dumps(missing_kws),
+                answer_score=float(result.get("technical_score", 0)),
+                answer_feedback=result.get("eq_feedback") or result.get("feedback") or ""
+            ))
+            # ── 7. Log to InterviewQuestionsLog (tracks question sequence) ──
+            # Count existing questions for sequence numbering
+            existing_q_count = db.query(InterviewQuestionsLog).filter_by(
+                interview_id=iv.interview_id
+            ).count()
+            # Try to find matching question in question bank
+            matched_q = db.query(QuestionBank).filter(
+                QuestionBank.role_id == iv.role_id,
+                QuestionBank.question_text == data.current_question
+            ).first()
+            if matched_q:
+                db.add(InterviewQuestionsLog(
+                    asked_question_id=generate_enterprise_id(db, "ASK"),
+                    interview_id=iv.interview_id,
+                    question_id=matched_q.question_id,
+                    question_text=data.current_question,
+                    sequence_number=existing_q_count + 1
+                ))
             db.commit()
     except Exception as db_e:
         logger.error(f"Failed to persist assessment data to database: {db_e}")

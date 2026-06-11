@@ -534,7 +534,7 @@ export default function AdminPanel() {
   };
 
   const handleViewDossier = (id) => {
-    localStorage.setItem('candidate_id', id);
+    sessionStorage.setItem('candidate_id', id);
     navigate('/report');
   };
 

@@ -21,13 +21,14 @@ def send_otp_email(to_email: str, code: str, purpose: str, candidate_name: str =
         logger.warning("No Email Credentials configured. Skipping email send.")
         return False
 
-    subject = f"{code} is your Spark-Hire OTP"
+    subject = f"{code} is your Sterling E-Mobility OTP"
     
     html_content = f"""
     <html>
       <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px; color: #0f172a;">
-        <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
-          <h2 style="color: #ef4444; margin-bottom: 20px; font-weight: 800; font-size: 24px; text-align: center;">Spark-<span style="color: #0f172a;">Hire</span></h2>
+        <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; border-top: 4px solid #dc2626;">
+          <h2 style="color: #dc2626; margin-bottom: 5px; font-weight: 900; font-size: 22px; text-align: center; letter-spacing: 1px;">STERLING</h2>
+          <p style="text-align: center; color: #64748b; font-size: 12px; font-weight: bold; margin: 0 0 20px 0; letter-spacing: 2px; text-transform: uppercase;">E-MOBILITY</p>
           <p style="font-size: 16px;">Hello {candidate_name},</p>
           <p style="font-size: 16px; color: #475569;">Your one-time password for <strong>{purpose}</strong> is:</p>
           <div style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1e293b; background: #f1f5f9; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0;">
@@ -35,7 +36,7 @@ def send_otp_email(to_email: str, code: str, purpose: str, candidate_name: str =
           </div>
           <p style="font-size: 14px; color: #64748b; text-align: center;">This code will expire in 10 minutes. Do not share it with anyone.</p>
           <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
-          <p style="font-size: 12px; color: #94a3b8; text-align: center;">Spark-Hire AI Interview Engine &copy; Sterling E-Mobility</p>
+          <p style="font-size: 12px; color: #94a3b8; text-align: center;">Sterling AI Interview Engine &copy; Sterling E-Mobility</p>
         </div>
       </body>
     </html>
@@ -52,7 +53,7 @@ def send_otp_email(to_email: str, code: str, purpose: str, candidate_name: str =
                 "content-type": "application/json"
             }
             data = {
-                "sender": {"name": "Spark-Hire OTP", "email": SMTP_USER},
+                "sender": {"name": "Sterling E-Mobility OTP", "email": SMTP_USER},
                 "to": [{"email": to_email}],
                 "subject": subject,
                 "htmlContent": html_content
@@ -69,7 +70,7 @@ def send_otp_email(to_email: str, code: str, purpose: str, candidate_name: str =
     # Only works on paid Render tiers or local machines
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = f"Spark-Hire OTP <{SMTP_USER}>"
+    msg["From"] = f"Sterling E-Mobility OTP <{SMTP_USER}>"
     msg["To"] = to_email
 
     msg.attach(MIMEText(html_content, "html"))

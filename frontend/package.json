@@ -3,8 +3,7 @@
   "private": true,
   "version": "3.0.0",
   "type": "module",
-  "author": "Aditya Singh",
-  "description": "Frontend for AI Virtual Interview Platform - Spark-Hire AI Theme",
+  "description": "Sterling E-Mobility — AI Interview Portal (Enterprise)",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

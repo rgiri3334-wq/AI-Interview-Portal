@@ -437,7 +437,7 @@ export default function CandidateRegister() {
                   <input
                     type="text" required value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Aditya Singh"
+                    placeholder="John Doe"
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EF4444]/50 focus:border-[#EF4444] transition-all sm:text-sm font-medium text-slate-900"
                   />
                 </div>

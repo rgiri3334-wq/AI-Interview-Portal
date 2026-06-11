@@ -38,7 +38,7 @@ export default function CandidateDetails() {
   const [companyStructure, setCompanyStructure] = useState(DEFAULT_STRUCTURE);
   const [fieldErrors, setFieldErrors] = useState({});
 
-  const candidateName = sessionStorage.getItem('candidateName') || localStorage.getItem('candidate_name') || 'Candidate';
+  const candidateName = sessionStorage.getItem('candidateName') || 'Candidate';
   const role = sessionStorage.getItem('role') || 'candidate'; // default to candidate if unsure
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function CandidateDetails() {
     setError('');
     
     try {
-      const cid = sessionStorage.getItem('candidateId') || localStorage.getItem('candidate_id');
+      const cid = sessionStorage.getItem('candidateId');
       if (!cid) {
         throw new Error('Authentication lost. Please login again.');
       }
@@ -92,7 +92,10 @@ export default function CandidateDetails() {
         skills: form.skills || ''
       });
       
-      localStorage.setItem('job_role', form.job_role);
+      sessionStorage.setItem('job_role', form.job_role);
+      sessionStorage.setItem('experience', form.experience || 'Fresher (0 years)');
+      sessionStorage.setItem('skills', form.skills || '');
+      sessionStorage.setItem('interview_id', appResult.interview_id);
 
       if (resumeFile) {
         setResumeLoading(true);

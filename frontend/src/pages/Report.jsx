@@ -387,6 +387,91 @@ export default function Report() {
           </motion.div>
         </div>
 
+        {/* ═══════════════════════════════════════════════════════════════
+            LIVE TRANSCRIPT: Questions & Answers with Keyword Highlights
+        ══════════════════════════════════════════════════════════════════ */}
+        {iv.transcript && iv.transcript.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            className="bg-white border border-slate-200 rounded-2xl p-8 mb-8 shadow-sm border-t-4 border-t-indigo-600"
+          >
+            <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest">
+              <Search size={16} className="text-indigo-600 mr-3" /> Interview Transcript
+              <span className="ml-auto flex gap-3 text-xs font-medium normal-case tracking-normal">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-green-200 border border-green-400 inline-block" />
+                  Matched Keyword
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-red-200 border border-red-400 inline-block" />
+                  Missing Keyword
+                </span>
+              </span>
+            </h3>
+
+            <div className="space-y-6">
+              {iv.transcript.map((t, idx) => {
+                // Build highlighted HTML for the candidate's answer
+                let highlightedAnswer = t.answer || '(No answer recorded)';
+                const allKeywords = [
+                  ...(t.positive_keywords || []).map(k => ({ word: k, type: 'positive' })),
+                  ...(t.negative_keywords || []).map(k => ({ word: k, type: 'negative' })),
+                ].sort((a, b) => b.word.length - a.word.length);
+
+                allKeywords.forEach(({ word, type }) => {
+                  if (!word?.trim()) return;
+                  const safe = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                  const regex = new RegExp(`\\b(${safe})\\b`, 'gi');
+                  const bg  = type === 'positive' ? '#dcfce7' : '#fee2e2';
+                  const col = type === 'positive' ? '#166534' : '#991b1b';
+                  const bdr = type === 'positive' ? '#86efac' : '#fca5a5';
+                  highlightedAnswer = highlightedAnswer.replace(
+                    regex,
+                    `<mark style="background:${bg};color:${col};border:1px solid ${bdr};padding:1px 5px;border-radius:4px;font-weight:700;">$1</mark>`
+                  );
+                });
+
+                return (
+                  <div key={idx} className="rounded-xl border border-slate-200 overflow-hidden">
+                    {/* Question header */}
+                    <div className="bg-slate-800 text-white px-6 py-4 flex items-start gap-3">
+                      <span className="w-7 h-7 rounded-full bg-red-600 text-white text-xs font-black flex items-center justify-center shrink-0 mt-0.5">
+                        Q{idx + 1}
+                      </span>
+                      <p className="text-sm font-bold leading-relaxed">{t.question}</p>
+                    </div>
+                    {/* Answer body */}
+                    <div className="bg-slate-50 px-6 py-4">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Candidate's Answer</p>
+                      <p
+                        className="text-sm text-slate-700 leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: highlightedAnswer }}
+                      />
+                      {/* Keyword summary chips */}
+                      {(t.positive_keywords?.length > 0 || t.negative_keywords?.length > 0) && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {(t.positive_keywords || []).map((kw, ki) => (
+                            <span key={`pos-${ki}`} className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-bold">
+                              ✓ {kw}
+                            </span>
+                          ))}
+                          {(t.negative_keywords || []).map((kw, ki) => (
+                            <span key={`neg-${ki}`} className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 rounded-full text-xs font-bold">
+                              ✗ {kw}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
       
         {/* HIDDEN PDF TEMPLATE - ONLY VISIBLE TO HTML2CANVAS */}
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
