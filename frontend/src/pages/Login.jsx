@@ -93,7 +93,7 @@ export default function Login() {
               transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
             >
               <div className="relative flex flex-col items-center">
-                <div className="bg-white p-6 rounded-3xl shadow-2xl flex items-center justify-center">
+                <div className="bg-black p-6 rounded-3xl shadow-2xl flex items-center justify-center">
                   <img 
                     src={logoUrl} 
                     alt="Sterling Logo" 
