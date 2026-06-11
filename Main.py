@@ -1119,18 +1119,33 @@ async def add_admin_questions_bulk(file: UploadFile = File(...), db: Session = D
                 db.commit()
                 db.refresh(role)
                 
-            qid = generate_enterprise_id(db, "Q")
-            new_q = QuestionBank(
-                question_id=qid,
+            # Check if question already exists for this role
+            existing_q = db.query(QuestionBank).filter_by(
                 department_id=dept.department_id,
                 role_id=role.role_id,
-                question_text=question_text,
-                keywords=keywords,
-                difficulty=difficulty
-            )
-            db.add(new_q)
-            db.commit()
-            imported_count += 1
+                question_text=question_text
+            ).first()
+
+            if existing_q:
+                # Update existing question with new keywords and difficulty
+                existing_q.keywords = keywords
+                existing_q.difficulty = difficulty
+                db.commit()
+                # Treat as imported since it was successfully processed
+                imported_count += 1
+            else:
+                qid = generate_enterprise_id(db, "Q")
+                new_q = QuestionBank(
+                    question_id=qid,
+                    department_id=dept.department_id,
+                    role_id=role.role_id,
+                    question_text=question_text,
+                    keywords=keywords,
+                    difficulty=difficulty
+                )
+                db.add(new_q)
+                db.commit()
+                imported_count += 1
             
             if dept_name not in new_structure_map:
                 new_structure_map[dept_name] = set()
