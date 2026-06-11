@@ -790,9 +790,6 @@ export default function Dashboard() {
                                   </div>
                                 </div>
                               </td>
-                                  </div>
-                                </div>
-                              </td>
                               <td className="py-5 px-4">
                                 <span className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-widest">{c.job_role}</span>
                               </td>
