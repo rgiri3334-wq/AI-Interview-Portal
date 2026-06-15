@@ -262,7 +262,7 @@ export default function Report() {
                     <h3 className="text-sm font-bold w-full text-left mb-4 text-slate-900 uppercase tracking-widest">Neural Radar</h3>
                     <div className="w-full h-[250px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart data={radarData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                        <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
                           <PolarGrid stroke="#E2E8F0" />
                           <PolarAngleAxis dataKey="axis" tick={{ fill: '#64748B', fontSize: 10, fontWeight: 'bold' }} />
                           <Radar name="Candidate" dataKey="value" stroke="#DC2626" fill="#DC2626" fillOpacity={0.2} strokeWidth={2} />
