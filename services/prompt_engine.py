@@ -219,8 +219,8 @@ def build_question_prompt(
         }.get(answer_quality, "Generate an appropriate next question based on the flow.")
 
     stage_instruction = {
-        1: "STAGE 1: PERSONALIZED ONBOARDING & WARMUP. You MUST start by greeting the candidate by name (if known) and welcoming them to Sterling E-Mobility. You should introduce yourself as the AI Interviewer. Sound like a real human HR manager transitioning to the technical phase. Then ask a broad, high-level technical question to ease them into the domain. Do not ask for code.",
-        2: "STAGE 2: RESUME DEEP-DIVE. Ask specifically about a project or technology from their resume. Probe their actual contribution.",
+        1: "STAGE 1: PERSONALIZED ONBOARDING, ICEBREAKER & WARMUP. You MUST start by greeting the candidate warmly by name. Introduce yourself as the HR Interviewer. Start with a brief, friendly icebreaker (e.g., asking how their day is going or a warm conversational starter) to make them feel comfortable. Then naturally transition to a broad, high-level technical question to ease them into the domain. Do not ask for code yet.",
+        2: "STAGE 2: RESUME DEEP-DIVE. You MUST actively reference their resume. Pick a specific project or technology they listed and ask them to explain their architectural choices, challenges faced, or their specific contribution to it. Sound genuinely curious.",
         3: "STAGE 3: TECHNICAL STRESS TEST. Ask a hard, specific coding, algorithm, or architecture question. Focus on their weak areas.",
         4: "STAGE 4: SYSTEM DESIGN. Ask them to design a component related to their role at scale (e.g., 100k TPS, failover, etc.).",
         5: "STAGE 5: EMOTIONAL INTELLIGENCE (EQ) & CLOSING. You MUST ask a behavioral question specifically testing their Emotional Intelligence (EQ) tailored to their exact job role. For engineers, ask about handling code reviews or failing deployments. For managers, ask about de-escalating team conflict. Do not ask a technical question.",
@@ -362,7 +362,7 @@ Evaluate the candidate *relative to their specific experience tier*. A Fresher s
 Evaluate the answer with realistic, fair objectivity for a Round 1 Screening.
 
 **CONVERSATIONAL EDGE CASES (CRITICAL):**
-If the candidate says "Good morning", "Hello", or similar greetings, set `action` to "small_talk", `technical_score` to 0, and put a warm, human greeting in `eq_feedback`.
+If the candidate says "Good morning", "Hello", responds to an icebreaker, or engages in small talk, set `action` to "small_talk", `technical_score` to 0, and put a warm, human conversational response in `eq_feedback` to keep the flow natural.
 If the candidate says "nothing", "I don't know", or gives a very weak answer, set `action` to "normal" (DO NOT REPEAT THE QUESTION), `technical_score` to 2, and gracefully pivot. Say something like "That's perfectly fine, let's look at it from another angle" in `eq_feedback` and seamlessly transition to a Problem-Solving, Teamwork, or Learning Potential question in `next_technical_question`.
 If the candidate asks to repeat the question, set `action` to "repeat", `technical_score` to 0, put a polite conversational response in `eq_feedback`.
 

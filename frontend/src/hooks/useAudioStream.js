@@ -123,10 +123,29 @@ export function useAudioStream() {
     stopFrequencyAnalysis();
   }, [stopFrequencyAnalysis]);
 
+  // ── playActiveListeningCue ──────────────────────────────────────────────
+  const playActiveListeningCue = useCallback(() => {
+    // SPRINT 3: Active listening psychological touches
+    const cues = ["Mhmm.", "I see.", "Right.", "Okay."];
+    const cue = cues[Math.floor(Math.random() * cues.length)];
+    const utterance = new SpeechSynthesisUtterance(cue);
+    const voice = getPreferredVoice();
+    if (voice) utterance.voice = voice;
+    utterance.volume = 0.3; // Quiet backchanneling
+    utterance.rate = 0.9;
+    
+    // Note: We deliberately do NOT set isSpeaking(true) here
+    // so it doesn't trigger the UI "AI Speaking" mode or interrupt VAD.
+    window.speechSynthesis.speak(utterance);
+  }, [getPreferredVoice]);
+
   // ── speak ───────────────────────────────────────────────────────────────
-  const speak = useCallback((text) => {
+  const speak = useCallback((text, options = {}) => {
     return new Promise((resolve) => {
       if (!text?.trim()) return resolve();
+
+      // [TODO: SPRINT 4] Swap window.speechSynthesis with ElevenLabs/OpenAI TTS API here
+      // For now, we enhance the native TTS with varied pacing logic.
 
       // GUARD: Prevent double-fire if called twice with the same text
       // This fixes the duplicate speech bug caused by render cycle double-invocations
@@ -149,7 +168,16 @@ export function useAudioStream() {
       const voice = getPreferredVoice();
       if (voice) utterance.voice = voice;
 
-      utterance.rate  = 0.98;  // Slightly slower = warmer, more human
+      // Varied pacing based on options (Psychological Touch)
+      const pacing = options.pacing || 'normal';
+      if (pacing === 'slow') {
+        utterance.rate = 0.85; // Slower for complex technical questions
+      } else if (pacing === 'fast') {
+        utterance.rate = 1.05; // Faster for casual small talk
+      } else {
+        utterance.rate  = 0.95;  // Slightly slower = warmer, more human
+      }
+      
       utterance.pitch = 1.05;  // Slightly higher = professional female tone
       utterance.volume = 1.0;
 
@@ -203,5 +231,5 @@ export function useAudioStream() {
 
   const enqueue = useCallback((text) => speak(text), [speak]);
 
-  return { speak, enqueue, stop, isSpeaking, isReady: true, getAudioFrequency };
+  return { speak, enqueue, stop, isSpeaking, isReady: true, getAudioFrequency, playActiveListeningCue };
 }

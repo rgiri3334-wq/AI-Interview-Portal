@@ -1128,8 +1128,8 @@ async def add_admin_questions_bulk(file: UploadFile = File(...), db: Session = D
 
             if existing_q:
                 # Update existing question with new keywords and difficulty
-                existing_q.keywords = keywords
-                existing_q.difficulty = difficulty
+                existing_q.keywords = keywords  # type: ignore
+                existing_q.difficulty = difficulty  # type: ignore
                 db.commit()
                 # Treat as imported since it was successfully processed
                 imported_count += 1

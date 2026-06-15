@@ -155,13 +155,13 @@ export default function AdminPanel() {
     "EV Systems Architect"
   ];
   const [personas, setPersonas] = useState(
-    JSON.parse(localStorage.getItem('personas')) || DEFAULT_PERSONAS
+    JSON.parse(sessionStorage.getItem('personas')) || DEFAULT_PERSONAS
   );
 
   const addPersona = (newPersona) => {
     const updated = [...personas, newPersona];
     setPersonas(updated);
-    localStorage.setItem('personas', JSON.stringify(updated));
+    sessionStorage.setItem('personas', JSON.stringify(updated));
     setRoleConfigs({...roleConfigs, persona: newPersona});
   };
 
@@ -169,7 +169,7 @@ export default function AdminPanel() {
     if (personas.length <= 1) return showToast("Cannot delete the last persona", "error");
     const updated = personas.filter(x => x !== p);
     setPersonas(updated);
-    localStorage.setItem('personas', JSON.stringify(updated));
+    sessionStorage.setItem('personas', JSON.stringify(updated));
     if (roleConfigs.persona === p) {
       setRoleConfigs({...roleConfigs, persona: updated[0]});
     }
