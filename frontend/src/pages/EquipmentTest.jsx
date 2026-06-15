@@ -16,22 +16,37 @@ export default function EquipmentTest() {
     let stream = null;
     let audioContext = null;
     let animationFrameId = null;
+    let isMounted = true;
 
-    const testEquipment = async () => {
-      // 1. Network Test (Simulated quick ping for now)
+    const checkNetwork = async () => {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
         const t0 = performance.now();
-        await fetch('https://httpbin.org/get', { cache: 'no-store' });
+        // Use Google's incredibly fast/reliable 204 endpoint instead of httpbin
+        await fetch('https://www.gstatic.com/generate_204', { 
+          cache: 'no-store',
+          signal: controller.signal,
+          mode: 'no-cors' // Use no-cors to avoid CORS blocking, we just want to know if it reaches
+        });
+        clearTimeout(timeoutId);
+        
         const t1 = performance.now();
-        if (t1 - t0 < 3000) setNetStatus('success');
-        else setNetStatus('error');
+        if (isMounted) {
+          if (t1 - t0 < 4000) setNetStatus('success');
+          else setNetStatus('error');
+        }
       } catch (e) {
-        setNetStatus('error');
+        if (isMounted) setNetStatus('error');
       }
+    };
 
-      // 2. Camera & Mic Test
+    const checkMedia = async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        if (!isMounted) return;
+        
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -47,6 +62,7 @@ export default function EquipmentTest() {
         const dataArray = new Uint8Array(bufferLength);
 
         const checkVolume = () => {
+          if (!isMounted) return;
           analyser.getByteFrequencyData(dataArray);
           let sum = 0;
           for (let i = 0; i < bufferLength; i++) {
@@ -55,7 +71,8 @@ export default function EquipmentTest() {
           const avg = sum / bufferLength;
           setMicVolume(avg);
           
-          if (avg > 10) {
+          // Lowered threshold so normal background noise/light speaking triggers it
+          if (avg > 5) {
             setMicStatus('success');
           }
           animationFrameId = requestAnimationFrame(checkVolume);
@@ -64,14 +81,20 @@ export default function EquipmentTest() {
 
       } catch (err) {
         console.error("Equipment error:", err);
-        setCamStatus('error');
-        setMicStatus('error');
+        if (isMounted) {
+          setCamStatus('error');
+          setMicStatus('error');
+        }
       }
     };
 
-    testEquipment();
+    // Run simultaneously! The previous bug ran them sequentially, 
+    // so if the network test hung, the camera never even tried to turn on!
+    checkNetwork();
+    checkMedia();
 
     return () => {
+      isMounted = false;
       if (stream) stream.getTracks().forEach(track => track.stop());
       if (audioContext) audioContext.close();
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
