@@ -224,7 +224,7 @@ export default function Report() {
           <AnimatePresence mode="wait">
             
             {/* 1. OVERVIEW TAB */}
-            {activeTab === 'overview' && (
+            {(isExporting || activeTab === 'overview') && (
               <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 {/* Identity Banner */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-8 shadow-sm flex items-center justify-between">
@@ -313,7 +313,7 @@ export default function Report() {
             )}
 
             {/* 2. IDENTITY & SECURITY TAB */}
-            {activeTab === 'kyc' && (
+            {(isExporting || activeTab === 'kyc') && (
               <motion.div key="kyc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 {iv.hiring_decision === 'PROCTORING_ACT' && (
                   <div className="mb-8 bg-red-600 rounded-xl p-4 flex items-center gap-4 text-white shadow-lg border border-red-700">
@@ -443,7 +443,7 @@ export default function Report() {
             )}
 
             {/* 3. RESUME INTELLIGENCE TAB */}
-            {activeTab === 'resume' && (
+            {(isExporting || activeTab === 'resume') && (
               <motion.div key="resume" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 {!resume ? (
                   <div className="bg-white border border-slate-200 rounded-2xl p-12 shadow-sm text-center">
@@ -526,7 +526,7 @@ export default function Report() {
             )}
 
             {/* 4. INTERVIEW TRANSCRIPT TAB */}
-            {activeTab === 'transcript' && (
+            {(isExporting || activeTab === 'transcript') && (
               <motion.div key="transcript" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm mb-8">
                   <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest">
@@ -599,7 +599,7 @@ export default function Report() {
             )}
 
             {/* 5. AUDIT TRAIL TAB */}
-            {activeTab === 'audit' && (
+            {(isExporting || activeTab === 'audit') && (
               <motion.div key="audit" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm min-h-[60vh]">
                   <h3 className="text-sm font-bold mb-8 text-slate-900 flex items-center uppercase tracking-widest border-b pb-4">
