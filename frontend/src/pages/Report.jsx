@@ -151,7 +151,7 @@ export default function Report() {
         // Reset scroll position to prevent html2canvas from clipping the top
         window.scrollTo(0, 0);
         
-        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdf = new jsPDF({ format: 'a4', compress: true });
         const pdfWidth = 210;
         const pageHeight = 297;
         
@@ -163,13 +163,14 @@ export default function Report() {
           if (!tabElement) continue;
 
           const canvas = await html2canvas(tabElement, {
-            scale: 2,
+            scale: 1.5, // Reduced from 2 to 1.5 to save huge amounts of space while maintaining excellent quality
             useCORS: true,
             logging: false,
             backgroundColor: '#FFFFFF',
           });
           
-          const imgData = canvas.toDataURL('image/png');
+          // Switch to JPEG format with 0.85 quality compression (Massive space saving over PNG)
+          const imgData = canvas.toDataURL('image/jpeg', 0.85);
           const imgHeight = (canvas.height * pdfWidth) / canvas.width;
           let heightLeft = imgHeight;
           let position = 0;
@@ -179,14 +180,14 @@ export default function Report() {
           }
           isFirstPage = false;
 
-          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+          pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
           heightLeft -= pageHeight;
 
           // If a single tab is exceptionally long (like the transcript), split it across multiple pages
           while (heightLeft > 0) {
             position = heightLeft - imgHeight;
             pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
             heightLeft -= pageHeight;
           }
         }
