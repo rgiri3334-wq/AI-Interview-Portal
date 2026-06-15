@@ -153,6 +153,8 @@ export default function Report() {
           useCORS: true,
           logging: false,
           backgroundColor: '#FFFFFF',
+          windowHeight: exportRef.current.scrollHeight,
+          height: exportRef.current.scrollHeight,
         });
         
         const imgData = canvas.toDataURL('image/png');
@@ -178,9 +180,9 @@ export default function Report() {
   ];
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className={`flex ${isExporting ? 'h-auto overflow-visible' : 'h-screen overflow-hidden'} bg-slate-50`}>
       <Sidebar />
-      <div className="flex-1 flex flex-col h-screen overflow-y-auto" ref={exportRef}>
+      <div className={`flex-1 flex flex-col ${isExporting ? 'h-auto overflow-visible' : 'h-screen overflow-y-auto'}`} ref={exportRef}>
         
         {/* Header Bar */}
         <div className="bg-slate-900 text-white p-6 sticky top-0 z-50 shadow-xl flex justify-between items-center">
