@@ -256,6 +256,28 @@ def _local_score_resume(resume_text: str, job_role: str) -> dict:
     6-Category local resume scoring engine.
     Scores range 0-100, weighted dynamically, never hardcoded.
     """
+    if not resume_text or not resume_text.strip():
+        return {
+            "candidate_name": "",
+            "extracted_skills": [],
+            "missing_skills": [],
+            "extracted_projects": [],
+            "extracted_technologies": [],
+            "experience_years": 0,
+            "education": "No resume provided",
+            "certifications": [],
+            "career_progression": "N/A",
+            "resume_score": 0,
+            "skill_match_percentage": 0,
+            "category_scores": {},
+            "strengths": [],
+            "red_flags": ["No resume provided"],
+            "shortlist_recommendation": "REVIEW",
+            "shortlist_reason": "No resume provided for evaluation.",
+            "interview_focus_areas": ["General technical assessment", "Problem solving approach"],
+            "resume_quality": "N/A",
+        }
+
     text_lower = resume_text.lower()
     matrix = _get_role_matrix(job_role)
 
