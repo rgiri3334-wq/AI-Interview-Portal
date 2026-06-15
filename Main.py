@@ -2806,16 +2806,20 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
     # Fetch Resume
     resumes = sorted(c.resumes, key=lambda r: r.created_at, reverse=True)  # type: ignore
     latest_resume = resumes[0] if resumes else None
-    resume_dict = None
+    def _safe_parse(val, default=[]):
+        if not val: return default
+        try: return json.loads(val)
+        except: return val.split(",") if isinstance(val, str) else default
+
     if latest_resume:
         resume_dict = {
             "resume_id": latest_resume.resume_id,
             "resume_score": latest_resume.resume_score,
             "extracted_text": latest_resume.extracted_text,
-            "skills_detected": json.loads(latest_resume.skills_detected) if latest_resume.skills_detected else [],
+            "skills_detected": _safe_parse(latest_resume.skills_detected),
             "experience_years": latest_resume.experience_years,
-            "education_summary": json.loads(latest_resume.education_summary) if latest_resume.education_summary and latest_resume.education_summary.startswith('[') else latest_resume.education_summary,
-            "projects_summary": json.loads(latest_resume.projects_summary) if latest_resume.projects_summary else [],
+            "education_summary": _safe_parse(latest_resume.education_summary, default=""),
+            "projects_summary": _safe_parse(latest_resume.projects_summary),
             "certifications": latest_resume.certifications,
         }
         
