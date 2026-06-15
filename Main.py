@@ -2880,6 +2880,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
         except:
             return str(val)
 
+    resume_dict = None
     if latest_resume:
         resume_dict = {
             "resume_id": latest_resume.resume_id,
