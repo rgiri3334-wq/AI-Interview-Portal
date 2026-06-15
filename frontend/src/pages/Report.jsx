@@ -145,8 +145,12 @@ export default function Report() {
     if (!exportRef.current) return;
     setIsExporting(true);
     
+    // Give React time to un-hide all tabs, render the Recharts, and layout images
     setTimeout(async () => {
       try {
+        // Reset scroll position to prevent html2canvas from clipping the top
+        window.scrollTo(0, 0);
+        
         const pdf = new jsPDF('p', 'mm', 'a4');
         const canvas = await html2canvas(exportRef.current, {
           scale: 2,
@@ -180,7 +184,7 @@ export default function Report() {
       } finally {
         setIsExporting(false);
       }
-    }, 100);
+    }, 1500); // Increased from 100ms to 1500ms
   };
 
   const tabs = [
