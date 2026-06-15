@@ -73,7 +73,7 @@ class Resume(Base):
     education_summary = Column(Text, nullable=True)
     projects_summary = Column(Text, default="[]")
     certifications = Column(Text, nullable=True)
-    resume_score = Column(Float, default=50.0)  # BUG-04/05 fix: store AI resume score; was missing (code referenced nonexistent ats_score)
+    resume_score = Column(Float, default=0.0)  # BUG-04/05 fix: store AI resume score; was missing (code referenced nonexistent ats_score)
     created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
     candidate = relationship("Candidate", back_populates="resumes")
