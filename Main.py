@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form, BackgroundTasks, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -1071,12 +1072,11 @@ async def verify_kyc(data: KycVerifyRequest, db: Session = Depends(get_db)):
             except Exception as e:
                 logger.error(f"Failed to upload KYC images to Supabase: {e}")
         
-        # Fallback to local mockup if Supabase is missing/fails
-        base_url = os.getenv('SUPABASE_URL', 'https://supabase.co')
+        # Fallback to local API serving if Supabase is missing/fails
         if not aadhar_url:
-            aadhar_url = f"{base_url}/storage/v1/object/public/kyc-images/aadhar_{data.candidate_id}.jpg"
+            aadhar_url = f"http://localhost:8000/api/recordings/aadhar_{data.candidate_id}.jpg"
         if not selfie_url:
-            selfie_url = f"{base_url}/storage/v1/object/public/kyc-images/selfie_{data.candidate_id}.jpg"
+            selfie_url = f"http://localhost:8000/api/recordings/selfie_{data.candidate_id}.jpg"
 
         cand.aadhar_image_url = aadhar_url # type: ignore
         cand.selfie_url = selfie_url # type: ignore
@@ -2689,6 +2689,8 @@ async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Ses
     integrity_band = score_band(integrity_score)
     if hasattr(iv, 'proctoring_warnings'):
         iv.proctoring_warnings = req.proctoring_warnings  # type: ignore
+    if hasattr(iv, 'proctoring_logs'):
+        iv.proctoring_logs = json.dumps(req.proctoring_logs) if req.proctoring_logs else "[]"  # type: ignore
     logger.info(
         f"[Integrity] Candidate={req.candidate_id} | "
         f"IntegrityScore={integrity_score} | Band={integrity_band} | "
@@ -2750,14 +2752,20 @@ def _build_interview_dict(iv_session, report):
 
     # Build transcript
     transcript = []
-    convos = sorted(iv_session.conversation, key=lambda c: c.timestamp) if hasattr(iv_session, "conversation") else []
-    # Using autoincrement sequence ID or insert order assumption for keyword evals
-    key_evals = list(iv_session.keyword_evals) if hasattr(iv_session, "keyword_evals") else []
+    try:
+        convos = sorted(iv_session.conversation, key=lambda c: c.timestamp) if iv_session.conversation else []
+    except:
+        convos = []
+        
+    try:
+        key_evals = list(iv_session.keyword_evals) if iv_session.keyword_evals else []
+    except:
+        key_evals = []
     
     questions = [c.message for c in convos if c.speaker == "AI"]
     answers = [c.message for c in convos if c.speaker == "Candidate"]
     
-    for i in range(len(questions)):
+    for i in range(max(len(questions), len(answers))):
         positive_kws = []
         negative_kws = []
         if i < len(key_evals):
@@ -2767,12 +2775,17 @@ def _build_interview_dict(iv_session, report):
             except:
                 pass
         
-        transcript.append({
-            "question": questions[i],
-            "answer": answers[i] if i < len(answers) else "",
-            "positive_keywords": positive_kws,
-            "negative_keywords": negative_kws
-        })
+        q_text = questions[i] if i < len(questions) else ""
+        a_text = answers[i] if i < len(answers) else ""
+        
+        # Only add to transcript if there's actually a question or answer
+        if q_text or a_text:
+            transcript.append({
+                "question": q_text,
+                "answer": a_text,
+                "positive_keywords": positive_kws,
+                "negative_keywords": negative_kws
+            })
 
     return {
         "interview_id": iv_session.interview_id,
@@ -2800,7 +2813,7 @@ def _build_interview_dict(iv_session, report):
         "readiness_score": 0,
         "hiring_decision": hiring_decision,
         "proctoring_warnings": getattr(iv_session, "proctoring_warnings", 0) or 0,
-        "proctoring_logs": [],
+        "proctoring_logs": _safe_json_list(getattr(iv_session, "proctoring_logs", "[]")),
         "termination_reason": "PROCTORING_ACT" if is_proctoring_terminated else None,
         "integrity_score": int(getattr(report, "integrity_score", 100) if report else 100),
         "integrity_verdict": getattr(report, "integrity_verdict", "CLEAN") if report else "CLEAN",
@@ -2812,6 +2825,8 @@ def _build_interview_dict(iv_session, report):
         "environment_score": float(getattr(report, "environment_score", 100) if report else 100),
         "grade": getattr(report, "grade", "F" if is_proctoring_terminated else "N/A") if report else ("F" if is_proctoring_terminated else "N/A"),
         "transcript": transcript,
+        "video_clip_url": getattr(iv_session, "video_clip_url", None),
+        "recording_url": getattr(iv_session, "video_clip_url", None),
     }
 
 @app.get("/api/reports/{candidate_id}", tags=["Data"])
@@ -2842,20 +2857,29 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
     # Fetch Resume
     resumes = sorted(c.resumes, key=lambda r: r.created_at, reverse=True)  # type: ignore
     latest_resume = resumes[0] if resumes else None
-    def _safe_parse(val, default=[]):
+    def _safe_parse_list(val, default=[]):
         if not val: return default
         try: return json.loads(val)
-        except: return val.split(",") if isinstance(val, str) else default
+        except: return [s.strip() for s in val.split(",")] if isinstance(val, str) else default
+
+    def _safe_parse_string(val, default=""):
+        if not val: return default
+        try:
+            parsed = json.loads(val)
+            if isinstance(parsed, list): return "\n".join(parsed)
+            return str(parsed)
+        except:
+            return str(val)
 
     if latest_resume:
         resume_dict = {
             "resume_id": latest_resume.resume_id,
             "resume_score": latest_resume.resume_score,
             "extracted_text": latest_resume.extracted_text,
-            "skills_detected": _safe_parse(latest_resume.skills_detected),
+            "skills_detected": _safe_parse_list(latest_resume.skills_detected),
             "experience_years": latest_resume.experience_years,
-            "education_summary": _safe_parse(latest_resume.education_summary, default=""),
-            "projects_summary": _safe_parse(latest_resume.projects_summary),
+            "education_summary": _safe_parse_string(latest_resume.education_summary),
+            "projects_summary": _safe_parse_string(latest_resume.projects_summary),
             "certifications": latest_resume.certifications,
         }
         

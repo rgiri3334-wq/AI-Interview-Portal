@@ -101,6 +101,8 @@ class InterviewSession(Base):
     fluency_score = Column(Float, default=0.0)
     behavioral_score = Column(Float, default=0.0)
     recommendation = Column(String, nullable=True)
+    proctoring_warnings = Column(Integer, default=0)
+    proctoring_logs = Column(Text, default="[]")
 
     candidate = relationship("Candidate", back_populates="interviews")
     role = relationship("JobRole", back_populates="interviews")
