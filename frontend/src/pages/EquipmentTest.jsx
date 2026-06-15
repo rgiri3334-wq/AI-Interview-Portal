@@ -23,7 +23,7 @@ export default function EquipmentTest() {
         const t0 = performance.now();
         await fetch('https://httpbin.org/get', { cache: 'no-store' });
         const t1 = performance.now();
-        if (t1 - t0 < 800) setNetStatus('success');
+        if (t1 - t0 < 3000) setNetStatus('success');
         else setNetStatus('error');
       } catch (e) {
         setNetStatus('error');
@@ -90,17 +90,16 @@ export default function EquipmentTest() {
             <Shield size={16} className="text-red-500" /> System Check
           </div>
           <div className="flex-1 flex items-center justify-center relative rounded-2xl overflow-hidden bg-black mt-12 border border-slate-700">
-            {camStatus === 'success' ? (
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
-                muted 
-                className="w-full h-full object-cover transform scale-x-[-1]"
-              />
-            ) : (
-              <div className="text-slate-500 flex flex-col items-center">
-                <Video size={48} className="mb-4 opacity-50" />
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              playsInline 
+              muted 
+              className={`absolute inset-0 w-full h-full object-cover transform scale-x-[-1] transition-opacity duration-500 ${camStatus === 'success' ? 'opacity-100' : 'opacity-0'}`}
+            />
+            {camStatus !== 'success' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 bg-black">
+                <Video size={48} className="mb-4 opacity-50 animate-pulse" />
                 <p>Waiting for camera access...</p>
               </div>
             )}
