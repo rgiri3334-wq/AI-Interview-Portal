@@ -152,30 +152,43 @@ export default function Report() {
         window.scrollTo(0, 0);
         
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const canvas = await html2canvas(exportRef.current, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#FFFFFF',
-          windowHeight: exportRef.current.scrollHeight,
-          height: exportRef.current.scrollHeight,
-        });
-        
-        const imgData = canvas.toDataURL('image/png');
         const pdfWidth = 210;
         const pageHeight = 297;
-        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 0;
+        
+        const tabIds = ['export-tab-overview', 'export-tab-kyc', 'export-tab-resume', 'export-tab-transcript', 'export-tab-audit'];
+        let isFirstPage = true;
 
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-        heightLeft -= pageHeight;
+        for (const tabId of tabIds) {
+          const tabElement = document.getElementById(tabId);
+          if (!tabElement) continue;
 
-        while (heightLeft > 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
+          const canvas = await html2canvas(tabElement, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#FFFFFF',
+          });
+          
+          const imgData = canvas.toDataURL('image/png');
+          const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+          let heightLeft = imgHeight;
+          let position = 0;
+
+          if (!isFirstPage) {
+            pdf.addPage();
+          }
+          isFirstPage = false;
+
           pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
           heightLeft -= pageHeight;
+
+          // If a single tab is exceptionally long (like the transcript), split it across multiple pages
+          while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+            heightLeft -= pageHeight;
+          }
         }
         
         pdf.save(`Sterling_Dossier_${c.name.replace(/\s+/g, '_')}.pdf`);
@@ -184,7 +197,7 @@ export default function Report() {
       } finally {
         setIsExporting(false);
       }
-    }, 1500); // Increased from 100ms to 1500ms
+    }, 1500);
   };
 
   const tabs = [
@@ -243,7 +256,7 @@ export default function Report() {
             
             {/* 1. OVERVIEW TAB */}
             {(isExporting || activeTab === 'overview') && (
-              <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <motion.div key="overview" id="export-tab-overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 {/* Identity Banner */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-8 shadow-sm flex items-center justify-between">
                   <div className="flex items-center gap-6">
@@ -332,7 +345,7 @@ export default function Report() {
 
             {/* 2. IDENTITY & SECURITY TAB */}
             {(isExporting || activeTab === 'kyc') && (
-              <motion.div key="kyc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <motion.div key="kyc" id="export-tab-kyc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 {iv.hiring_decision === 'PROCTORING_ACT' && (
                   <div className="mb-8 bg-red-600 rounded-xl p-4 flex items-center gap-4 text-white shadow-lg border border-red-700">
                     <ShieldAlert size={32} className="shrink-0" />
@@ -462,7 +475,7 @@ export default function Report() {
 
             {/* 3. RESUME INTELLIGENCE TAB */}
             {(isExporting || activeTab === 'resume') && (
-              <motion.div key="resume" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <motion.div key="resume" id="export-tab-resume" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 {!resume ? (
                   <div className="bg-white border border-slate-200 rounded-2xl p-12 shadow-sm text-center">
                     <FileText size={48} className="text-slate-300 mx-auto mb-4" />
@@ -545,7 +558,7 @@ export default function Report() {
 
             {/* 4. INTERVIEW TRANSCRIPT TAB */}
             {(isExporting || activeTab === 'transcript') && (
-              <motion.div key="transcript" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <motion.div key="transcript" id="export-tab-transcript" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm mb-8">
                   <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest">
                     <TrendingUp size={16} className="text-red-600 mr-3" /> Technical Accuracy Trajectory
@@ -618,7 +631,7 @@ export default function Report() {
 
             {/* 5. AUDIT TRAIL TAB */}
             {(isExporting || activeTab === 'audit') && (
-              <motion.div key="audit" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <motion.div key="audit" id="export-tab-audit" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm min-h-[60vh]">
                   <h3 className="text-sm font-bold mb-8 text-slate-900 flex items-center uppercase tracking-widest border-b pb-4">
                     <Clock size={16} className="text-red-600 mr-3" /> System Audit Timeline

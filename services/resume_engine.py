@@ -416,14 +416,25 @@ def _local_score_resume(resume_text: str, job_role: str) -> dict:
 
     resume_quality = "Excellent" if quality_score >= 80 else "Good" if quality_score >= 60 else "Average" if quality_score >= 40 else "Poor"
 
+    # Basic extraction for fallback
+    edu_text = "Education details parsed locally."
+    edu_match = re.search(r'(?i)\b(?:education|academic background|academics)\b\s*[\:\-]?\s*(.*?)(?=\b(?:experience|skills|projects|summary|objective|certifications)\b|$)', resume_text, re.DOTALL)
+    if edu_match and len(edu_match.group(1).strip()) > 10:
+        edu_text = edu_match.group(1).strip()[:200].replace('\n', ' ')
+
+    proj_text = ["Projects parsed locally."]
+    proj_match = re.search(r'(?i)\b(?:projects|portfolio|personal projects)\b\s*[\:\-]?\s*(.*?)(?=\b(?:experience|education|skills|summary|objective|certifications)\b|$)', resume_text, re.DOTALL)
+    if proj_match and len(proj_match.group(1).strip()) > 10:
+        proj_text = [proj_match.group(1).strip()[:300].replace('\n', ' ')]
+
     return {
         "candidate_name": "",
         "extracted_skills": matched_skills[:15] if matched_skills else ["General Skills"],
         "missing_skills": missing_skills[:10],
-        "extracted_projects": ["Projects analyzed via Sterling Resume Intelligence Engine"],
+        "extracted_projects": proj_text,
         "extracted_technologies": matched_skills,
         "experience_years": exp_years,
-        "education": "Education parsed from resume",
+        "education": edu_text,
         "certifications": [],
         "career_progression": "Analyzed by local engine",
         "resume_score": final_score,
