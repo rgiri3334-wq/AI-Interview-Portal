@@ -24,6 +24,7 @@ class InterviewSession:
     conversation_history: list[dict] = field(default_factory=list)  # [{question, answer, score, answer_quality, wpm}]
     weak_areas:    list[str]   = field(default_factory=list)
     strong_areas:  list[str]   = field(default_factory=list)
+    key_insights:  list[str]   = field(default_factory=list)
     last_answer_quality: str   = "average"  # strong | average | weak
     question_index: int        = 0
     current_stage: int         = 1          # 1: Warmup, 2: Resume, 3: Tech, 4: Design, 5: HR
@@ -53,7 +54,8 @@ class InterviewSession:
 
     def add_exchange(self, question: str, answer: str, score: int,
                      answer_quality: str, weaknesses: list[str], strengths: list[str],
-                     communication: int, confidence: int, wpm: float = 130.0):
+                     communication: int, confidence: int, wpm: float = 130.0,
+                     insight: str | None = None):
         if question not in self.asked_questions:
             self.asked_questions.append(question)
         self.conversation_history.append({
@@ -94,6 +96,8 @@ class InterviewSession:
         for s in strengths:
             if s and s not in self.strong_areas:
                 self.strong_areas.append(s)
+        if insight and insight not in self.key_insights:
+            self.key_insights.append(insight)
 
     @property
     def avg_technical(self) -> float:

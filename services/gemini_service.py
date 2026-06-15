@@ -158,10 +158,11 @@ async def generate_smart_question(
             interview_stage=session.current_stage,
             difficulty_index=session.difficulty_index,
             assertive_mode=session.assertive_mode,
-            personality=persona,
-            company_context=company_context,
+            personality=str(persona),
+            company_context=str(company_context),
             resume_context=session.resume_context or {},
             candidate_name=candidate_name,
+            key_insights=session.key_insights,
         )
 
         fallback_q = get_fallback_question(job_role, session.asked_questions)
@@ -184,7 +185,7 @@ async def generate_smart_question(
     q_str = result["question"].lower()
     is_dupe = any(q_str in asked.lower() or asked.lower() in q_str for asked in session.asked_questions)
     if not is_dupe:
-        session.asked_questions.append(result["question"])
+        session.asked_questions.append(str(result["question"]))
     return result
 
 
@@ -212,9 +213,10 @@ async def assess_answer(
         emotion=emotion,
         filler_words=filler_words,
         conversation_history=session.conversation_history,
-        admin_expected_keywords=admin_keywords,
-        next_admin_question=admin_next_q,
+        admin_expected_keywords=str(admin_keywords) if admin_keywords else "",
+        next_admin_question=str(admin_next_q) if admin_next_q else "",
         consecutive_failures=session.consecutive_failures,
+        key_insights=session.key_insights,
     )
 
     try:
@@ -226,6 +228,8 @@ async def assess_answer(
         result = safe_parse_assessment_response(json.dumps(parsed_data))
         if "action" in parsed_data:
             result["action"] = parsed_data["action"]
+        if "key_insight_extracted" in parsed_data:
+            result["key_insight_extracted"] = parsed_data["key_insight_extracted"]
     except Exception as e:
         logger.error(f"Assessment failed: {e}. Using fallback.")
         result = safe_parse_assessment_response("")  # guaranteed safe defaults
@@ -300,6 +304,7 @@ async def assess_answer(
         communication=result.get("communication_score", 60),
         confidence=result.get("confidence_score", 60),
         wpm=wpm,
+        insight=result.get("key_insight_extracted")
     )
 
     # Fill next question from follow-up logic if empty

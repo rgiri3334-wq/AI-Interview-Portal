@@ -177,6 +177,7 @@ def build_question_prompt(
     resume_context: dict | None = None,
     candidate_name: str = "Candidate",
     company_context: str = "",
+    key_insights: list[str] | None = None,
 ) -> str:
     domains = get_role_domains(job_role)
     tier_info = get_experience_tier(experience)
@@ -214,8 +215,8 @@ def build_question_prompt(
     else:
         difficulty_instruction = {
             "strong": "The candidate answered strongly. Increase difficulty. Ask advanced architecture or design tradeoffs.",
-            "average": "The candidate gave an average answer. Ask a follow-up that probes deeper understanding.",
-            "weak": "The candidate gave a weak or shallow answer. Drill into fundamental concepts for this topic.",
+            "average": "The candidate gave an average answer. Ask a follow-up that probes deeper understanding using the Active Listener Framework.",
+            "weak": "The candidate gave a weak or shallow answer. Drill into fundamental concepts for this topic conversationally.",
         }.get(answer_quality, "Generate an appropriate next question based on the flow.")
 
     stage_instruction = {
@@ -241,9 +242,14 @@ def build_question_prompt(
         # Prevent token overflow by taking only first 500 chars
         company_instruction = f"**Current Company Context (CRITICAL):**\n{company_context[:500]}\n*You MUST weave this recent company news into your next question if appropriate, asking how their skills apply to this development.*"
 
+    memory_instruction = ""
+    if key_insights:
+        memory_instruction = f"**Long-Term Memory Callbacks (CRITICAL):**\nThe candidate previously shared these key insights:\n" + "\n".join([f"- {k}" for k in key_insights]) + "\n*If relevant, occasionally use one of these insights to tie your next question to something they said earlier (e.g., '15 minutes ago you mentioned X, how does that relate to...'). This proves you are listening deeply.*"
+
     return f"""
 {personality_instruction}
 {company_instruction}
+{memory_instruction}
 
 You are interviewing **{candidate_name}** ({experience} candidate) for the role of: **{job_role}**
 Their listed skills: {skills or "Not specified"}
@@ -276,6 +282,7 @@ Core technical domains for this role: {domain_str}
 **Your task:**
 Generate ONE highly relevant, intelligent, role-specific interview question.
 Ensure the overall interview feels like a balanced Round 1 Screening: ~40% Resume-based, ~30% Role-based, ~20% Behavioral, ~10% Problem Solving.
+You MUST write the question using conversational, human-like language (Burstiness & Hedging). Avoid robotic phrasing entirely.
 
 Return ONLY this exact JSON (no explanation, no markdown):
 {{
@@ -299,6 +306,7 @@ def build_assessment_prompt(
     admin_expected_keywords: str = "",
     next_admin_question: str = "",
     consecutive_failures: int = 0,
+    key_insights: list[str] | None = None,
 ) -> str:
     tier_info = get_experience_tier(experience)
     tier_name = tier_info["tier_name"]
@@ -323,22 +331,24 @@ You are a senior AI evaluator assessing a {experience} candidate for **{job_role
 **Prior interview questions for context:**
 {history_str}
 
+**Long-Term Memory Callbacks:**
+The candidate previously shared these key insights: {', '.join(key_insights) if key_insights else "None yet."}
+If you generate `next_technical_question`, occasionally tie it back to one of these insights.
+Additionally, you MUST extract a 1-sentence summary into `key_insight_extracted` if they mentioned a unique technical detail, architecture choice, or specific tool in this answer. Otherwise, leave it null.
+
 **Admin-Defined Expected Keywords & Concepts:**
 {admin_expected_keywords if admin_expected_keywords else "Evaluate based on general technical accuracy."}
 
-**Semantic Matching Rule (CRITICAL) - 5-Layer Evaluation:**
-You MUST evaluate using semantic understanding rather than exact keyword matching. Use these layers:
-- Layer 1 (Exact Match): Award full credit.
-- Layer 2 (Synonym Match): Accept "Collaboration" for "Teamwork".
-- Layer 3 (Concept Match): Accept "Improved query performance" for "Database Optimization".
-- Layer 4 (Practical Match): Accept "Managed a team of interns" for "Leadership".
-- Layer 5 (Intent Match): Did they answer the core question?
-If a human HR manager would consider the intent met, AWARD THE SCORE. Do NOT penalize wording.
+**Semantic Matching Rule (CRITICAL) - Deep Semantic Intent Parsing:**
+You MUST evaluate using semantic understanding rather than exact keyword matching. 
+- Transcribed speech is messy. If the candidate stutters, uses broken grammar, or struggles to find the exact word BUT describes the concept accurately (e.g., describing "Database Indexing" as "making a lookup table so the query doesn't scan every row"), you MUST recognize the semantic intent and award full points.
+- Look past the raw text to the underlying engineering intent. Do NOT penalize wording if the intent is correct.
 
-**Empathy & Emotional Response System:**
-- If Emotion = Confused: Rephrase the question kindly in `eq_feedback`.
-- If Emotion = Nervous or Anxious: Reduce pressure, say something highly encouraging in `eq_feedback` like "Take your time, you're doing great."
-- If Emotion = Frustrated: Validate their frustration ("I understand that can be tricky") and pivot to an easier topic in `next_technical_question`.
+**Empathy & Emotional Response System (The Active Listener Framework):**
+- Use conversational connective tissue in `eq_feedback`. Acknowledge what they said by briefly referencing it (e.g., "Using Redis is a solid call, but...").
+- **ANTI-SLOP RULE (CRITICAL):** You are FORBIDDEN from using robotic phrases. Do NOT use: "Let's look at it from another angle," "Moving on," "That's perfectly fine," "Certainly!", "Great question!", "I understand," "Leverage," "Utilize," "Delve."
+- **Burstiness & Hedging:** Humans speak with varied rhythms. Mix short, punchy sentences with longer ones. Use natural hedging sparingly (e.g., "perhaps," "I guess," "you know," "um") to sound like a real person thinking on their feet.
+- Emotion Handling: If Emotion = Frustrated, validate it ("Yeah, that part can be tricky") and pivot effortlessly in `next_technical_question`.
 
 **Evaluation Criteria (for {tier_name}) - REALISTIC HUMAN EXPECTATIONS:**
 Evaluate the candidate *relative to their specific experience tier*. A Fresher scoring 80/100 should be treated as equally impressive as an Expert scoring 80/100 relative to their level. Do NOT penalize a Fresher or Junior candidate for lacking Senior/Architect-level knowledge unless it was explicitly mandated.
@@ -363,7 +373,7 @@ Evaluate the answer with realistic, fair objectivity for a Round 1 Screening.
 
 **CONVERSATIONAL EDGE CASES (CRITICAL):**
 If the candidate says "Good morning", "Hello", responds to an icebreaker, or engages in small talk, set `action` to "small_talk", `technical_score` to 0, and put a warm, human conversational response in `eq_feedback` to keep the flow natural.
-If the candidate says "nothing", "I don't know", or gives a very weak answer, set `action` to "normal" (DO NOT REPEAT THE QUESTION), `technical_score` to 2, and gracefully pivot. Say something like "That's perfectly fine, let's look at it from another angle" in `eq_feedback` and seamlessly transition to a Problem-Solving, Teamwork, or Learning Potential question in `next_technical_question`.
+If the candidate says "nothing", "I don't know", or gives a very weak answer, set `action` to "normal" (DO NOT REPEAT THE QUESTION), `technical_score` to 2, and gracefully pivot without sounding robotic. Say something natural like "Yeah, that's a pretty niche edge case anyway. Let's talk about..." in `eq_feedback` and seamlessly transition to a broader or different question in `next_technical_question`.
 If the candidate asks to repeat the question, set `action` to "repeat", `technical_score` to 0, put a polite conversational response in `eq_feedback`.
 
 CRITICAL RULE 1: `eq_feedback` is your SPOKEN VOICE. It MUST sound like an empathetic HR Manager. Use their detected emotion ({emotion}) to guide your tone. Do not sound robotic.
@@ -394,6 +404,7 @@ Return ONLY this exact JSON (no explanation, no markdown):
   "repeated_words_detected": {fillers_json_str},
   "follow_up_question": "<Optional: deeper follow-up on THIS specific answer if weak/average>",
   "next_technical_question": "<Optional: next main interview question OR the repeated question if action is 'repeat'>",
+  "key_insight_extracted": "<1-sentence summary of a unique point the candidate just made, or null>",
   "answer_quality": "<strong|average|weak|none>",
   "positive_keywords": ["<correct technical term used by candidate>"],
   "negative_keywords": ["<factually incorrect term or red flag used>"]

@@ -22,3 +22,4 @@ pytesseract
 thefuzz
 python-Levenshtein
 moviepy
+edge-tts
