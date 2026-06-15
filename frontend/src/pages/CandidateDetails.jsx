@@ -113,7 +113,7 @@ export default function CandidateDetails() {
 
       setSuccess(true);
       if (!resumeFile) {
-        setTimeout(() => navigate('/interview'), 1200);
+        setTimeout(() => navigate('/equipment-test'), 1200);
       }
     } catch (err) {
       setError(err.message || 'Failed to submit application.');
@@ -251,9 +251,9 @@ export default function CandidateDetails() {
                       ))}
                     </div>
                     <p className="text-sm text-slate-600 font-medium leading-relaxed">{resumeResult.shortlist_reason}</p>
-                    <motion.button type="button" onClick={() => navigate('/interview')}
+                    <motion.button type="button" onClick={() => navigate('/equipment-test')}
                       className="mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-md">
-                      Proceed to AI Interview <ArrowRight size={16} />
+                      Proceed to Pre-Flight Checks <ArrowRight size={16} />
                     </motion.button>
                   </motion.div>
                 )}

@@ -14,6 +14,7 @@ import { useAudioStream } from '../hooks/useAudioStream';
 import { useHumanBehavior } from '../hooks/useHumanBehavior';
 import { useCodeWorkspace, SUPPORTED_LANGUAGES } from '../hooks/useCodeWorkspace';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
+import { useVideoRecorder } from '../hooks/useVideoRecorder';
 import { useVAD } from '../hooks/useVAD';
 import { useIntegrityEngine } from '../hooks/useIntegrityEngine'; // Sprint 3
 
@@ -131,6 +132,7 @@ export default function LiveInterview() {
   useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   const { isRecording, startRecording, stopRecording, forceStopAllTracks } = useAudioRecorder();
+  const { startVideoRecording, stopAndUploadVideo } = useVideoRecorder();
 
   useEffect(() => {
     return () => {
@@ -435,6 +437,9 @@ export default function LiveInterview() {
         console.debug('[State] Transition: Initializing -> Interviewing');
         setPhase('interviewing');
         setQuestion(greeting);
+        setOverlayMsg('');
+        await startVideoRecording(); // START CONTINUOUS RECORDING
+        await startNextQuestion();
         questionStartTimeRef.current = Date.now();
         await speak(greeting);
       } catch {
@@ -686,7 +691,11 @@ export default function LiveInterview() {
   const doEndInterview = async (h, terminationReason = null) => {
     setPhase('ending');
     stopHuman();
-    // Do not call stopVoice() here so the final goodbye message can play.
+    
+    const interviewId = sessionStorage.getItem('interview_id');
+    if (interviewId) {
+      await stopAndUploadVideo(interviewId); // STOP RECORDING AND UPLOAD
+    }
 
     const avgScore = (key) => h.length ? Math.round(h.reduce((s, x) => s + (x[key] || 0), 0) / h.length) : 0;
 
@@ -729,8 +738,7 @@ export default function LiveInterview() {
         totalAnswers: h.length,
       });
       const integrityReport = computeIntegrityFinal();
-
-      await apiClient.saveInterview({
+      const payload = {
         candidate_id: candidateId,
         technical_score: avgScore('score'),
         eq_score: avgScore('eqScore'),
@@ -758,7 +766,8 @@ export default function LiveInterview() {
         eye_tracking_score: integrityReport.eye_tracking_score,
         authenticity_score: integrityReport.authenticity_score,
         environment_score: integrityReport.environment_score,
-      });
+      };
+      await apiClient.saveInterview(payload);
     } catch (e) {
       console.error('Failed to save final interview scores', e);
     }

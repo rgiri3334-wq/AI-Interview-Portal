@@ -13,6 +13,9 @@ import CandidateLogin from './pages/CandidateLogin';
 import SystemHealth from './pages/SystemHealth';
 import AdminManagement from './pages/AdminManagement';
 import CandidateLanding from './pages/CandidateLanding';
+import EquipmentTest from './pages/EquipmentTest';
+import KycGuidelines from './pages/KycGuidelines';
+import KycCapture from './pages/KycCapture';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -68,6 +71,12 @@ export default function App() {
           <Route path="/candidate-home" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateLanding /></ProtectedRoute>} />
           <Route path="/home" element={<ProtectedRoute allowedRoles={['admin']}><Landing /></ProtectedRoute>} />
           <Route path="/candidate" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateDetails /></ProtectedRoute>} />
+          
+          {/* ── KYC Pre-Flight Pipeline ── */}
+          <Route path="/equipment-test" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><EquipmentTest /></ProtectedRoute>} />
+          <Route path="/kyc-guidelines" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><KycGuidelines /></ProtectedRoute>} />
+          <Route path="/kyc-capture" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><KycCapture /></ProtectedRoute>} />
+          
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><Dashboard /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><LiveInterview /></ProtectedRoute>} />
           <Route path="/report" element={<ProtectedRoute allowedRoles={['admin']}><ReportList /></ProtectedRoute>} />

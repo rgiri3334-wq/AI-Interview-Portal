@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Star, Brain, Smile, Volume2, MessageSquare, Search,
-  TrendingUp, TrendingDown, Download, RotateCcw, Award, CheckCircle, AlertCircle, ShieldAlert
+  TrendingUp, TrendingDown, Download, RotateCcw, RefreshCcw, Award, CheckCircle, AlertCircle, ShieldAlert,
+  FileText, Clock, Camera, Fingerprint, ChevronRight, Check
 } from 'lucide-react';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
@@ -47,16 +48,14 @@ function ScoreRing({ score, max = 100, color = '#DC2626', label, size = 120 }) {
   );
 }
 
-// No mock report in production to prevent data leaks
-
 const radarFromReport = (r) => [
   { axis: 'Technical', value: r.technical_score ?? 0 },
   { axis: 'Problem Solving', value: r.problem_solving_score ?? 0 },
   { axis: 'Communication', value: r.communication_score ?? 0 },
   { axis: 'Confidence', value: r.confidence_score ?? 0 },
-  { axis: 'Professionalism', value: r.professionalism_score ?? 0 },
+  { axis: 'Professional', value: r.professionalism_score ?? 0 },
   { axis: 'Role Alignment', value: r.role_alignment_score ?? 0 },
-  { axis: 'Learning Potential', value: r.learning_potential_score ?? 0 },
+  { axis: 'Learning', value: r.learning_potential_score ?? 0 },
   { axis: 'EQ', value: r.behavioral_score ?? 0 },
 ];
 
@@ -73,17 +72,15 @@ const getTimelineData = (r) => {
   ];
 };
 
-const BAR_COLORS = ['#DC2626', '#EF4444', '#F87171', '#DC2626', '#EF4444'];
-
 export default function Report() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const page1Ref = useRef(null);
-  const page2Ref = useRef(null);
+  const [activeTab, setActiveTab] = useState('overview');
   const [isExporting, setIsExporting] = useState(false);
+  const exportRef = useRef(null);
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -102,35 +99,36 @@ export default function Report() {
     fetchReport();
   }, [id]);
 
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <div className="flex-1 flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-slate-500 font-bold tracking-wide uppercase">Compiling AI Analytics...</p>
-          </div>
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-500 font-bold tracking-wide uppercase">Compiling AI Analytics...</p>
         </div>
-      );
-    }
+      </div>
+    );
+  }
 
-    if (error || !report) {
-      return (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[60vh]">
-          <AlertCircle size={48} className="text-red-500 mb-4 mx-auto" />
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">Report Unavailable</h2>
-          <p className="text-slate-500 mb-6 max-w-md mx-auto">{error || "Could not load report."}</p>
-          <button onClick={() => navigate('/report')} className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 mx-auto">
-            Return to Reports
-          </button>
-        </div>
-      );
-    }
+  if (error || !report) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-screen bg-slate-50">
+        <AlertCircle size={48} className="text-red-500 mb-4 mx-auto" />
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">Report Unavailable</h2>
+        <p className="text-slate-500 mb-6 max-w-md mx-auto">{error || "Could not load report."}</p>
+        <button onClick={() => navigate('/report')} className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 mx-auto">
+          Return to Reports
+        </button>
+      </div>
+    );
+  }
 
-    const c = report.candidate;
-
-
+  const c = report.candidate;
   const iv = report.interview;
+  const resume = report.resume;
+  const auditLogs = report.audit_logs || [];
+  const transcript = iv.transcript || [];
+
   const radarData = radarFromReport(iv);
   const timelineData = getTimelineData(iv);
 
@@ -144,28 +142,24 @@ export default function Report() {
   const gradeColor = overall >= 80 ? '#10B981' : overall >= 60 ? '#DC2626' : '#991B1B';
 
   const handleExport = async () => {
-    if (!page1Ref.current || !page2Ref.current) return;
+    if (!exportRef.current) return;
     setIsExporting(true);
     
     setTimeout(async () => {
       try {
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = 210;
-        const pdfHeight = 297;
-        const pages = [page1Ref.current, page2Ref.current];
-
-        for (let i = 0; i < pages.length; i++) {
-          if (i > 0) pdf.addPage();
-          const canvas = await html2canvas(pages[i], {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#FFFFFF',
-          });
-          const imgData = canvas.toDataURL('image/png');
-          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        }
+        const canvas = await html2canvas(exportRef.current, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#FFFFFF',
+        });
         
+        const imgData = canvas.toDataURL('image/png');
+        const pdfWidth = 210;
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Sterling_Dossier_${c.name.replace(/\s+/g, '_')}.pdf`);
       } catch (err) {
         console.error("Failed to generate PDF", err);
@@ -175,530 +169,502 @@ export default function Report() {
     }, 100);
   };
 
-  
-    return (
-      <div className="p-8">
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: Star },
+    { id: 'kyc', label: 'Identity & Security', icon: Fingerprint },
+    { id: 'resume', label: 'Resume Intelligence', icon: FileText },
+    { id: 'transcript', label: 'Interview Transcript', icon: MessageSquare },
+    { id: 'audit', label: 'Audit Trail', icon: Clock },
+  ];
 
-
-        {/* Header Section */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-10 flex justify-between items-end">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-200 rounded-full text-red-600 text-xs font-bold tracking-wider uppercase mb-4 shadow-sm">
-              <CheckCircle size={14} /> Evaluation Finalized
-            </div>
-            <h1 className="text-4xl font-extrabold tracking-tight mb-2 text-slate-900">
-              Candidate <span className="text-red-700">Intelligence Report</span>
-            </h1>
-            <p className="text-slate-500 font-medium">Advanced metrics and Sterling AI evaluation for {c.name}</p>
-          </div>
-          <div className="flex gap-4">
-            <button onClick={() => navigate('/report')} className="px-5 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors text-slate-800 shadow-sm">
-              <RotateCcw size={16} /> All Reports
-            </button>
-            <button onClick={handleExport} disabled={isExporting} className={`px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-md uppercase tracking-wider ${isExporting ? 'opacity-70 cursor-not-allowed' : ''}`}>
-              {isExporting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Download size={16} />} 
-              {isExporting ? 'Exporting PDF...' : 'Export Dossier'}
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Identity Banner */}
-        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
-          className="bg-white border border-slate-200 rounded-2xl p-8 mb-8 flex justify-between items-center shadow-sm border-l-4 border-l-red-600">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-2xl font-black text-red-600 shadow-sm">
-              {c.name?.[0] || 'A'}
+  return (
+    <div className="flex h-screen bg-slate-50 overflow-hidden">
+      <Sidebar />
+      <div className="flex-1 flex flex-col h-screen overflow-y-auto" ref={exportRef}>
+        
+        {/* Header Bar */}
+        <div className="bg-slate-900 text-white p-6 sticky top-0 z-50 shadow-xl flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-2">
+              <img src={sterlingLogo} alt="Sterling" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h2 className="text-2xl font-black mb-1 text-slate-900">{c.name}</h2>
-              <p className="text-red-600 font-bold tracking-wide mb-1 uppercase">{c.job_role}</p>
-              <p className="text-sm text-slate-500 font-medium">{c.email} &bull; {c.experience}</p>
+              <h1 className="text-xl font-black uppercase tracking-widest text-white">Sterling Ultimate Dossier</h1>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">{c.name} • {c.job_role || 'Candidate'}</p>
             </div>
           </div>
-          <div className="text-center">
-            <div className="w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-sm bg-white"
-              style={{ borderColor: gradeColor }}>
-              <span className="text-3xl font-black tracking-tighter" style={{ color: gradeColor }}>{grade}</span>
-            </div>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-3">Rank</p>
-          </div>
-        </motion.div>
-
-        {/* Telemetry Rings */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white border border-slate-200 rounded-2xl p-8 mb-8 shadow-sm">
-          <h3 className="text-sm font-bold mb-8 text-slate-900 flex items-center uppercase tracking-widest">
-            <Star size={16} className="text-red-600 mr-3" /> Core Competency Telemetry
-          </h3>
-          {/* Termination Banner */}
-          {iv.hiring_decision === 'PROCTORING_ACT' && (
-            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 bg-red-600 rounded-xl p-4 flex items-center gap-4 text-white shadow-lg border border-red-700">
-              <ShieldAlert size={32} className="shrink-0" />
-              <div>
-                <h3 className="font-black tracking-widest uppercase text-sm mb-1 text-red-100">Interview Terminated</h3>
-                <p className="font-bold text-lg leading-tight">This session was automatically terminated due to excessive proctoring violations (Proctoring Act).</p>
-              </div>
-            </motion.div>
-          )}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <ScoreRing score={normalizedTech} label="Technical" color="#DC2626" />
-            <ScoreRing score={eqScore} label="EQ Score" color="#10B981" />
-            <ScoreRing score={confScore} label="Confidence" color="#DC2626" />
-            <ScoreRing score={commScore} label="Clarity" color="#DC2626" />
-          </div>
-        </motion.div>
-
-        {/* Data Visualizations */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Radar HUD */}
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-            <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest">
-              <Brain size={16} className="text-red-600 mr-3" /> Neural Competency Radar
-            </h3>
-            <ResponsiveContainer width="100%" height={280}>
-              <RadarChart data={radarData}>
-                <PolarGrid stroke="#E2E8F0" />
-                <PolarAngleAxis dataKey="axis" tick={{ fill: '#64748B', fontSize: 12, fontWeight: 600 }} />
-                <Radar dataKey="value" stroke="#DC2626" fill="#DC2626" fillOpacity={0.2} strokeWidth={2} />
-                <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', color: '#0F172A' }} />
-              </RadarChart>
-            </ResponsiveContainer>
-          </motion.div>
-
-          {/* Bar Chart HUD */}
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }} className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-            <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest">
-              <TrendingUp size={16} className="text-red-600 mr-3" /> Technical Accuracy Timeline
-            </h3>
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={timelineData}>
-                <defs>
-                  <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#DC2626" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#DC2626" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="#E2E8F0" vertical={false} strokeDasharray="3 3" />
-                <XAxis dataKey="q" tick={{ fill: '#64748B', fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 10]} tick={{ fill: '#64748B', fontSize: 12 }} axisLine={false} tickLine={false} width={30} />
-                <Tooltip cursor={{ stroke: '#F1F5F9', strokeWidth: 2 }} contentStyle={{ backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', color: '#0F172A', borderRadius: '8px' }} />
-                <Area type="monotone" dataKey="score" stroke="#DC2626" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </motion.div>
+          <button onClick={handleExport} disabled={isExporting} className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-bold uppercase tracking-widest text-xs flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] disabled:opacity-50">
+            {isExporting ? <RotateCcw className="animate-spin" size={16} /> : <Download size={16} />}
+            {isExporting ? 'Compiling...' : 'Export PDF'}
+          </button>
         </div>
 
-        {/* AI Synthesis */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white border border-slate-200 rounded-2xl p-8 mb-8 shadow-sm border-t-4 border-t-red-600">
-          <h3 className="text-sm font-bold mb-4 text-slate-900 flex items-center uppercase tracking-widest">
-            <MessageSquare size={16} className="text-red-600 mr-3" /> Sterling AI Synthesis
-          </h3>
-          <p className="text-slate-600 leading-relaxed text-lg font-medium">
-            {iv.hiring_decision === 'PROCTORING_ACT' ? 
-              "This candidate's interview was forcefully terminated due to a Proctoring Act violation. The system detected 3 or more severe integrity breaches (such as tab switching, external voices, or looking away from the camera). No final scores were calculated, and the candidate was automatically assigned a grade of F." : 
-              (iv.summary || "No summary available.")}
-          </p>
-        </motion.div>
+        {/* Tab Navigation */}
+        <div className="bg-white border-b border-slate-200 sticky top-[96px] z-40 px-8 flex gap-8">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 py-4 border-b-2 transition-colors font-bold text-xs uppercase tracking-widest ${
+                  isActive ? 'border-red-600 text-red-600' : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Icon size={16} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
 
-        {/* Integrity Triage Matrix */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }} className="bg-white border border-slate-200 rounded-2xl p-8 mb-8 shadow-sm border-t-4 border-t-slate-800">
-          <div className="flex justify-between items-start mb-8">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center uppercase tracking-widest">
-              <ShieldAlert size={16} className="text-slate-800 mr-3" /> Integrity Triage Matrix
-            </h3>
-            <div className={`px-4 py-1 rounded-full text-sm font-bold uppercase tracking-wider border
-              ${iv.integrity_verdict === 'CLEAN' ? 'bg-green-50 text-green-700 border-green-200' : 
-                iv.integrity_verdict === 'BORDERLINE' ? 'bg-amber-50 text-amber-700 border-amber-200' : 
-                iv.integrity_verdict === 'FLAGGED' ? 'bg-orange-50 text-orange-700 border-orange-200' : 
-                'bg-red-50 text-red-700 border-red-200'}`}>
-              Verdict: {iv.integrity_verdict || 'CLEAN'} ({iv.integrity_score || 100})
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-8">
-            {[
-              { label: 'Posture (35%)', score: iv.posture_score || 100 },
-              { label: 'Movement (25%)', score: iv.movement_score || 100 },
-              { label: 'Eye Tracking (20%)', score: iv.eye_tracking_score || 100 },
-              { label: 'Authenticity (15%)', score: iv.authenticity_score || 100 },
-              { label: 'Environment (5%)', score: iv.environment_score || 100 },
-            ].map((metric, idx) => (
-              <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col items-center text-center">
-                <span className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">{metric.label}</span>
-                <span className={`text-2xl font-black ${metric.score < 50 ? 'text-red-600' : metric.score < 80 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                  {Math.round(metric.score)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Signal Logs</h4>
-          {iv.integrity_signals && iv.integrity_signals.length > 0 ? (
-            <div className="space-y-3">
-              {iv.integrity_signals.map((log, index) => (
-                <div key={index} className="flex items-start gap-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                  <div className={`w-2 h-2 mt-2 rounded-full shrink-0 ${log.deduction > 0 ? 'bg-red-500' : 'bg-slate-300'}`} />
-                  <div>
-                    <span className="text-xs font-bold text-slate-400 mb-0.5 block">
-                      {new Date(log.timestamp).toLocaleTimeString()} &bull; {log.category?.toUpperCase() || 'SYS'} &bull; {log.signal}
-                    </span>
-                    <span className="text-sm font-semibold text-slate-800">{log.note}</span>
-                    {log.deduction > 0 && (
-                      <span className="ml-2 text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-100">
-                        -{log.deduction} pts
-                      </span>
-                    )}
+        {/* Main Content Area */}
+        <div className="p-8 pb-24">
+          <AnimatePresence mode="wait">
+            
+            {/* 1. OVERVIEW TAB */}
+            {activeTab === 'overview' && (
+              <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                {/* Identity Banner */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-8 shadow-sm flex items-center justify-between">
+                  <div className="flex items-center gap-6">
+                    <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 text-slate-400 overflow-hidden">
+                      {c.selfie_url ? <img src={c.selfie_url} alt="Profile" className="w-full h-full object-cover" /> : <Smile size={32} />}
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">{c.name}</h2>
+                      <p className="text-sm text-slate-500 font-medium">{c.email} &bull; Attempt #{iv.attempt_number || 1}</p>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-sm bg-white" style={{ borderColor: gradeColor }}>
+                      <span className="text-3xl font-black tracking-tighter" style={{ color: gradeColor }}>{grade}</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-3">Rank</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-slate-500 italic text-sm">No integrity violations recorded. Perfect run.</p>
-          )}
-        </motion.div>
 
-        {/* Attributes Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="bg-green-50 border border-green-200 rounded-2xl p-8 shadow-sm">
-            <h3 className="text-sm font-bold mb-6 text-green-700 flex items-center uppercase tracking-widest">
-              <TrendingUp size={16} className="mr-3" /> Identified Strengths
-            </h3>
-            <ul className="space-y-4">
-              {(iv.strengths || []).map((s, i) => (
-                <li key={i} className="flex items-start gap-4">
-                  <div className="w-2 h-2 mt-1.5 rounded-full bg-green-600 shrink-0" />
-                  <span className="text-green-800 text-sm font-bold leading-relaxed">{s}</span>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="bg-amber-50 border border-amber-200 rounded-2xl p-8 shadow-sm">
-            <h3 className="text-sm font-bold mb-6 text-amber-700 flex items-center uppercase tracking-widest">
-              <TrendingDown size={16} className="mr-3" /> Optimization Areas
-            </h3>
-            <ul className="space-y-4">
-              {(iv.weaknesses || []).map((w, i) => (
-                <li key={i} className="flex items-start gap-4">
-                  <div className="w-2 h-2 mt-1.5 rounded-full bg-amber-600 shrink-0" />
-                  <span className="text-amber-900 text-sm font-bold leading-relaxed">{w}</span>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        </div>
-
-        {/* ═══════════════════════════════════════════════════════════════
-            LIVE TRANSCRIPT: Questions & Answers with Keyword Highlights
-        ══════════════════════════════════════════════════════════════════ */}
-        {iv.transcript && iv.transcript.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-            className="bg-white border border-slate-200 rounded-2xl p-8 mb-8 shadow-sm border-t-4 border-t-indigo-600"
-          >
-            <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest">
-              <Search size={16} className="text-indigo-600 mr-3" /> Interview Transcript
-              <span className="ml-auto flex gap-3 text-xs font-medium normal-case tracking-normal">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-sm bg-green-200 border border-green-400 inline-block" />
-                  Matched Keyword
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-sm bg-red-200 border border-red-400 inline-block" />
-                  Missing Keyword
-                </span>
-              </span>
-            </h3>
-
-            <div className="space-y-6">
-              {iv.transcript.map((t, idx) => {
-                // Build highlighted HTML for the candidate's answer
-                let highlightedAnswer = t.answer || '(No answer recorded)';
-                const allKeywords = [
-                  ...(t.positive_keywords || []).map(k => ({ word: k, type: 'positive' })),
-                  ...(t.negative_keywords || []).map(k => ({ word: k, type: 'negative' })),
-                ].sort((a, b) => b.word.length - a.word.length);
-
-                allKeywords.forEach(({ word, type }) => {
-                  if (!word?.trim()) return;
-                  const safe = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                  const regex = new RegExp(`\\b(${safe})\\b`, 'gi');
-                  const bg  = type === 'positive' ? '#dcfce7' : '#fee2e2';
-                  const col = type === 'positive' ? '#166534' : '#991b1b';
-                  const bdr = type === 'positive' ? '#86efac' : '#fca5a5';
-                  highlightedAnswer = highlightedAnswer.replace(
-                    regex,
-                    `<mark style="background:${bg};color:${col};border:1px solid ${bdr};padding:1px 5px;border-radius:4px;font-weight:700;">$1</mark>`
-                  );
-                });
-
-                return (
-                  <div key={idx} className="rounded-xl border border-slate-200 overflow-hidden">
-                    {/* Question header */}
-                    <div className="bg-slate-800 text-white px-6 py-4 flex items-start gap-3">
-                      <span className="w-7 h-7 rounded-full bg-red-600 text-white text-xs font-black flex items-center justify-center shrink-0 mt-0.5">
-                        Q{idx + 1}
-                      </span>
-                      <p className="text-sm font-bold leading-relaxed">{t.question}</p>
+                {/* Score Rings & Radar */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                  <div className="col-span-2 bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+                    <h3 className="text-sm font-bold mb-8 text-slate-900 flex items-center uppercase tracking-widest">
+                      <Star size={16} className="text-red-600 mr-3" /> Core Competency Telemetry
+                    </h3>
+                    <div className="flex flex-wrap justify-around gap-y-12">
+                      <ScoreRing score={normalizedTech} label="Technical" color="#DC2626" />
+                      <ScoreRing score={eqScore} label="Behavioral" color="#3B82F6" />
+                      <ScoreRing score={confScore} label="Confidence" color="#10B981" />
+                      <ScoreRing score={commScore} label="Communication" color="#F59E0B" />
                     </div>
-                    {/* Answer body */}
-                    <div className="bg-slate-50 px-6 py-4">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Candidate's Answer</p>
-                      <p
-                        className="text-sm text-slate-700 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: highlightedAnswer }}
-                      />
-                      {/* Keyword summary chips */}
-                      {(t.positive_keywords?.length > 0 || t.negative_keywords?.length > 0) && (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {(t.positive_keywords || []).map((kw, ki) => (
-                            <span key={`pos-${ki}`} className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-bold">
-                              ✓ {kw}
-                            </span>
+                  </div>
+                  <div className="col-span-1 bg-white border border-slate-200 rounded-2xl p-8 shadow-sm flex flex-col items-center">
+                    <h3 className="text-sm font-bold w-full text-left mb-4 text-slate-900 uppercase tracking-widest">Neural Radar</h3>
+                    <div className="w-full h-[250px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadarChart data={radarData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                          <PolarGrid stroke="#E2E8F0" />
+                          <PolarAngleAxis dataKey="axis" tick={{ fill: '#64748B', fontSize: 10, fontWeight: 'bold' }} />
+                          <Radar name="Candidate" dataKey="value" stroke="#DC2626" fill="#DC2626" fillOpacity={0.2} strokeWidth={2} />
+                        </RadarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                {/* AI Synthesis & Recommendation */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                  <div className="bg-slate-900 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
+                    <Brain className="absolute -bottom-4 -right-4 text-slate-800 opacity-50" size={120} />
+                    <h3 className="text-sm font-bold mb-4 text-red-500 flex items-center uppercase tracking-widest relative z-10">
+                      <SparklesIcon /> AI Executive Synthesis
+                    </h3>
+                    <p className="text-slate-300 leading-relaxed relative z-10">{iv.summary}</p>
+                    
+                    <div className="mt-8 grid grid-cols-2 gap-4 relative z-10">
+                      <div>
+                        <h4 className="text-xs font-bold text-green-400 uppercase tracking-widest mb-2">Key Strengths</h4>
+                        <ul className="space-y-2">
+                          {(iv.strengths && iv.strengths.length > 0 ? iv.strengths : ['No distinct strengths recorded']).map((s,i) => (
+                            <li key={i} className="text-sm text-slate-300 flex items-start gap-2"><Check size={14} className="mt-0.5 text-green-500 shrink-0"/> {s}</li>
                           ))}
-                          {(t.negative_keywords || []).map((kw, ki) => (
-                            <span key={`neg-${ki}`} className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 rounded-full text-xs font-bold">
-                              ✗ {kw}
-                            </span>
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-amber-400 uppercase tracking-widest mb-2">Development Areas</h4>
+                        <ul className="space-y-2">
+                          {(iv.weaknesses && iv.weaknesses.length > 0 ? iv.weaknesses : ['No major weaknesses recorded']).map((w,i) => (
+                            <li key={i} className="text-sm text-slate-300 flex items-start gap-2"><TrendingDown size={14} className="mt-0.5 text-amber-500 shrink-0"/> {w}</li>
                           ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm flex flex-col justify-center">
+                    <h3 className="text-sm font-bold mb-6 text-slate-900 uppercase tracking-widest">Hiring Recommendation</h3>
+                    <div className={`p-6 rounded-xl border-l-4 ${iv.hiring_recommendation === 'HIRE' || iv.hiring_recommendation === 'STRONG_HIRE' ? 'bg-green-50 border-green-500 text-green-900' : iv.hiring_recommendation === 'NO_HIRE' ? 'bg-red-50 border-red-500 text-red-900' : 'bg-amber-50 border-amber-500 text-amber-900'}`}>
+                      <p className="text-2xl font-black mb-2">{iv.hiring_recommendation || 'PENDING'}</p>
+                      <p className="text-sm opacity-80">Based on comprehensive analysis of technical accuracy, behavioral traits, and integrity checks.</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* 2. IDENTITY & SECURITY TAB */}
+            {activeTab === 'kyc' && (
+              <motion.div key="kyc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                {iv.hiring_decision === 'PROCTORING_ACT' && (
+                  <div className="mb-8 bg-red-600 rounded-xl p-4 flex items-center gap-4 text-white shadow-lg border border-red-700">
+                    <ShieldAlert size={32} className="shrink-0" />
+                    <div>
+                      <h4 className="font-bold text-lg">PROCTORING TERMINATION</h4>
+                      <p className="text-red-100 text-sm">Session was terminated early due to severe integrity violations.</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white border border-slate-200 rounded-2xl p-8 mb-8 shadow-sm">
+                  <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest">
+                    <Fingerprint size={16} className="text-red-600 mr-3" /> Identity & Security Dossier
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Selfie */}
+                    <div className="flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                      <div className="p-4 bg-slate-800 text-white flex justify-between items-center">
+                        <span className="text-xs font-bold uppercase tracking-widest">Candidate Selfie</span>
+                        {c.kyc_verified ? (
+                          <span className="flex items-center gap-1 text-xs text-green-400 font-bold bg-green-400/10 px-2 py-0.5 rounded">
+                            <CheckCircle size={12} /> Verified
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-xs text-amber-400 font-bold bg-amber-400/10 px-2 py-0.5 rounded">
+                            <AlertCircle size={12} /> Unverified
+                          </span>
+                        )}
+                      </div>
+                      <div className="aspect-square bg-slate-200 relative overflow-hidden">
+                        {c.selfie_url ? (
+                          <img src={c.selfie_url} alt="Selfie" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400 italic">No Selfie</div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">OCR Name Match</p>
+                        <p className="text-sm font-bold text-slate-900">{c.aadhar_name || 'N/A'}</p>
+                      </div>
+                    </div>
+
+                    {/* Aadhar */}
+                    <div className="flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                      <div className="p-4 bg-slate-800 text-white">
+                        <span className="text-xs font-bold uppercase tracking-widest">Govt ID (Aadhar)</span>
+                      </div>
+                      <div className="aspect-[1.58/1] bg-slate-200 relative overflow-hidden flex-1">
+                        {c.aadhar_image_url ? (
+                          <img src={c.aadhar_image_url} alt="Aadhar" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400 italic">No ID Provided</div>
+                        )}
+                      </div>
+                      <div className="p-4 bg-white border-t border-slate-200">
+                        <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">Extracted ID</p>
+                        <p className="text-sm font-bold text-slate-900 tracking-widest">{c.aadhar_number_masked || 'XXXX XXXX 0000'}</p>
+                      </div>
+                    </div>
+
+                    {/* Video Glimpse */}
+                    <div className="flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 md:col-span-1">
+                      <div className="p-4 bg-slate-800 text-white flex justify-between items-center">
+                        <span className="text-xs font-bold uppercase tracking-widest">20s Video Loop</span>
+                        <span className="text-xs text-slate-300 flex items-center gap-1"><RefreshCcw size={12}/> Autoplay</span>
+                      </div>
+                      <div className="aspect-video bg-black relative flex-1">
+                        {iv.video_clip_url ? (
+                          <video src={iv.video_clip_url} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm italic">Clip Unavailable</div>
+                        )}
+                      </div>
+                      <div className="p-4 bg-white border-t border-slate-200 flex justify-between items-center">
+                        <div>
+                          <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">Full Recording</p>
+                          <p className="text-sm font-bold text-slate-900">{iv.duration_seconds ? Math.floor(iv.duration_seconds/60) + 'm ' + (iv.duration_seconds%60) + 's' : 'N/A'}</p>
                         </div>
+                        {iv.recording_url && (
+                          <a href={iv.recording_url} target="_blank" rel="noreferrer" className="text-red-600 hover:text-red-800 font-bold text-xs uppercase flex items-center gap-1">
+                            Watch <ChevronRight size={14}/>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Integrity Triage Matrix */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+                    <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest">
+                      <ShieldAlert size={16} className="text-red-600 mr-3" /> Integrity Triage Matrix
+                    </h3>
+                    <div className="space-y-6">
+                      <TriageBar label="Posture Stability" score={iv.posture_score || 100} />
+                      <TriageBar label="Movement Entropy" score={iv.movement_score || 100} />
+                      <TriageBar label="Eye Tracking Focus" score={iv.eye_tracking_score || 100} />
+                      <TriageBar label="Authenticity" score={iv.authenticity_score || 100} />
+                      <TriageBar label="Environment Check" score={iv.environment_score || 100} />
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+                     <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest">
+                      <AlertCircle size={16} className="text-red-600 mr-3" /> Proctoring Events
+                    </h3>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 h-[250px] overflow-y-auto">
+                      {iv.proctoring_logs && iv.proctoring_logs.length > 0 ? (
+                        <ul className="space-y-3">
+                          {iv.proctoring_logs.map((log, i) => (
+                            <li key={i} className="flex gap-3 text-sm">
+                              <span className="text-slate-400 whitespace-nowrap">{log.timestamp}</span>
+                              <span className="text-slate-800 font-medium">{log.event}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-slate-400 italic">No abnormal events detected</div>
                       )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
+                </div>
+              </motion.div>
+            )}
 
-      
-        {/* HIDDEN PDF TEMPLATE - ONLY VISIBLE TO HTML2CANVAS */}
-        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-          
-          {/* PAGE 1: EXECUTIVE OVERVIEW */}
-          <div ref={page1Ref} style={{ width: '800px', height: '1131px', backgroundColor: '#FFFFFF', color: '#0F172A', padding: '60px', boxSizing: 'border-box', fontFamily: 'sans-serif', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '2px solid #E2E8F0', paddingBottom: '20px', marginBottom: '40px' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                 <img src={sterlingLogo} alt="Logo" style={{ width: '40px' }} />
-                 <h1 style={{ fontSize: '24px', fontWeight: '900', margin: 0, lineHeight: '1', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '1px' }}>STERLING<br/><span style={{ fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>E-MOBILITY</span></h1>
-               </div>
-               <div style={{ textAlign: 'right' }}>
-                 <p style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: 'bold', color: '#64748B', letterSpacing: '2px', textTransform: 'uppercase' }}>CANDIDATE DOSSIER</p>
-                 <p style={{ margin: 0, fontSize: '14px', color: '#0F172A' }}>{new Date().toLocaleDateString()}</p>
-               </div>
-            </div>
-
-            {/* Candidate Profile */}
-            <div style={{ marginBottom: '50px' }}>
-               <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#DC2626', letterSpacing: '2px', textTransform: 'uppercase' }}>Executive Profile</p>
-               <h2 style={{ margin: '0 0 15px 0', fontSize: '48px', fontWeight: '900', color: '#0F172A', letterSpacing: '-1px' }}>{c.name}</h2>
-               <div style={{ display: 'flex', gap: '40px' }}>
-                  <div>
-                    <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#64748B', fontWeight: 'bold', textTransform: 'uppercase' }}>Target Role</p>
-                    <p style={{ margin: 0, fontSize: '20px', color: '#0F172A', fontWeight: '600' }}>{c.job_role}</p>
+            {/* 3. RESUME INTELLIGENCE TAB */}
+            {activeTab === 'resume' && (
+              <motion.div key="resume" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                {!resume ? (
+                  <div className="bg-white border border-slate-200 rounded-2xl p-12 shadow-sm text-center">
+                    <FileText size={48} className="text-slate-300 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-slate-800 mb-2">No Resume Found</h3>
+                    <p className="text-slate-500">The candidate did not upload a resume for parsing.</p>
                   </div>
-                  <div>
-                    <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#64748B', fontWeight: 'bold', textTransform: 'uppercase' }}>Contact</p>
-                    <p style={{ margin: 0, fontSize: '20px', color: '#0F172A', fontWeight: '600' }}>{c.email}</p>
-                  </div>
-               </div>
-            </div>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Metrics Sidebar */}
+                    <div className="col-span-1 space-y-8">
+                      <div className="bg-slate-900 rounded-2xl p-8 text-white shadow-lg text-center">
+                        <Award size={48} className="text-yellow-400 mx-auto mb-4" />
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">AI Resume Match Score</h3>
+                        <div className="text-6xl font-black mb-2">{resume.resume_score ? Math.round(resume.resume_score) : 'N/A'}</div>
+                        <p className="text-sm text-slate-400">Match against required JD parameters</p>
+                      </div>
 
-            {/* The Verdict Card */}
-            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '40px', marginBottom: '50px', display: 'flex', gap: '40px', alignItems: 'center' }}>
-               <div style={{ width: '160px', height: '160px', border: '8px solid #FFFFFF', borderRadius: '24px', background: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 25px -5px rgba(220, 38, 38, 0.3)' }}>
-                  <h1 style={{ fontSize: '80px', fontWeight: '900', color: '#FFFFFF', margin: 0, lineHeight: 1 }}>{grade}</h1>
-               </div>
-               <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#64748B', letterSpacing: '2px', textTransform: 'uppercase' }}>AI Evaluation Verdict</h3>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '15px', marginBottom: '20px' }}>
-                     <span style={{ fontSize: '56px', fontWeight: '900', color: '#0F172A', lineHeight: 1 }}>{overall}</span>
-                     <span style={{ fontSize: '24px', color: '#64748B', fontWeight: 'bold' }}>/ 100</span>
-                  </div>
-                  <div style={{ display: 'inline-block', background: iv.hiring_decision === 'REJECTED' ? '#FEE2E2' : '#D1FAE5', color: iv.hiring_decision === 'REJECTED' ? '#991B1B' : '#065F46', padding: '10px 20px', borderRadius: '8px', fontSize: '18px', fontWeight: '900', letterSpacing: '1px' }}>
-                     {iv.hiring_decision || 'PENDING'}
-                  </div>
-               </div>
-            </div>
-
-            {/* Executive Summary */}
-            <div style={{ flex: 1 }}>
-               <p style={{ margin: '0 0 20px 0', fontSize: '14px', fontWeight: 'bold', color: '#DC2626', letterSpacing: '2px', textTransform: 'uppercase' }}>Executive Summary</p>
-               <p style={{ margin: 0, fontSize: '20px', lineHeight: '1.8', color: '#334155' }}>
-                 {iv.summary || 'Comprehensive AI evaluation completed. The candidate demonstrated key competencies aligned with the role requirements. Refer to the analytics section for a detailed breakdown of intelligence metrics and proctoring logs.'}
-               </p>
-            </div>
-
-            {/* Footer */}
-            <div style={{ borderTop: '2px solid #E2E8F0', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>STERLING E-MOBILITY • CANDIDATE ASSESSMENT REPORT</span>
-               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#94A3B8' }}>PAGE 1 OF 2</span>
-            </div>
-          </div>
-
-          {/* PAGE 2: DETAILED ANALYTICS */}
-          <div ref={page2Ref} style={{ width: '800px', height: '1131px', backgroundColor: '#FFFFFF', color: '#0F172A', padding: '60px', boxSizing: 'border-box', fontFamily: 'sans-serif', position: 'relative', display: 'flex', flexDirection: 'column', marginTop: '20px' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '2px solid #E2E8F0', paddingBottom: '20px', marginBottom: '40px' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                 <img src={sterlingLogo} alt="Logo" style={{ width: '40px' }} />
-                 <h1 style={{ fontSize: '24px', fontWeight: '900', margin: 0, lineHeight: '1', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '1px' }}>STERLING<br/><span style={{ fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>E-MOBILITY</span></h1>
-               </div>
-               <div style={{ textAlign: 'right' }}>
-                 <p style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: 'bold', color: '#64748B', letterSpacing: '2px', textTransform: 'uppercase' }}>DETAILED ANALYTICS</p>
-                 <p style={{ margin: 0, fontSize: '14px', color: '#0F172A' }}>ID: {iv.interview_id ? iv.interview_id.substring(0,8).toUpperCase() : 'N/A'}</p>
-               </div>
-            </div>
-
-            {/* Colorful Intelligence Metrics */}
-            <div style={{ marginBottom: '50px' }}>
-               <p style={{ margin: '0 0 25px 0', fontSize: '14px', fontWeight: 'bold', color: '#DC2626', letterSpacing: '2px', textTransform: 'uppercase' }}>Core Intelligence Metrics</p>
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                  {[
-                    { label: 'Technical Mastery', val: normalizedTech, color: '#4F46E5' },
-                    { label: 'Problem Solving', val: iv.problem_solving_score || 0, color: '#7C3AED' },
-                    { label: 'Confidence Index', val: confScore, color: '#D97706' },
-                    { label: 'Learning Potential', val: iv.learning_potential_score || 0, color: '#059669' },
-                    { label: 'Emotional Intelligence', val: eqScore, color: '#E11D48' },
-                    { label: 'Communication', val: commScore, color: '#0284C7' },
-                  ].map((m, i) => (
-                    <div key={i}>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                          <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#334155' }}>{m.label}</span>
-                          <span style={{ fontSize: '14px', fontWeight: '900', color: '#0F172A' }}>{m.val}/100</span>
-                       </div>
-                       <div style={{ width: '100%', height: '12px', background: '#F1F5F9', borderRadius: '6px', overflow: 'hidden' }}>
-                          <div style={{ width: `${m.val}%`, background: m.color, height: '100%', borderRadius: '6px' }}></div>
-                       </div>
-                    </div>
-                  ))}
-               </div>
-            </div>
-
-            {/* Strengths & Weaknesses Split Cards */}
-            <div style={{ display: 'flex', gap: '30px', marginBottom: '50px' }}>
-               <div style={{ flex: 1, background: '#F8FAFC', border: '1px solid #E2E8F0', borderTop: '4px solid #10B981', borderRadius: '12px', padding: '25px' }}>
-                  <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', fontWeight: '900', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                     <span style={{ color: '#10B981' }}>●</span> Key Strengths
-                  </h3>
-                  <ul style={{ paddingLeft: '20px', margin: 0, fontSize: '14px', lineHeight: '1.6', color: '#334155' }}>
-                     {(iv.strengths || []).map((s, i) => <li key={i} style={{ marginBottom: '8px' }}>{s}</li>)}
-                  </ul>
-               </div>
-               <div style={{ flex: 1, background: '#F8FAFC', border: '1px solid #E2E8F0', borderTop: '4px solid #F59E0B', borderRadius: '12px', padding: '25px' }}>
-                  <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', fontWeight: '900', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                     <span style={{ color: '#F59E0B' }}>●</span> Optimization Areas
-                  </h3>
-                  <ul style={{ paddingLeft: '20px', margin: 0, fontSize: '14px', lineHeight: '1.6', color: '#334155' }}>
-                     {(iv.weaknesses || []).map((w, i) => <li key={i} style={{ marginBottom: '8px' }}>{w}</li>)}
-                  </ul>
-               </div>
-            </div>
-
-            {/* Proctoring Log */}
-            <div style={{ flex: 1 }}>
-               <p style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: 'bold', color: '#DC2626', letterSpacing: '2px', textTransform: 'uppercase' }}>Security & Proctoring</p>
-               <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden' }}>
-                  <div style={{ background: '#F1F5F9', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0' }}>
-                     <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#334155' }}>Session Integrity</span>
-                     <span style={{ fontSize: '14px', fontWeight: '900', color: iv.proctoring_warnings > 0 ? '#DC2626' : '#10B981' }}>
-                        {iv.proctoring_warnings > 0 ? 'WARNINGS DETECTED' : 'SECURE'}
-                     </span>
-                  </div>
-                  <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: iv.proctoring_warnings > 0 ? '#FEE2E2' : '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                        {iv.proctoring_warnings > 0 ? '⚠️' : '🔒'}
-                     </div>
-                     <div>
-                        <p style={{ margin: '0 0 5px 0', fontSize: '16px', fontWeight: 'bold', color: '#0F172A' }}>Total Warnings: {iv.proctoring_warnings || 0}</p>
-                        <p style={{ margin: 0, fontSize: '14px', color: '#475569' }}>
-                           {iv.proctoring_warnings > 0 ? 'Human review of session recording is recommended to verify proctoring flags.' : 'No suspicious behavior or policy violations detected during the session.'}
-                        </p>
-                     </div>
-                  </div>
-               </div>
-            </div>
-
-            {/* Footer */}
-            <div style={{ borderTop: '2px solid #E2E8F0', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>STERLING E-MOBILITY • CANDIDATE ASSESSMENT REPORT</span>
-               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#94A3B8' }}>PAGE 2</span>
-            </div>
-          </div>
-
-          {/* PAGE 3: TRANSCRIPT */}
-          {iv.transcript && iv.transcript.length > 0 && (
-            <div 
-              style={{
-                width: '100%', 
-                maxWidth: '850px', 
-                minHeight: '1100px', 
-                background: '#ffffff',
-                boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)',
-                margin: '0 auto', 
-                padding: '50px 60px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '30px',
-                boxSizing: 'border-box'
-              }}
-            >
-               {/* Header Page 3 */}
-               <div style={{ borderBottom: '2px solid #0F172A', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                 <div>
-                    <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.5px' }}>Interview Transcript</h1>
-                    <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748B', fontWeight: 'bold' }}>{c.name} • {c.job_role}</p>
-                 </div>
-               </div>
-
-               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {iv.transcript.map((t, idx) => {
-                     let highlightedText = t.answer || "";
-                     const allKeywords = [
-                        ...(t.positive_keywords || []).map(k => ({ word: k, type: 'positive' })),
-                        ...(t.negative_keywords || []).map(k => ({ word: k, type: 'negative' }))
-                     ].sort((a, b) => b.word.length - a.word.length);
-
-                     allKeywords.forEach(({ word, type }) => {
-                        if (!word || !word.trim()) return;
-                        // Escape regex characters
-                        const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const regex = new RegExp(`\\b(${safeWord})\\b`, 'gi');
-                        const bg = type === 'positive' ? '#dcfce7' : '#fee2e2';
-                        const col = type === 'positive' ? '#166534' : '#991b1b';
-                        highlightedText = highlightedText.replace(regex, `<mark style="background-color: ${bg}; color: ${col}; padding: 0 4px; border-radius: 4px; font-weight: 600;">$1</mark>`);
-                     });
-
-                     return (
-                        <div key={idx} style={{ padding: '20px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                           <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: '900', color: '#0F172A' }}>Q{idx + 1}: {t.question}</h4>
-                           <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: '#334155' }} dangerouslySetInnerHTML={{ __html: highlightedText }} />
+                      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Detected Skills</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {(resume.skills_detected || []).map((skill, i) => (
+                            <span key={i} className="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full border border-slate-200">
+                              {skill}
+                            </span>
+                          ))}
                         </div>
-                     );
-                  })}
-               </div>
+                      </div>
 
-               {/* Footer Page 3 */}
-               <div style={{ borderTop: '2px solid #E2E8F0', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>STERLING E-MOBILITY • CANDIDATE ASSESSMENT REPORT</span>
-                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#94A3B8' }}>PAGE 3</span>
-               </div>
-            </div>
-          )}
+                      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                         <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Experience</h3>
+                         <div className="text-3xl font-black text-slate-900">{resume.experience_years} <span className="text-lg text-slate-500 font-medium">Years</span></div>
+                      </div>
+                    </div>
 
+                    {/* Main Content */}
+                    <div className="col-span-2 space-y-8">
+                       <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+                        <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest border-b pb-4">
+                          Education Summary
+                        </h3>
+                        {Array.isArray(resume.education_summary) ? (
+                          <ul className="space-y-4">
+                            {resume.education_summary.map((edu, i) => (
+                              <li key={i} className="text-sm text-slate-700 font-medium">{edu}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{resume.education_summary || 'No education data.'}</p>
+                        )}
+                      </div>
+
+                      <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+                        <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest border-b pb-4">
+                          Projects & Experience
+                        </h3>
+                         {Array.isArray(resume.projects_summary) ? (
+                          <ul className="space-y-4">
+                            {resume.projects_summary.map((proj, i) => (
+                              <li key={i} className="text-sm text-slate-700 font-medium">{proj}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{resume.projects_summary || 'No project data.'}</p>
+                        )}
+                      </div>
+
+                      <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+                        <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest border-b pb-4">
+                          Raw Extracted Text
+                        </h3>
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 h-64 overflow-y-auto">
+                           <pre className="text-xs text-slate-600 whitespace-pre-wrap font-mono">{resume.extracted_text}</pre>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* 4. INTERVIEW TRANSCRIPT TAB */}
+            {activeTab === 'transcript' && (
+              <motion.div key="transcript" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm mb-8">
+                  <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest">
+                    <TrendingUp size={16} className="text-red-600 mr-3" /> Technical Accuracy Trajectory
+                  </h3>
+                  <div className="w-full h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={timelineData}>
+                        <defs>
+                          <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#DC2626" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#DC2626" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="q" tick={{ fill: '#64748B', fontSize: 12 }} axisLine={false} tickLine={false} />
+                        <YAxis domain={[0, 10]} tick={{ fill: '#64748B', fontSize: 12 }} axisLine={false} tickLine={false} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                        <Area type="monotone" dataKey="score" stroke="#DC2626" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+                   <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest border-b pb-4">
+                    <MessageSquare size={16} className="text-red-600 mr-3" /> Full QA Transcript
+                  </h3>
+                  <div className="space-y-8">
+                    {transcript && transcript.length > 0 ? transcript.map((qa, idx) => (
+                      <div key={idx} className="bg-slate-50 border border-slate-100 rounded-xl p-6 relative">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-slate-200 rounded-l-xl"></div>
+                        <div className="mb-4">
+                          <span className="text-xs font-bold text-red-600 uppercase tracking-widest mb-1 block">Question {idx + 1}</span>
+                          <p className="text-slate-800 font-semibold">{qa.question}</p>
+                        </div>
+                        <div className="mb-4 bg-white p-4 rounded border border-slate-200">
+                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Candidate Response</span>
+                           <p className="text-slate-700 text-sm leading-relaxed">{qa.answer || <span className="italic text-slate-400">No response recorded</span>}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-4">
+                          {qa.positive_keywords && qa.positive_keywords.length > 0 && (
+                            <div>
+                              <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest block mb-1">Matched Keywords</span>
+                              <div className="flex gap-1 flex-wrap">
+                                {qa.positive_keywords.map((kw, i) => (
+                                  <span key={i} className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-sm">{kw}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {qa.negative_keywords && qa.negative_keywords.length > 0 && (
+                            <div>
+                              <span className="text-[10px] font-bold text-red-600 uppercase tracking-widest block mb-1">Missing Keywords</span>
+                              <div className="flex gap-1 flex-wrap">
+                                {qa.negative_keywords.map((kw, i) => (
+                                  <span key={i} className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded-sm">{kw}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )) : (
+                      <p className="text-slate-500 italic">No transcript data available for this session.</p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* 5. AUDIT TRAIL TAB */}
+            {activeTab === 'audit' && (
+              <motion.div key="audit" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm min-h-[60vh]">
+                  <h3 className="text-sm font-bold mb-8 text-slate-900 flex items-center uppercase tracking-widest border-b pb-4">
+                    <Clock size={16} className="text-red-600 mr-3" /> System Audit Timeline
+                  </h3>
+                  
+                  <div className="relative pl-6 border-l-2 border-slate-100 space-y-8">
+                    {auditLogs && auditLogs.length > 0 ? auditLogs.map((log, idx) => {
+                      let color = 'bg-slate-500';
+                      if (log.type === 'SECURITY') color = 'bg-red-500';
+                      if (log.type === 'ADMIN') color = 'bg-blue-500';
+                      if (log.type === 'SYSTEM') color = 'bg-emerald-500';
+
+                      return (
+                        <div key={idx} className="relative">
+                          <div className={`absolute -left-[31px] top-1 w-4 h-4 rounded-full border-4 border-white shadow-sm ${color}`}></div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-400 block mb-1">
+                              {new Date(log.timestamp).toLocaleString()} • {log.type}
+                            </span>
+                            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">{log.action}</h4>
+                            <p className="text-sm text-slate-600 mt-1">{log.details}</p>
+                          </div>
+                        </div>
+                      );
+                    }) : (
+                      <p className="text-slate-500 italic">No audit events recorded.</p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+}
 
+function SparklesIcon() {
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-      <Sidebar />
-      <main className="flex-1 flex flex-col h-screen overflow-y-auto">
-        {renderContent()}
-      </main>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+      <path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0 -1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z"></path>
+    </svg>
+  );
+}
+
+function TriageBar({ label, score }) {
+  const getSeverity = (s) => {
+    if (s >= 90) return { color: 'bg-green-500', text: 'Optimal' };
+    if (s >= 70) return { color: 'bg-amber-500', text: 'Minor Deviation' };
+    return { color: 'bg-red-500', text: 'High Risk' };
+  };
+  const { color, text } = getSeverity(score);
+  
+  return (
+    <div>
+      <div className="flex justify-between text-xs font-bold uppercase tracking-widest mb-2">
+        <span className="text-slate-700">{label}</span>
+        <span className="text-slate-500">{score}/100 - {text}</span>
+      </div>
+      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+        <motion.div initial={{ width: 0 }} animate={{ width: `${score}%` }} transition={{ duration: 1 }} className={`h-full ${color}`} />
+      </div>
     </div>
   );
 }

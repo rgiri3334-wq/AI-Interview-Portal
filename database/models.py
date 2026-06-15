@@ -46,6 +46,11 @@ class Candidate(Base):
     # New OTP-authenticated candidates will have this as None.
     password_hash = Column(String, nullable=True)
     is_verified = Column(Boolean, default=False)  # True after first OTP verification
+    kyc_verified = Column(Boolean, default=False) # True after successful Aadhar OCR capture
+    aadhar_name = Column(String, nullable=True)
+    aadhar_number_masked = Column(String, nullable=True)
+    selfie_url = Column(String, nullable=True)
+    aadhar_image_url = Column(String, nullable=True)
     registration_date = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
     resumes = relationship("Resume", back_populates="candidate", cascade="all, delete-orphan")
@@ -83,6 +88,8 @@ class InterviewSession(Base):
     started_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
     completed_at = Column(String, nullable=True)
     duration_seconds = Column(Integer, default=0)
+    recording_url = Column(String, nullable=True)
+    video_clip_url = Column(String, nullable=True)
     overall_score = Column(Float, default=0.0)
     technical_score = Column(Float, default=0.0)
     communication_score = Column(Float, default=0.0)

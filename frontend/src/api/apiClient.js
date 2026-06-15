@@ -118,11 +118,12 @@ export const apiClient = {
   loginCandidate: (data) => withRetry(() => api.post('/api/auth/login', data)),
   adminLogin: (data) => withRetry(() => api.post('/api/auth/admin-login', data)),
 
-  // ── OTP Authentication (Sprint 1) ─────────────────────────────────────
+  // ── OTP Authentication & KYC (Sprint 1) ─────────────────────────────────────
   sendCandidateOtp:   (data) => withRetry(() => api.post('/api/auth/candidate/send-otp', data)),
   verifyCandidateOtp: (data) => withRetry(() => api.post('/api/auth/candidate/verify-otp', data)),
   applyForRole: (candidateId, data) => withRetry(() => api.post(`/api/candidates/${candidateId}/apply`, data)),
   getCandidate: (id) => api.get(`/api/candidates/${id}`),
+  verifyKyc: (data) => withRetry(() => api.post('/api/kyc/verify', data)),
 
   // ── AI Engine ─────────────────────────────────────────────────────────
   generateQuestion: (data) => withRetry(() => api.post('/generate-question', data)),
@@ -155,6 +156,13 @@ export const apiClient = {
   getCandidateReport: (id) => api.get(`/api/reports/${id}`),
   getAIReport:        (id) => api.get(`/api/interview/ai-report/${id}`),
   updateHiringDecision: (candidateId, decision) => api.patch(`/api/interviews/${candidateId}/decision`, { decision }),
+  uploadInterviewRecording: (interviewId, formData) =>
+    withRetry(() =>
+      api.post(`/api/interviews/${interviewId}/recording`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000, // 2 minutes for large video uploads
+      })
+    ),
   
   // Dashboard & Admin
   getDashboardData:   () => api.get('/api/dashboard'),
