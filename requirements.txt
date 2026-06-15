@@ -19,6 +19,6 @@ psycopg2-binary
 supabase
 opencv-python-headless
 pytesseract
-fuzzywuzzy
+thefuzz
 python-Levenshtein
 moviepy
