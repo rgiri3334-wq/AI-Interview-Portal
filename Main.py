@@ -60,6 +60,8 @@ if SUPABASE_URL and SUPABASE_KEY:
     except Exception as e:
         print(f"Error initializing Supabase client: {e}")
 
+BACKEND_URL = os.environ.get("BACKEND_URL", "https://ai-interview-portal-1.onrender.com")
+
 # ── Logging ───────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
@@ -1074,9 +1076,9 @@ async def verify_kyc(data: KycVerifyRequest, db: Session = Depends(get_db)):
         
         # Fallback to local API serving if Supabase is missing/fails
         if not aadhar_url:
-            aadhar_url = f"http://localhost:8000/api/recordings/aadhar_{data.candidate_id}.jpg"
+            aadhar_url = f"{BACKEND_URL}/api/recordings/aadhar_{data.candidate_id}.jpg"
         if not selfie_url:
-            selfie_url = f"http://localhost:8000/api/recordings/selfie_{data.candidate_id}.jpg"
+            selfie_url = f"{BACKEND_URL}/api/recordings/selfie_{data.candidate_id}.jpg"
 
         cand.aadhar_image_url = aadhar_url # type: ignore
         cand.selfie_url = selfie_url # type: ignore
@@ -2598,12 +2600,16 @@ async def upload_recording(interview_id: str, bg: BackgroundTasks, file: UploadF
     # Run clip generation and upload in background
     bg.add_task(generate_clip)
         
-    recording_url = f"https://supabase.co/storage/v1/object/public/interview-recordings/{interview_id}.webm"
-    clip_url = f"https://supabase.co/storage/v1/object/public/interview-recordings/{interview_id}_clip.webm"
+    # Local fallback URL
+    recording_url = f"{BACKEND_URL}/api/recordings/{interview_id}.webm"
+    clip_url = f"{BACKEND_URL}/api/recordings/{interview_id}_clip.webm"
     
     if supabase_client:
-        recording_url = supabase_client.storage.from_("interview-recordings").get_public_url(f"{interview_id}.webm")
-        clip_url = supabase_client.storage.from_("interview-recordings").get_public_url(f"{interview_id}_clip.webm")
+        try:
+            recording_url = supabase_client.storage.from_("interview-recordings").get_public_url(f"{interview_id}.webm")
+            clip_url = supabase_client.storage.from_("interview-recordings").get_public_url(f"{interview_id}_clip.webm")
+        except Exception:
+            pass
     
     iv.recording_url = recording_url # type: ignore
     iv.video_clip_url = clip_url # type: ignore
