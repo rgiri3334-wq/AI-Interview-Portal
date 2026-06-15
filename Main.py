@@ -228,6 +228,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# ── Static Files (Recordings Fallback) ──────────────────────────────────────────
+os.makedirs("recordings", exist_ok=True)
+app.mount("/api/recordings", StaticFiles(directory="recordings"), name="recordings")
 
 
 @app.middleware("http")
