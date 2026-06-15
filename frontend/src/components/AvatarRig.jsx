@@ -37,6 +37,25 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
   const avatarStateRef = useRef(avatarState);
   useEffect(() => { avatarStateRef.current = avatarState; }, [avatarState]);
 
+  // POTATO MODE: Downgrade all materials to avoid GPU shader crash
+  useEffect(() => {
+    if (scene) {
+      scene.traverse((child) => {
+        if (child.isMesh && child.material) {
+          const oldMat = child.material;
+          // Use basic Lambert shading (per-vertex lighting) to prevent GPU shader compilation timeouts
+          child.material = new THREE.MeshLambertMaterial({
+            map: oldMat.map,
+            color: oldMat.color,
+            transparent: oldMat.transparent,
+            opacity: oldMat.opacity,
+            alphaTest: oldMat.alphaTest,
+          });
+        }
+      });
+    }
+  }, [scene]);
+
   useFrame((state, delta) => {
     if (!nodes) return;
     
