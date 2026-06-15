@@ -7,7 +7,7 @@ import { useAvatarState } from '../hooks/useAvatarState';
 import { useAvatarLipSync } from '../hooks/useAvatarLipSync';
 
 // Preload the standard avatar file that the user will replace
-useGLTF.preload('/models/avatar.glb');
+useGLTF.preload('/interviewer.glb');
 
 // ── Audio visualizer bars ──────────────────────────────────────────────────
 function AudioBars({ audioLevel, count = 5 }) {

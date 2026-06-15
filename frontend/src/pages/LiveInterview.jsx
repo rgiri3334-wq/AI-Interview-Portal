@@ -890,32 +890,36 @@ export default function LiveInterview() {
   }
 
   return (
-    <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col">
+    <div className="min-h-screen bg-[#0a0a0a] text-slate-200 font-sans flex flex-col relative overflow-hidden">
+      {/* Cinematic ambient background glow */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-red-900/20 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-900/10 blur-[120px] rounded-full pointer-events-none"></div>
 
       {/* HEADER - Matching the screenshot's top nav */}
-      <header className="bg-sterling-surface/80 backdrop-blur-md border-b border-sterling-border px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+      <header className="bg-black/40 backdrop-blur-2xl border-b border-white/10 px-8 py-4 flex justify-between items-center sticky top-0 z-50">
         {/* Logo Area */}
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-md border border-slate-800">
+          <div className="w-12 h-12 bg-black/60 rounded-xl flex items-center justify-center shrink-0 shadow-lg border border-white/10">
             <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain mix-blend-screen" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
-            <div className="hidden w-9 h-9 bg-sterling-blue text-white flex items-center justify-center font-bold text-sm">Sterling</div>
+            <div className="hidden w-9 h-9 bg-red-600 text-white flex items-center justify-center font-bold text-sm">S</div>
           </div>
           <div className="leading-tight">
-            <h1 className="text-sm font-bold tracking-widest text-slate-900">STERLING</h1>
-            <h2 className="text-sm tracking-widest text-slate-500">E-MOBILITY</h2>
+            <h1 className="text-sm font-black tracking-[0.2em] text-white">STERLING</h1>
+            <h2 className="text-xs tracking-widest text-slate-400">E-MOBILITY</h2>
           </div>
         </div>
 
         {/* Nav Links - Restricted for Candidate */}
-        <div className="hidden md:flex gap-8 text-sm font-bold text-[#111827] items-center">
-          <div className="text-slate-400 uppercase tracking-widest text-xs flex items-center gap-2">
-            <ShieldAlert size={14} className="text-red-500" /> Proctoring Active
+        <div className="hidden md:flex gap-8 text-sm font-bold items-center">
+          <div className="text-red-400/80 uppercase tracking-widest text-xs flex items-center gap-2">
+            <ShieldAlert size={14} className="text-red-500 animate-pulse" /> Proctoring Active
           </div>
           <button onClick={() => {
             if (window.confirm("Are you sure you want to end and submit the interview now?")) {
               doEndInterview(history);
             }
-          }} className="px-5 py-2 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white rounded-lg shadow-md hover:shadow-xl hover:shadow-red-500/30 active:scale-95 transition-all duration-300 ease-in-out font-bold tracking-wide">
+          }} className="relative group overflow-hidden px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-all duration-300 ease-out font-bold tracking-widest shadow-lg">
+            <div className="absolute inset-0 w-1/4 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-150%] group-hover:translate-x-[400%] transition-transform duration-700"></div>
             End & Submit
           </button>
         </div>
@@ -937,7 +941,7 @@ export default function LiveInterview() {
         {/* LEFT COLUMN: AI Video Conference Feed */}
         <div className="col-span-7 flex flex-col gap-6 h-full">
           
-          <div className="relative bg-black border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex-1 min-h-[500px] flex flex-col justify-end group">
+          <div className={`relative bg-black rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] flex-1 min-h-[500px] flex flex-col justify-end group transition-all duration-700 ${isSpeaking ? 'shadow-[0_0_80px_rgba(59,130,246,0.15)] border-blue-500/20' : isListening ? 'shadow-[0_0_80px_rgba(34,197,94,0.1)] border-green-500/20' : 'border-white/5'} border`}>
             
             {/* The AI Avatar taking full width/height */}
             <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-slate-900 to-black">
@@ -988,8 +992,13 @@ export default function LiveInterview() {
               </span>
             </div>
 
-            {/* Picture-in-Picture Webcam (Top Right) */}
-            <div className="absolute top-5 right-5 z-30 w-56 h-36 bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border-2 border-slate-700/50 transition-all duration-300 hover:scale-105 hover:border-slate-500/50">
+            {/* Picture-in-Picture Webcam (Top Right) - DRAGGABLE */}
+            <motion.div 
+              drag 
+              dragConstraints={{ left: -600, right: 0, top: 0, bottom: 400 }}
+              dragMomentum={false}
+              className="absolute top-5 right-5 z-40 w-64 h-40 bg-black/80 backdrop-blur-xl rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/10 cursor-grab active:cursor-grabbing hover:border-white/30 transition-colors"
+            >
               {memoizedVideo}
               {(!camOn || camError) && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white/70 text-xs font-bold">
@@ -998,13 +1007,14 @@ export default function LiveInterview() {
               )}
               {/* Mic/Cam Toggle Overlay on hover */}
               <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 to-transparent flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <button onClick={() => setMicOn(!micOn)} className={`p-2 rounded-lg transition-colors ${micOn ? 'bg-white/20 hover:bg-white/40 text-white' : 'bg-red-500/80 hover:bg-red-500 text-white'}`} title={micOn ? "Mute Microphone" : "Unmute Microphone"}>
+                <button onClick={(e) => { e.stopPropagation(); setMicOn(!micOn); }} className={`p-2 rounded-lg transition-colors ${micOn ? 'bg-white/20 hover:bg-white/40 text-white' : 'bg-red-500/80 hover:bg-red-500 text-white'}`} title={micOn ? "Mute Microphone" : "Unmute Microphone"}>
                   {micOn ? '🎙️' : '🔇'}
                 </button>
-                <button onClick={() => setCamOn(!camOn)} className={`p-2 rounded-lg transition-colors ${camOn ? 'bg-white/20 hover:bg-white/40 text-white' : 'bg-red-500/80 hover:bg-red-500 text-white'}`} title={camOn ? "Stop Video" : "Start Video"}>
+                <button onClick={(e) => { e.stopPropagation(); setCamOn(!camOn); }} className={`p-2 rounded-lg transition-colors ${camOn ? 'bg-white/20 hover:bg-white/40 text-white' : 'bg-red-500/80 hover:bg-red-500 text-white'}`} title={camOn ? "Stop Video" : "Start Video"}>
                   {camOn ? '📹' : '📵'}
                 </button>
               </div>
+              
               
               {/* Audio visualizer for candidate when listening */}
               {micOn && isListening && (
@@ -1014,7 +1024,7 @@ export default function LiveInterview() {
                   <div className="w-1 bg-green-400 rounded-t h-3 animate-[bounce_1s_ease-in-out_infinite_0.4s]"></div>
                 </div>
               )}
-            </div>
+            </motion.div>
 
             {/* Posture Hint */}
             <AnimatePresence>
@@ -1048,7 +1058,7 @@ export default function LiveInterview() {
           </div>
           
           {/* Text Fallback Input */}
-          <div className="bg-sterling-surface/80 backdrop-blur-md border border-sterling-border rounded-2xl p-4 shadow-sm">
+          <div className="bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-xl relative z-20">
             <div className="relative">
               <input
                 type="text"
@@ -1056,13 +1066,13 @@ export default function LiveInterview() {
                 onChange={(e) => setTextFallback(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSubmitAnswer(); }}
                 placeholder={(!isSpeaking && finalTranscript) ? "✅ Answer captured. Press Enter or click Submit to continue." : "Need to type? Enter your response here..."}
-                className="w-full bg-white border border-sterling-border rounded-xl px-5 py-3 pr-28 text-sm text-slate-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all duration-300 shadow-inner"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3 pr-28 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-red-600 focus:bg-white/10 transition-all duration-300 shadow-inner"
                 disabled={loading || isSpeaking}
               />
               {(!isSpeaking && finalTranscript && !loading) && (
                 <button
                   onClick={handleSubmitAnswer}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-5 py-2 rounded-lg shadow-md animate-[pulse_2s_ease-in-out_infinite] transition-all active:scale-95"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-red-600 to-red-800 text-white text-xs font-bold px-5 py-2 rounded-lg shadow-lg animate-[pulse_2s_ease-in-out_infinite] transition-all active:scale-95 border border-red-500/50"
                 >
                   Submit
                 </button>
@@ -1075,17 +1085,22 @@ export default function LiveInterview() {
         <div className="col-span-5 flex flex-col gap-6 h-full">
 
           {/* Code/Workspace Area */}
-          <div className="bg-sterling-surface/80 backdrop-blur-md border border-sterling-border rounded-2xl flex-1 flex flex-col shadow-xl overflow-hidden min-h-[500px]">
-            {/* Editor Header */}
-            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="w-1.5 h-5 bg-slate-800 rounded-full"></div>
-                <span className="text-sm font-bold text-slate-900 tracking-wide">Technical Workspace</span>
+          <div className="bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl flex-1 flex flex-col shadow-2xl overflow-hidden min-h-[500px]">
+            {/* macOS-style Editor Header */}
+            <div className="bg-white/5 border-b border-white/10 px-6 py-3 flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                {/* Traffic Lights */}
+                <div className="flex gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                </div>
+                <span className="text-xs font-bold text-slate-300 tracking-widest uppercase">Technical Workspace</span>
               </div>
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
-                className="bg-white border border-slate-300 text-sm text-slate-900 outline-none cursor-pointer px-3 py-1.5 rounded-lg shadow-sm font-medium hover:border-slate-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"
+                className="bg-black/50 border border-white/10 text-xs text-white outline-none cursor-pointer px-3 py-1.5 rounded-lg shadow-sm font-medium hover:border-white/30 focus:border-red-500 transition-all appearance-none"
               >
                 {SUPPORTED_LANGUAGES.map(l => (
                   <option key={l.id} value={l.id}>
@@ -1101,7 +1116,7 @@ export default function LiveInterview() {
             </div>
 
             {/* Editor Footer */}
-            <div className="bg-slate-50 border-t border-slate-200 p-4 flex justify-between items-center">
+            <div className="bg-white/5 border-t border-white/10 p-4 flex justify-between items-center">
               <button onClick={async () => {
                 const code = getCode();
                 if (language === 'javascript' || language === 'typescript') {
@@ -1130,7 +1145,7 @@ export default function LiveInterview() {
                   setOverlayMsg(`Syntactic validation for ${language} passed successfully. Output simulation not available in browser sandbox.`);
                 }
               }}
-                className="text-sm font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-lg transition-colors px-4 py-2"
+                className="text-xs font-bold tracking-wider uppercase text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors px-5 py-2.5 border border-transparent hover:border-white/10"
                 disabled={loading}
               >
                 {language === 'python' ? 'Run Backend Sandbox' : 'Run Code Locally'}
@@ -1143,13 +1158,13 @@ export default function LiveInterview() {
                   }
                 }}
                 disabled={isSpeaking || loading}
-                className="relative overflow-hidden group bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold px-8 py-3 rounded-xl shadow-lg shadow-red-500/30 hover:shadow-xl hover:shadow-red-500/50 active:scale-95 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:active:scale-100 disabled:shadow-none"
+                className="relative overflow-hidden group bg-white hover:bg-slate-100 text-black font-black uppercase tracking-widest px-8 py-3 rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] active:scale-95 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:active:scale-100 disabled:shadow-none"
               >
-                <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out skew-x-12 disabled:hidden"></div>
+                <div className="absolute inset-0 bg-black/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out skew-x-12 disabled:hidden"></div>
                 <span className="relative z-10 flex items-center gap-2">
                   {loading ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
                       Analyzing...
                     </>
                   ) : 'Submit Response'}
