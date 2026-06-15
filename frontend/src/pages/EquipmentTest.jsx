@@ -95,7 +95,7 @@ export default function EquipmentTest() {
               autoPlay 
               playsInline 
               muted 
-              className={`absolute inset-0 w-full h-full object-cover transform scale-x-[-1] transition-opacity duration-500 ${camStatus === 'success' ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 w-full h-full object-contain transform scale-x-[-1] transition-opacity duration-500 ${camStatus === 'success' ? 'opacity-100' : 'opacity-0'}`}
             />
             {camStatus !== 'success' && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 bg-black">

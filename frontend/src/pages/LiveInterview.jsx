@@ -386,7 +386,7 @@ export default function LiveInterview() {
   }, [micOn, isListening, phase, isSpeaking, loading, startListening, stopListening, isRecording, startRecording]);
 
   const memoizedVideo = React.useMemo(() => (
-    <video ref={setVideoRef} autoPlay muted playsInline className="w-full h-full object-cover bg-gray-100" style={{ transform: 'scaleX(-1)', display: camOn && !camError ? 'block' : 'none' }} />
+    <video ref={setVideoRef} autoPlay muted playsInline className="w-full h-full object-contain bg-black" style={{ transform: 'scaleX(-1)', display: camOn && !camError ? 'block' : 'none' }} />
   ), [setVideoRef, camOn, camError]);
 
   const memoizedEditor = React.useMemo(() => (
@@ -439,7 +439,6 @@ export default function LiveInterview() {
         setQuestion(greeting);
         setOverlayMsg('');
         await startVideoRecording(); // START CONTINUOUS RECORDING
-        await startNextQuestion();
         questionStartTimeRef.current = Date.now();
         await speak(greeting);
       } catch {

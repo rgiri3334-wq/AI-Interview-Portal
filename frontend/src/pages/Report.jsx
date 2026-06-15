@@ -159,9 +159,21 @@ export default function Report() {
         
         const imgData = canvas.toDataURL('image/png');
         const pdfWidth = 210;
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        const pageHeight = 297;
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
         
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Sterling_Dossier_${c.name.replace(/\s+/g, '_')}.pdf`);
       } catch (err) {
         console.error("Failed to generate PDF", err);
@@ -429,9 +441,9 @@ export default function Report() {
                       {iv.proctoring_logs && iv.proctoring_logs.length > 0 ? (
                         <ul className="space-y-3">
                           {iv.proctoring_logs.map((log, i) => (
-                            <li key={i} className="flex gap-3 text-sm">
+                            <li key={i} className="flex gap-3 text-sm items-center">
                               <span className="text-slate-400 whitespace-nowrap">{log.timestamp}</span>
-                              <span className="text-slate-800 font-medium">{log.event}</span>
+                              <span className="text-red-700 font-bold bg-red-50 px-2 py-1 rounded border border-red-100">{log.event}</span>
                             </li>
                           ))}
                         </ul>

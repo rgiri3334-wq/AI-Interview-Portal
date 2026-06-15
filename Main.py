@@ -1072,10 +1072,11 @@ async def verify_kyc(data: KycVerifyRequest, db: Session = Depends(get_db)):
                 logger.error(f"Failed to upload KYC images to Supabase: {e}")
         
         # Fallback to local mockup if Supabase is missing/fails
+        base_url = os.getenv('SUPABASE_URL', 'https://supabase.co')
         if not aadhar_url:
-            aadhar_url = f"https://supabase.co/storage/v1/object/public/kyc-images/aadhar_{data.candidate_id}.jpg"
+            aadhar_url = f"{base_url}/storage/v1/object/public/kyc-images/aadhar_{data.candidate_id}.jpg"
         if not selfie_url:
-            selfie_url = f"https://supabase.co/storage/v1/object/public/kyc-images/selfie_{data.candidate_id}.jpg"
+            selfie_url = f"{base_url}/storage/v1/object/public/kyc-images/selfie_{data.candidate_id}.jpg"
 
         cand.aadhar_image_url = aadhar_url # type: ignore
         cand.selfie_url = selfie_url # type: ignore
@@ -1573,10 +1574,13 @@ async def upload_resume(
     resume_score = parsed.get("resume_score", 0)
     parsed_skills = json.dumps(parsed.get("extracted_skills", []))
     parsed_projects = json.dumps(parsed.get("extracted_projects", []))
+    education_text = parsed.get("education", "")
     
     if resume:
         resume.extracted_text = resume_text  # type: ignore
         resume.skills_detected = parsed_skills  # type: ignore
+        resume.projects_summary = parsed_projects  # type: ignore
+        resume.education_summary = education_text  # type: ignore
         resume.resume_score = float(resume_score)  # type: ignore
     
     # Candidate status changes to ready (200) after parsing
@@ -2493,6 +2497,38 @@ async def transcribe_audio_endpoint(file: UploadFile = File(...)):
         filename=file.filename or "audio.webm",
     )
     return result
+
+@app.post("/api/interviews/{interview_id}/recording", tags=["AI Engine"])
+async def upload_interview_recording(interview_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Upload WebM video recording of the entire interview session."""
+    iv = db.query(InterviewSession).filter_by(interview_id=interview_id).first()
+    if not iv: raise HTTPException(status_code=404, detail="Interview not found")
+    
+    raw_bytes = await file.read()
+    if len(raw_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Empty video file")
+
+    recording_url = ""
+    if supabase_client:
+        try:
+            filename = f"INT_{interview_id}_{int(datetime.now(timezone.utc).timestamp())}.webm"
+            supabase_client.storage.from_("interview-recordings").upload(
+                filename, 
+                raw_bytes, 
+                file_options={"content-type": "video/webm", "upsert": "true"}
+            )
+            recording_url = supabase_client.storage.from_("interview-recordings").get_public_url(filename)
+        except Exception as e:
+            logger.error(f"Failed to upload video to Supabase: {e}")
+            
+    if not recording_url:
+        # Fallback to local URL if Supabase fails
+        base_url = os.getenv('SUPABASE_URL', 'https://supabase.co')
+        recording_url = f"{base_url}/storage/v1/object/public/interview-recordings/INT_{interview_id}.webm"
+        
+    iv.recording_url = recording_url # type: ignore
+    db.commit()
+    return {"status": "success", "recording_url": recording_url}
 
 # ── AI Engine: Final Report ───────────────────────────────────────────────
 
