@@ -144,17 +144,10 @@ export function useAudioStream() {
     return new Promise((resolve) => {
       if (!text?.trim()) return resolve();
 
-      // [TODO: SPRINT 4] Swap window.speechSynthesis with ElevenLabs/OpenAI TTS API here
-      // For now, we enhance the native TTS with varied pacing logic.
-
-      // GUARD: Prevent double-fire if called twice with the same text
-      // This fixes the duplicate speech bug caused by render cycle double-invocations
       if (isSpeakingRef.current) {
         stop();
       }
 
-      // We must wait a tiny bit after stop() due to a known Chrome bug where
-      // calling speak() immediately after cancel() causes the speech to be muted.
       setTimeout(() => {
         if (echoDebounceRef.current) clearTimeout(echoDebounceRef.current);
         window.speechSynthesis.cancel();
@@ -169,17 +162,16 @@ export function useAudioStream() {
         const voice = getPreferredVoice();
         if (voice) utterance.voice = voice;
 
-        // Varied pacing based on options (Psychological Touch)
         const pacing = options.pacing || 'normal';
         if (pacing === 'slow') {
-          utterance.rate = 0.85; // Slower for complex technical questions
+          utterance.rate = 0.85;
         } else if (pacing === 'fast') {
-          utterance.rate = 1.05; // Faster for casual small talk
+          utterance.rate = 1.05;
         } else {
-          utterance.rate  = 0.95;  // Slightly slower = warmer, more human
+          utterance.rate = 0.95;
         }
         
-        utterance.pitch = 1.05;  // Slightly higher = professional female tone
+        utterance.pitch = 1.05;
         utterance.volume = 1.0;
 
         const finalize = () => {
@@ -189,13 +181,9 @@ export function useAudioStream() {
             utteranceRef.current = null;
             stopFrequencyAnalysis();
             resolve();
-          }, 600); // 600ms post-speech debounce for echo protection
+          }, 600);
         };
 
-        utterance.onend   = finalize;
-        utterance.onerror = finalize;
-
-        // Chrome: speechSynthesis pauses when tab is hidden. Resume it.
         const keepAliveInterval = setInterval(() => {
           if (window.speechSynthesis.paused) {
             window.speechSynthesis.resume();
@@ -206,6 +194,7 @@ export function useAudioStream() {
           clearInterval(keepAliveInterval);
           finalize();
         };
+        
         utterance.onerror = () => {
           clearInterval(keepAliveInterval);
           finalize();
