@@ -21,9 +21,20 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
   
   // 2. Load the animations from avatar.glb (the pink robot)
   const { animations } = useGLTF('/avatar.glb');
+
+  // Fix the bone names: avatar.glb uses 'mixamorig:BoneName', but model.glb uses 'BoneName'
+  const retargetedAnimations = React.useMemo(() => {
+    return animations.map(clip => {
+      const newClip = clip.clone();
+      newClip.tracks.forEach(track => {
+        track.name = track.name.replace('mixamorig:', '');
+      });
+      return newClip;
+    });
+  }, [animations]);
   
   // 3. Bind the extracted animations to the human mesh group
-  const { actions } = useAnimations(animations, groupRef);
+  const { actions } = useAnimations(retargetedAnimations, groupRef);
 
   const avatarStateRef = useRef(avatarState);
   useEffect(() => { avatarStateRef.current = avatarState; }, [avatarState]);
