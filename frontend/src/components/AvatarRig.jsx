@@ -25,6 +25,8 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
     speakBobPhase: 0,
     swayPhase: 0,
     lookPhaseX: 0, lookPhaseY: 0,
+    blinkTimer: Math.random() * 3 + 1,
+    blinkPhase: 0, // 0 = open, 1 = fully closed
   });
 
   const avatarStateRef = useRef(avatarState);
@@ -102,18 +104,39 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
       neck.rotation.x = a.headPitch * 0.5;
     }
 
-    // 5. Procedural Lip Sync
-    if (mouthOpenRef && scene) {
-      const openAmount = mouthOpenRef.current ?? 0;
+    // 5. Procedural Eye Blinks
+    a.blinkTimer -= dt;
+    if (a.blinkTimer <= 0) {
+      // Start a blink (fast close, slightly slower open)
+      a.blinkPhase += dt * 10.0;
+      if (a.blinkPhase >= Math.PI) {
+        a.blinkPhase = 0;
+        a.blinkTimer = 2.0 + Math.random() * 4.0; // Next blink in 2-6 seconds
+      }
+    }
+    const blinkAmount = a.blinkPhase > 0 ? Math.max(0, Math.sin(a.blinkPhase)) : 0;
+
+    // 6. Apply Morph Targets (Lip Sync & Blinking)
+    if (scene) {
+      const openAmount = (mouthOpenRef && mouthOpenRef.current) ? mouthOpenRef.current : 0;
       scene.traverse((child) => {
         if (child.isMesh && child.morphTargetInfluences && child.morphTargetDictionary) {
           const dict = child.morphTargetDictionary;
           const influences = child.morphTargetInfluences;
           
+          // Lip Sync
           if (dict.viseme_O !== undefined) influences[dict.viseme_O] = openAmount * 0.8;
           if (dict.viseme_aa !== undefined) influences[dict.viseme_aa] = openAmount * 0.6;
           if (dict.mouthOpen !== undefined) influences[dict.mouthOpen] = openAmount * 0.5;
           if (dict.jawOpen !== undefined) influences[dict.jawOpen] = openAmount * 0.4;
+
+          // Eye Blinks (Support standard Mixamo/RPM morph names)
+          if (dict.eyeBlinkLeft !== undefined) influences[dict.eyeBlinkLeft] = blinkAmount;
+          if (dict.eyeBlinkRight !== undefined) influences[dict.eyeBlinkRight] = blinkAmount;
+          if (dict.eyeBlink_L !== undefined) influences[dict.eyeBlink_L] = blinkAmount;
+          if (dict.eyeBlink_R !== undefined) influences[dict.eyeBlink_R] = blinkAmount;
+          if (dict.eyesClosed !== undefined) influences[dict.eyesClosed] = blinkAmount;
+          if (dict.blink !== undefined) influences[dict.blink] = blinkAmount;
         }
       });
     }
