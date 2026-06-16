@@ -604,6 +604,7 @@ export default function LiveInterview() {
       if (res.action !== 'repeat' && res.action !== 'small_talk') clearCode();
 
       if (res.action !== 'repeat' && res.action !== 'small_talk' && nextHistory.length >= MAX_QUESTIONS) {
+        setPhase('goodbye'); // Lock the UI phase so mic is disabled but Avatar remains on screen
         // Natural human-like HR goodbye
         const finalGoodbye = res.eq_feedback + " That wraps up our interview for today. Thank you for your time. Our team will review your evaluation and follow up with you shortly. Have a great day!";
         setQuestion("Interview Complete. You may close this window.");

@@ -58,10 +58,17 @@ export function useVideoRecorder() {
         console.log(`[useVideoRecorder] Video recording stopped. Total size: ${(videoBlob.size / 1024 / 1024).toFixed(2)} MB`);
         
         try {
-          const formData = new FormData();
-          formData.append('file', videoBlob, `interview_${interviewId}.webm`);
-          // Note: In production, this might need a signed URL upload if the file is >100MB
-          await apiClient.uploadInterviewRecording(interviewId, formData);
+          if (videoBlob.size > 2 * 1024 * 1024) {
+            // Upload large files in 5MB chunks to bypass Render payload limits
+            await apiClient.uploadInterviewRecordingChunked(interviewId, videoBlob, (progress) => {
+              console.log(`[useVideoRecorder] Chunk upload progress: ${Math.round(progress * 100)}%`);
+            });
+          } else {
+            // Tiny files can still use the normal endpoint
+            const formData = new FormData();
+            formData.append('file', videoBlob, `interview_${interviewId}.webm`);
+            await apiClient.uploadInterviewRecording(interviewId, formData);
+          }
           console.log("[useVideoRecorder] Upload successful.");
           resolve(true);
         } catch (error) {

@@ -163,6 +163,30 @@ export const apiClient = {
         timeout: 120000, // 2 minutes for large video uploads
       })
     ),
+  uploadInterviewRecordingChunked: async (interviewId, blob, onProgress) => {
+    const chunkSize = 5 * 1024 * 1024; // 5MB chunks
+    const totalChunks = Math.ceil(blob.size / chunkSize);
+    const sessionId = Date.now().toString();
+    
+    let result = null;
+    for (let i = 0; i < totalChunks; i++) {
+      const chunk = blob.slice(i * chunkSize, (i + 1) * chunkSize);
+      const formData = new FormData();
+      formData.append('chunk', chunk, `chunk_${i}.webm`);
+      formData.append('chunkIndex', i);
+      formData.append('totalChunks', totalChunks);
+      formData.append('sessionId', sessionId);
+      
+      result = await withRetry(() => 
+        api.post(`/api/interviews/${interviewId}/recording/chunk`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 60000, 
+        })
+      );
+      if (onProgress) onProgress((i + 1) / totalChunks);
+    }
+    return result;
+  },
   
   // Dashboard & Admin
   getDashboardData:   () => api.get('/api/dashboard'),

@@ -2535,6 +2535,58 @@ async def upload_interview_recording(interview_id: str, file: UploadFile = File(
     db.commit()
     return {"status": "success", "recording_url": recording_url}
 
+@app.post("/api/interviews/{interview_id}/recording/chunk", tags=["AI Engine"])
+async def upload_recording_chunk(
+    interview_id: str,
+    chunkIndex: int = Form(...),
+    totalChunks: int = Form(...),
+    sessionId: str = Form(...),
+    chunk: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Handles chunked upload of massive video recordings to bypass proxy limits."""
+    from pathlib import Path
+    temp_dir = Path("temp_recordings")
+    temp_dir.mkdir(exist_ok=True)
+    
+    file_path = temp_dir / f"recording_{interview_id}_{sessionId}.webm"
+    
+    # Append chunk
+    with open(file_path, "ab") as f:
+        f.write(await chunk.read())
+        
+    if chunkIndex == totalChunks - 1:
+        # This was the final chunk, now upload to Supabase
+        iv = db.query(InterviewSession).filter_by(interview_id=interview_id).first()
+        if not iv: raise HTTPException(status_code=404, detail="Interview not found")
+
+        raw_bytes = file_path.read_bytes()
+        recording_url = ""
+        
+        if supabase_client:
+            try:
+                filename = f"INT_{interview_id}_{int(datetime.now(timezone.utc).timestamp())}.webm"
+                supabase_client.storage.from_("interview-recordings").upload(
+                    filename, raw_bytes, file_options={"content-type": "video/webm", "upsert": "true"}
+                )
+                recording_url = supabase_client.storage.from_("interview-recordings").get_public_url(filename)
+            except Exception as e:
+                logger.error(f"Failed to upload chunked video to Supabase: {e}")
+                
+        if not recording_url:
+            base_url = os.getenv('SUPABASE_URL', 'https://supabase.co')
+            recording_url = f"{base_url}/storage/v1/object/public/interview-recordings/INT_{interview_id}.webm"
+            
+        iv.recording_url = recording_url # type: ignore
+        db.commit()
+        
+        # Cleanup temp file
+        file_path.unlink()
+        
+        return {"status": "completed", "recording_url": recording_url}
+        
+    return {"status": "chunk_received", "chunkIndex": chunkIndex}
+
 # ── AI Engine: Final Report ───────────────────────────────────────────────
 
 @app.get("/api/interview/ai-report/{candidate_id}", tags=["AI Engine"])

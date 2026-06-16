@@ -86,20 +86,36 @@ export function useAIVoice({ rate = 0.95, pitch = 0.95, volume = 1.0 } = {}) {
     const { text, resolve, reject } = queueRef.current.shift();
 
     const utterance         = new SpeechSynthesisUtterance(text);
+    // GC PROTECTION: Chrome bug destroys utterance mid-speech if not globally referenced
+    window.__ttsUtterance   = utterance;
+
     utterance.voice         = voiceRef.current;
     utterance.rate          = rate;
     utterance.pitch         = pitch;
     utterance.volume        = volume;
     utterance.lang          = 'en-US';
 
+    // Safety timeout: forcefully resolve if speech gets stuck
+    const safetyTimeout = setTimeout(() => {
+      if (processingRef.current) {
+        console.warn('[AIVoice] Safety timeout triggered. Force resolving TTS.');
+        setIsSpeaking(false);
+        processingRef.current = false;
+        resolve();
+        _processQueue();
+      }
+    }, Math.max(10000, text.length * 100)); // ~10 seconds min, longer for big text
+
     utterance.onstart  = () => setIsSpeaking(true);
     utterance.onend    = () => {
+      clearTimeout(safetyTimeout);
       setIsSpeaking(false);
       processingRef.current = false;
       resolve();
       _processQueue(); // process next in queue
     };
     utterance.onerror  = (e) => {
+      clearTimeout(safetyTimeout);
       console.error('[AIVoice] Speech error:', e.error);
       setIsSpeaking(false);
       processingRef.current = false;
