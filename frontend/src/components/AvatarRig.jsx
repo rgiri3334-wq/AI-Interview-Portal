@@ -42,6 +42,11 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
       scene.traverse((child) => {
         if (child.isMesh) {
           child.frustumCulled = false;
+          // Fix THREE.js warnings for deprecated properties
+          if (child.material) {
+            if (child.material.skinning !== undefined) delete child.material.skinning;
+            if (child.material.morphTargets !== undefined) delete child.material.morphTargets;
+          }
         }
       });
     }

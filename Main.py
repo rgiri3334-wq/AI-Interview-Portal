@@ -734,7 +734,7 @@ def _invalidate_existing_otps(db: Session, identifier: str, purpose: str):
     db.commit()
 
 @app.post("/api/auth/candidate/send-otp", tags=["Candidate Auth"])
-async def send_candidate_otp(
+def send_candidate_otp(
     request: Request,
     data: SendOTPRequest,
     background_tasks: BackgroundTasks,
@@ -828,7 +828,7 @@ async def send_candidate_otp(
 
 
 @app.post("/api/auth/candidate/verify-otp", tags=["Candidate Auth"])
-async def verify_candidate_otp(
+def verify_candidate_otp(
     data: VerifyOTPRequest,
     db: Session = Depends(get_db)
 ):
