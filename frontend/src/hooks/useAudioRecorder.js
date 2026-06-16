@@ -8,7 +8,7 @@
  * Author: Aditya Singh | Sterling AI AI Platform
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 export function useAudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -73,6 +73,14 @@ export function useAudioRecorder() {
     if (mediaRecorderRef.current?.stream) {
       mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+    };
   }, []);
 
   return {
