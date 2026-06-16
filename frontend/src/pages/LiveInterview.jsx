@@ -167,19 +167,14 @@ export default function LiveInterview() {
     startListening,
     stopListening,
     resetTranscript,
-  } = useWebSocketSTT({ onSilenceDetected: handleSilenceDetected, silenceDelayMs: 3000 }); // Sprint 3: Reduced from 4500ms → 3000ms for snappier auto-submit
+  } = useWebSocketSTT({ onSilenceDetected: handleSilenceDetected, silenceDelayMs: 2000 }); // Sprint 3: Reduced from 4500ms → 2000ms for snappier auto-submit
   // isListening is passed to Avatar3D for the LISTENING state display
 
   const lastCueWordCount = useRef(0);
 
   // SPRINT 4: Audio & VAD Improvements (Interruption & Active Listening)
   useEffect(() => {
-    // 1. Interruption Handling: If user starts speaking while AI is speaking, cut AI off.
-    if (isSpeaking && interimTranscript && interimTranscript.trim().length > 5) {
-      stopVoice();
-      // Optionally reset the transcript if they were just clearing their throat, 
-      // but here we let the natural flow continue.
-    }
+    // 1. Interruption Handling: Removed per user request so candidate cannot interrupt AI.
 
     // 2. Active Listening Cues: If user is speaking a long sentence, occasionally backchannel
     if (isListening && !isSpeaking && finalTranscript) {
@@ -353,11 +348,7 @@ export default function LiveInterview() {
     }
   }, [phase, addProctoringLog]); // Added addProctoringLog
 
-  const handleInterrupt = useCallback(() => {
-    stopVoice();
-  }, [stopVoice]);
-
-  useVAD(isSpeaking, handleInterrupt);
+  // VAD Interruption disabled per user request
 
   const wasSpeakingRef = useRef(false);
   useEffect(() => {
@@ -1065,7 +1056,7 @@ export default function LiveInterview() {
                 value={textFallback}
                 onChange={(e) => setTextFallback(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSubmitAnswer(); }}
-                placeholder={(!isSpeaking && finalTranscript) ? "✅ Answer captured. Press Enter or click Submit to continue." : "Need to type? Enter your response here..."}
+                placeholder={(!isSpeaking && finalTranscript) ? "✅ Answer captured. Submitting automatically..." : "Need to type? Enter your response here..."}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3 pr-28 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-red-600 focus:bg-white/10 transition-all duration-300 shadow-inner"
                 disabled={loading || isSpeaking}
               />
