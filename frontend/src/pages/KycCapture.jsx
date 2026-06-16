@@ -8,6 +8,8 @@ export default function KycCapture() {
   const navigate = useNavigate();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const isMountedRef = useRef(true);
   
   const [stream, setStream] = useState(null);
   const [step, setStep] = useState('aadhar'); // 'aadhar', 'selfie', 'verifying', 'success', 'error'
@@ -18,6 +20,11 @@ export default function KycCapture() {
   const startCamera = useCallback(async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } });
+      if (!isMountedRef.current) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        return;
+      }
+      streamRef.current = mediaStream;
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -32,11 +39,12 @@ export default function KycCapture() {
   useEffect(() => {
     startCamera();
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      isMountedRef.current = false;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [startCamera]);
 
   const captureFrame = () => {
     if (!videoRef.current || !canvasRef.current) return null;

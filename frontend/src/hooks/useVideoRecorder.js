@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { apiClient } from '../api/apiClient';
 
 export function useVideoRecorder() {
@@ -74,6 +74,14 @@ export function useVideoRecorder() {
       // Safety fallback
       setTimeout(finishStop, 2000);
     });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+    };
   }, []);
 
   return {
