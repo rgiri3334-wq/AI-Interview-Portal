@@ -150,9 +150,7 @@ export default function Avatar3D({
           <directionalLight position={[0, 2, 5]} intensity={1.5} />
           <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={1.0} />
           <Suspense fallback={null}>
-            <Bounds fit clip observe margin={1.2}>
-              <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
-            </Bounds>
+            <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
           </Suspense>
         </Canvas>
       </div>

@@ -231,8 +231,7 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
   });
 
   return (
-    // Rotate 90 degrees on X to stand her upright, since the VRChat model was laying face down
-    <group ref={groupRef} dispose={null} rotation={[Math.PI / 2, 0, 0]}>
+    <group ref={groupRef} dispose={null} position={[0, -1.5, 0]} scale={1}>
       <primitive object={scene} />
     </group>
   );
