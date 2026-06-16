@@ -8,13 +8,15 @@ export function useVideoRecorder() {
 
   const startVideoRecording = useCallback(async () => {
     try {
-      // Capture both Camera and Microphone
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: true });
+      // Capture both Camera and Microphone at lower resolution to save bandwidth
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: true });
       videoChunksRef.current = [];
       
-      const options = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
-        ? { mimeType: 'video/webm;codecs=vp9,opus' }
-        : { mimeType: 'video/webm' };
+      const options = {
+        mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm',
+        videoBitsPerSecond: 250000, // 250 kbps to ensure file sizes stay < 50MB for Render upload limits
+        audioBitsPerSecond: 64000
+      };
 
       const recorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = recorder;

@@ -83,7 +83,7 @@ export function useAIVoice({ rate = 0.95, pitch = 0.95, volume = 1.0 } = {}) {
     if (!synthRef.current) return;
 
     processingRef.current = true;
-    const text = queueRef.current.shift();
+    const { text, resolve, reject } = queueRef.current.shift();
 
     const utterance         = new SpeechSynthesisUtterance(text);
     utterance.voice         = voiceRef.current;
@@ -96,12 +96,14 @@ export function useAIVoice({ rate = 0.95, pitch = 0.95, volume = 1.0 } = {}) {
     utterance.onend    = () => {
       setIsSpeaking(false);
       processingRef.current = false;
+      resolve();
       _processQueue(); // process next in queue
     };
     utterance.onerror  = (e) => {
       console.error('[AIVoice] Speech error:', e.error);
       setIsSpeaking(false);
       processingRef.current = false;
+      resolve(); // Resolve anyway so it doesn't hang
       _processQueue();
     };
 
@@ -111,23 +113,40 @@ export function useAIVoice({ rate = 0.95, pitch = 0.95, volume = 1.0 } = {}) {
   /**
    * Speak a text string. Cancels any current speech and speaks immediately.
    * @param {string} text - The AI question or message to speak
+   * @returns {Promise} Resolves when speech finishes or is cancelled
    */
   const speak = useCallback((text) => {
-    if (!synthRef.current || !text) return;
-    // Cancel current speech and clear queue
-    synthRef.current.cancel();
-    queueRef.current = [text];
-    processingRef.current = false;
-    setTimeout(_processQueue, 100); // brief delay for cancel to flush
+    return new Promise((resolve, reject) => {
+      if (!synthRef.current || !text) {
+        resolve();
+        return;
+      }
+      
+      // If there's an existing item in queue, resolve it early because we're cancelling
+      if (queueRef.current.length > 0) {
+        queueRef.current.forEach(item => item.resolve());
+      }
+      
+      // Cancel current speech and clear queue
+      synthRef.current.cancel();
+      queueRef.current = [{ text, resolve, reject }];
+      processingRef.current = false;
+      setTimeout(_processQueue, 100); // brief delay for cancel to flush
+    });
   }, [_processQueue]);
 
   /**
    * Add text to the speech queue without interrupting current speech.
    */
   const enqueue = useCallback((text) => {
-    if (!text) return;
-    queueRef.current.push(text);
-    _processQueue();
+    return new Promise((resolve, reject) => {
+      if (!text) {
+        resolve();
+        return;
+      }
+      queueRef.current.push({ text, resolve, reject });
+      _processQueue();
+    });
   }, [_processQueue]);
 
   /**
@@ -135,6 +154,9 @@ export function useAIVoice({ rate = 0.95, pitch = 0.95, volume = 1.0 } = {}) {
    */
   const stop = useCallback(() => {
     synthRef.current?.cancel();
+    if (queueRef.current.length > 0) {
+      queueRef.current.forEach(item => item.resolve());
+    }
     queueRef.current = [];
     processingRef.current = false;
     setIsSpeaking(false);

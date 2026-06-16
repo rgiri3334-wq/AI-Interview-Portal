@@ -604,15 +604,13 @@ export default function LiveInterview() {
       if (res.action !== 'repeat' && res.action !== 'small_talk') clearCode();
 
       if (res.action !== 'repeat' && res.action !== 'small_talk' && nextHistory.length >= MAX_QUESTIONS) {
-        setPhase('ending');
         // Natural human-like HR goodbye
         const finalGoodbye = res.eq_feedback + " That wraps up our interview for today. Thank you for your time. Our team will review your evaluation and follow up with you shortly. Have a great day!";
         setQuestion("Interview Complete. You may close this window.");
         setLoading(false); // Fix: show question text instead of loading status
         try {
+          // Wait for the TTS to completely finish speaking the goodbye while the avatar is still on screen
           await speak(finalGoodbye);
-          // Wait to ensure candidate hears the TTS before unmounting component
-          await new Promise(r => setTimeout(r, 8000));
         } catch (e) {
           console.warn("TTS failed on goodbye", e);
         }
