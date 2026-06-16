@@ -10,8 +10,6 @@ const damp = (current, target, factor, dt) => {
 };
 
 export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenRef }) {
-  // Load the GLB model from the local public folder
-  useGLTF.preload('/interviewer.glb');
   const { nodes, materials, scene } = useGLTF('/interviewer.glb', true, true, (error) => {
     console.error("Failed to load /interviewer.glb.", error);
   });
@@ -54,9 +52,7 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
             const oldMat = child.material;
             child.material = new THREE.MeshBasicMaterial({
               map: oldMat.map || null,
-              color: oldMat.color || new THREE.Color(0xcccccc),
-              skinning: true,
-              morphTargets: true
+              color: oldMat.color || new THREE.Color(0xcccccc)
             });
             oldMat.dispose();
           }
