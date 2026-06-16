@@ -813,7 +813,7 @@ export default function LiveInterview() {
           {/* LEFT: Avatar — visible immediately, no loading delay */}
           <div className="flex flex-col items-center gap-4">
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200"
-              style={{ width: '280px', height: '340px' }}>
+              style={{ width: '280px', height: '340px', background: 'linear-gradient(160deg, #f8f9fa 0%, #e8edf2 60%, #dce3eb 100%)' }}>
               <Avatar3D
                 isSpeaking={false}
                 isListening={false}

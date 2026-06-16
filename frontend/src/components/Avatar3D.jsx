@@ -111,8 +111,7 @@ export default function Avatar3D({
   })();
 
   return (
-    <div className="w-full h-full relative overflow-hidden rounded-2xl flex items-center justify-center"
-         style={{ background: 'linear-gradient(160deg, #f8f9fa 0%, #e8edf2 60%, #dce3eb 100%)' }}>
+    <div className="w-full h-full relative overflow-hidden flex items-center justify-center bg-transparent">
 
       {/* ── Background ambient glow ─────────────────────────────────── */}
       <motion.div
@@ -140,7 +139,7 @@ export default function Avatar3D({
       )}
 
       <div className="absolute inset-0 z-10">
-        <Canvas camera={{ position: [0, -0.2, 1.2], fov: 35 }} dpr={[1, 1.5]}>
+        <Canvas camera={{ position: [0, 0, 3], fov: 30 }} dpr={[1, 1.5]}>
           <ambientLight intensity={0.8} />
           <directionalLight position={[0, 2, 5]} intensity={1.5} />
           <Suspense fallback={

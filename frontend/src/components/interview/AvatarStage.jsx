@@ -22,7 +22,7 @@ export default function AvatarStage({
   return (
     <motion.div
       layout
-      className={`relative w-full h-screen flex flex-col justify-center items-center overflow-hidden transition-colors duration-500 ${
+      className={`absolute inset-0 flex flex-col justify-center items-center overflow-hidden transition-colors duration-500 ${
         isDark ? 'bg-[#000000]' : 'bg-slate-50'
       }`}
     >
@@ -34,7 +34,7 @@ export default function AvatarStage({
         } ${isCodeOpen ? 'rounded-[40px] border' : ''}`}
         style={{
           width: isCodeOpen ? '90%' : '100%',
-          height: isCodeOpen ? '85vh' : '100vh',
+          height: isCodeOpen ? '85%' : '100%',
           maxWidth: isCodeOpen ? '1200px' : '100%',
         }}
         animate={{
