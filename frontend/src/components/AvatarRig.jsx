@@ -14,10 +14,10 @@ const lerpToward = (current, target, factor) => {
 };
 
 // Preload outside component to prevent WebGL Context Lost crash
-useGLTF.preload('/interviewer.glb');
+useGLTF.preload('/model.glb');
 
 export default function AvatarRig({ avatarState, mouthOpenRef }) {
-  const { nodes, scene } = useGLTF('/interviewer.glb');
+  const { nodes, scene } = useGLTF('/model.glb');
   const groupRef = useRef();
 
   const anim = useRef({
