@@ -1045,54 +1045,44 @@ export default function LiveInterview() {
               )}
             </AnimatePresence>
 
-            {/* Elegant Dual-Track Subtitles Overlay */}
-            <div className="relative z-20 w-full px-8 pb-8 pt-32 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col gap-4">
-              
-              {/* AI TTS Track */}
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                className="self-start max-w-3xl flex flex-col items-start gap-1.5 w-full"
-              >
-                <div className="flex items-center gap-2 px-2">
-                  <div className={`w-1.5 h-1.5 rounded-full ${isSpeaking ? 'bg-blue-500 animate-pulse' : 'bg-slate-600'}`}></div>
-                  <span className="text-xs font-bold tracking-widest uppercase text-slate-400">AI Interviewer</span>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl rounded-tl-sm px-6 py-4 shadow-xl">
-                  <p className="text-lg md:text-xl text-white font-medium leading-relaxed drop-shadow-sm">
-                    {loading ? loadingStatus : displayedQuestion}
-                  </p>
-                </div>
-              </motion.div>
-
-              {/* Candidate STT Track */}
-              <AnimatePresence>
-                {(finalTranscript || interimTranscript || isListening) && !loading && (
+            {/* Cinematic Dynamic Captions */}
+            <div className="absolute inset-x-0 bottom-0 z-20 w-full px-8 pb-10 pt-32 bg-gradient-to-t from-black/95 via-black/80 to-transparent pointer-events-none flex flex-col items-center justify-end min-h-[160px]">
+              <AnimatePresence mode="wait">
+                {isSpeaking || loading ? (
                   <motion.div 
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                    className="self-end max-w-3xl flex flex-col items-end gap-1.5 mt-2 w-full"
+                    key="ai-speaking"
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                    className="flex flex-col items-center text-center max-w-4xl"
                   >
-                    <div className="flex items-center gap-2 px-2">
-                      <span className="text-xs font-bold tracking-widest uppercase text-emerald-400">You</span>
-                      <div className={`w-1.5 h-1.5 rounded-full ${isListening ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'}`}></div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-[pulse_1s_ease-in-out_infinite]"></div>
+                      <span className="text-[11px] font-black tracking-[0.2em] uppercase text-blue-400">AI Interviewer</span>
                     </div>
-                    <div className="bg-emerald-950/40 backdrop-blur-md border border-emerald-500/20 rounded-2xl rounded-tr-sm px-6 py-4 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-                      <p className="text-[15px] md:text-base leading-relaxed text-right">
+                    <h2 className="text-2xl md:text-3xl text-white font-medium leading-relaxed drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+                      {loading ? loadingStatus : displayedQuestion}
+                    </h2>
+                  </motion.div>
+                ) : (finalTranscript || interimTranscript || isListening) ? (
+                  <motion.div 
+                    key="candidate-speaking"
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                    className="flex flex-col items-center text-center max-w-4xl"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-[11px] font-black tracking-[0.2em] uppercase text-emerald-400">Candidate</span>
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-[pulse_1s_ease-in-out_infinite]"></div>
+                    </div>
+                    <div className="min-h-[40px] flex items-center justify-center">
+                      <p className="text-xl md:text-2xl leading-relaxed drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] text-white">
                         {finalTranscript && <span className="text-emerald-50 font-medium">{finalTranscript} </span>}
                         {interimTranscript && <span className="text-emerald-200/70 italic">{interimTranscript}</span>}
                         {!finalTranscript && !interimTranscript && isListening && (
-                          <span className="text-emerald-500/50 italic flex items-center gap-2 justify-end">
-                            Listening...
-                            <span className="flex gap-0.5 ml-1">
-                               <span className="w-1 h-1 bg-emerald-500/50 rounded-full animate-[bounce_1s_infinite]"></span>
-                               <span className="w-1 h-1 bg-emerald-500/50 rounded-full animate-[bounce_1s_infinite_0.2s]"></span>
-                               <span className="w-1 h-1 bg-emerald-500/50 rounded-full animate-[bounce_1s_infinite_0.4s]"></span>
-                            </span>
-                          </span>
+                          <span className="text-emerald-500/50 italic font-medium">Listening to your response...</span>
                         )}
                       </p>
                     </div>
                   </motion.div>
-                )}
+                ) : null}
               </AnimatePresence>
             </div>
           </div>
