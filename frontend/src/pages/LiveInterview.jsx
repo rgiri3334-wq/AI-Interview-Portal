@@ -6,6 +6,7 @@ import { Editor } from '@monaco-editor/react';
 
 import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png';
+import Avatar3D from '../components/Avatar3D';
 import PreFlightCheck from '../components/PreFlightCheck';
 
 import AvatarStage from '../components/interview/AvatarStage';
