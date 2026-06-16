@@ -151,66 +151,68 @@ export function useAudioStream() {
       // This fixes the duplicate speech bug caused by render cycle double-invocations
       if (isSpeakingRef.current) {
         stop();
-        // Small gap to let the previous utterance fully cancel
-        setTimeout(() => {}, 50);
       }
 
-      if (echoDebounceRef.current) clearTimeout(echoDebounceRef.current);
-      window.speechSynthesis.cancel();
+      // We must wait a tiny bit after stop() due to a known Chrome bug where
+      // calling speak() immediately after cancel() causes the speech to be muted.
+      setTimeout(() => {
+        if (echoDebounceRef.current) clearTimeout(echoDebounceRef.current);
+        window.speechSynthesis.cancel();
 
-      isSpeakingRef.current = true;
-      setIsSpeaking(true);
-      startFrequencyAnalysis();
+        isSpeakingRef.current = true;
+        setIsSpeaking(true);
+        startFrequencyAnalysis();
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utteranceRef.current = utterance;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utteranceRef.current = utterance;
 
-      const voice = getPreferredVoice();
-      if (voice) utterance.voice = voice;
+        const voice = getPreferredVoice();
+        if (voice) utterance.voice = voice;
 
-      // Varied pacing based on options (Psychological Touch)
-      const pacing = options.pacing || 'normal';
-      if (pacing === 'slow') {
-        utterance.rate = 0.85; // Slower for complex technical questions
-      } else if (pacing === 'fast') {
-        utterance.rate = 1.05; // Faster for casual small talk
-      } else {
-        utterance.rate  = 0.95;  // Slightly slower = warmer, more human
-      }
-      
-      utterance.pitch = 1.05;  // Slightly higher = professional female tone
-      utterance.volume = 1.0;
-
-      const finalize = () => {
-        echoDebounceRef.current = setTimeout(() => {
-          isSpeakingRef.current = false;
-          setIsSpeaking(false);
-          utteranceRef.current = null;
-          stopFrequencyAnalysis();
-          resolve();
-        }, 600); // 600ms post-speech debounce for echo protection
-      };
-
-      utterance.onend   = finalize;
-      utterance.onerror = finalize;
-
-      // Chrome: speechSynthesis pauses when tab is hidden. Resume it.
-      const keepAliveInterval = setInterval(() => {
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
+        // Varied pacing based on options (Psychological Touch)
+        const pacing = options.pacing || 'normal';
+        if (pacing === 'slow') {
+          utterance.rate = 0.85; // Slower for complex technical questions
+        } else if (pacing === 'fast') {
+          utterance.rate = 1.05; // Faster for casual small talk
+        } else {
+          utterance.rate  = 0.95;  // Slightly slower = warmer, more human
         }
-      }, 5000);
+        
+        utterance.pitch = 1.05;  // Slightly higher = professional female tone
+        utterance.volume = 1.0;
 
-      utterance.onend = () => {
-        clearInterval(keepAliveInterval);
-        finalize();
-      };
-      utterance.onerror = () => {
-        clearInterval(keepAliveInterval);
-        finalize();
-      };
+        const finalize = () => {
+          echoDebounceRef.current = setTimeout(() => {
+            isSpeakingRef.current = false;
+            setIsSpeaking(false);
+            utteranceRef.current = null;
+            stopFrequencyAnalysis();
+            resolve();
+          }, 600); // 600ms post-speech debounce for echo protection
+        };
 
-      window.speechSynthesis.speak(utterance);
+        utterance.onend   = finalize;
+        utterance.onerror = finalize;
+
+        // Chrome: speechSynthesis pauses when tab is hidden. Resume it.
+        const keepAliveInterval = setInterval(() => {
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
+        }, 5000);
+
+        utterance.onend = () => {
+          clearInterval(keepAliveInterval);
+          finalize();
+        };
+        utterance.onerror = () => {
+          clearInterval(keepAliveInterval);
+          finalize();
+        };
+
+        window.speechSynthesis.speak(utterance);
+      }, 50);
     });
   }, [stop, startFrequencyAnalysis, stopFrequencyAnalysis, getPreferredVoice]);
 
