@@ -1,13 +1,12 @@
 import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
-import { Environment, ContactShadows, useGLTF } from '@react-three/drei';
+import { Environment, ContactShadows, useGLTF, Html } from '@react-three/drei';
 import AvatarRig from './AvatarRig';
 import { useAvatarState } from '../hooks/useAvatarState';
 import { useAvatarLipSync } from '../hooks/useAvatarLipSync';
 
-// Preload the standard avatar file that the user will replace
-useGLTF.preload('/models/avatar.glb');
+// Preload handled in AvatarRig
 
 // ── Audio visualizer bars ──────────────────────────────────────────────────
 function AudioBars({ audioLevel, count = 5 }) {
@@ -147,10 +146,14 @@ export default function Avatar3D({
           dpr={[1, 1.5]} 
           gl={{ powerPreference: "low-power", antialias: false }}
         >
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[0, 2, 5]} intensity={1.2} />
-          <Environment preset="city" />
-          <Suspense fallback={null}>
+          <ambientLight intensity={0.8} />
+          <Suspense fallback={
+            <Html center>
+              <div className="text-sm font-bold text-slate-500 animate-pulse whitespace-nowrap bg-white/80 px-4 py-2 rounded-full shadow">
+                Booting 3D Engine...
+              </div>
+            </Html>
+          }>
             <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
           </Suspense>
         </Canvas>
