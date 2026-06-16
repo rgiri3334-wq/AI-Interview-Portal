@@ -153,7 +153,7 @@ export default function Avatar3D({
           <Suspense fallback={null}>
             <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
           </Suspense>
-          <ContactShadows opacity={0.4} scale={5} blur={2} far={4} resolution={256} color="#000000" position={[0, -1.5, 0]} />
+          <ContactShadows frames={1} opacity={0.4} scale={5} blur={2} far={4} resolution={256} color="#000000" position={[0, -1.5, 0]} />
         </Canvas>
       </div>
 

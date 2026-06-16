@@ -36,6 +36,21 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
   const avatarStateRef = useRef(avatarState);
   useEffect(() => { avatarStateRef.current = avatarState; }, [avatarState]);
 
+  // Performance Hack for Low-End GPUs (i3 10th Gen)
+  // ReadyPlayerMe meshes vanish if math bones move them outside their static bounds.
+  useEffect(() => {
+    if (scene) {
+      scene.traverse((child) => {
+        if (child.isMesh) {
+          child.frustumCulled = false;
+          // Disable shadows on the mesh itself to save massive GPU overhead
+          child.castShadow = false;
+          child.receiveShadow = false;
+        }
+      });
+    }
+  }, [scene]);
+
   useFrame((state, delta) => {
     if (!nodes) return;
     
