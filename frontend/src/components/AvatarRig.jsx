@@ -7,9 +7,10 @@ import { AVATAR_STATES } from '../hooks/useAvatarState';
 // Utility for smooth interpolation
 const lerpToward = (current, target, alpha) => current + (target - current) * alpha;
 
+// Preload and load the avatar from the public folder.
+useGLTF.preload('/avatar.glb');
+
 export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenRef }) {
-  // Preload and load the avatar from the public folder.
-  useGLTF.preload('/avatar.glb');
   const { nodes, scene } = useGLTF('/avatar.glb', true, true, (error) => {
     console.warn("Could not load /avatar.glb. Ensure the file is placed in the frontend/public/ folder.");
   });
