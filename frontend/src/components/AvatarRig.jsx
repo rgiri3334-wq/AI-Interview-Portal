@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
+import { useGLTF, useAnimations } from '@react-three/drei';
 
 const AVATAR_STATES = {
   SPEAKING: 'speaking',
@@ -14,9 +14,16 @@ const lerpToward = (current, target, factor) => {
 };
 
 export default function AvatarRig({ avatarState, mouthOpenRef }) {
-  useGLTF.preload('/model_opt.glb');
-  const { nodes, scene } = useGLTF('/model_opt.glb');
+  const { nodes, scene, animations } = useGLTF('/model_opt.glb');
   const groupRef = useRef();
+  const { actions, names } = useAnimations(animations, groupRef);
+
+  useEffect(() => {
+    if (names && names.length > 0) {
+      // Play the first animation (usually idle)
+      actions[names[0]]?.reset().fadeIn(0.5).play();
+    }
+  }, [actions, names]);
 
   const anim = useRef({
     t: 0,
@@ -94,6 +101,8 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
     // 4. Apply Rotations to standard Mixamo / ReadyPlayerMe bone hierarchy
     const head = nodes.Head || nodes.mixamorigHead;
     const neck = nodes.Neck || nodes.mixamorigNeck;
+    const leftArm = nodes.LeftArm || nodes.mixamorigLeftArm;
+    const rightArm = nodes.RightArm || nodes.mixamorigRightArm;
 
     if (head) {
       head.rotation.x = a.headPitch;
@@ -102,6 +111,12 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
     }
     if (neck) {
       neck.rotation.x = a.headPitch * 0.5;
+    }
+
+    // Procedurally drop arms if no animations are present to prevent T-pose
+    if (!animations || animations.length === 0) {
+      if (leftArm) leftArm.rotation.z = 1.2; // roughly 70 degrees down
+      if (rightArm) rightArm.rotation.z = -1.2;
     }
 
     // 5. Procedural Eye Blinks
