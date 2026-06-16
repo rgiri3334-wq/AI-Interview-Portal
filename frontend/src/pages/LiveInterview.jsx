@@ -938,14 +938,6 @@ export default function LiveInterview() {
 
   return (
     <div className={`fixed inset-0 h-screen w-screen overflow-hidden flex flex-col ${theme === 'dark' ? 'bg-[#000000] text-slate-200' : 'bg-slate-50 text-slate-900'}`}>
-      {/* Cinematic ambient background glow */}
-      {theme === 'dark' && (
-        <>
-          <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-red-900/20 blur-[120px] rounded-full pointer-events-none"></div>
-          <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-900/10 blur-[120px] rounded-full pointer-events-none"></div>
-        </>
-      )}
-
       {/* HEADER - Matching the screenshot's top nav */}
       <header className={`${theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-white/40 border-red-200'} backdrop-blur-2xl border-b px-8 py-4 flex justify-between items-center sticky top-0 z-50`}>
         {/* Logo Area */}
