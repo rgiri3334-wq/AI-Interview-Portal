@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
-import * as THREE from 'three';
 
 const AVATAR_STATES = {
   SPEAKING: 'speaking',
@@ -40,27 +39,7 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
   useEffect(() => { avatarStateRef.current = avatarState; }, [avatarState]);
 
   useEffect(() => {
-    if (scene && groupRef.current) {
-      // 1. Calculate the absolute size of the VRChat avatar
-      const box = new THREE.Box3().setFromObject(scene);
-      const height = box.max.y - box.min.y;
-      
-      // 2. VRChat models are often exported in Centimeters (170m tall). 
-      // Force it to be exactly 1.7 meters tall.
-      if (height > 0.1) {
-        const targetHeight = 1.7;
-        const scaleFactor = targetHeight / height;
-        groupRef.current.scale.setScalar(scaleFactor);
-        
-        // 3. Center the model horizontally, and place feet exactly at the bottom (-1.4)
-        const center = box.getCenter(new THREE.Vector3());
-        groupRef.current.position.set(
-          -center.x * scaleFactor, 
-          -1.4, 
-          -center.z * scaleFactor
-        );
-      }
-
+    if (scene) {
       scene.traverse((child) => {
         if (child.isMesh) {
           child.frustumCulled = false;
@@ -252,7 +231,7 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
   });
 
   return (
-    <group ref={groupRef} dispose={null}>
+    <group ref={groupRef} dispose={null} position={[0, -1.5, 0]}>
       <primitive object={scene} />
     </group>
   );
