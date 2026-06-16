@@ -15,16 +15,6 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
       scene.traverse((child) => {
         if (child.isMesh) {
           child.frustumCulled = false;
-          // Intel i3 Hack: Convert complex PBR shaders to Basic Unlit to bypass X4122 crash
-          if (child.material) {
-            const oldMat = child.material;
-            // Handle arrays of materials or single material
-            if (Array.isArray(oldMat)) {
-              child.material = oldMat.map(m => new THREE.MeshBasicMaterial({ map: m.map, color: m.color }));
-            } else {
-              child.material = new THREE.MeshBasicMaterial({ map: oldMat.map, color: oldMat.color });
-            }
-          }
         }
       });
     }

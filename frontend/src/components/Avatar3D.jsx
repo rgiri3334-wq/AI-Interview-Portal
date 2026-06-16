@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
-import { Environment, ContactShadows, useGLTF } from '@react-three/drei';
+import { Environment, ContactShadows, useGLTF, OrbitControls, Bounds } from '@react-three/drei';
 import AvatarRig from './AvatarRig';
 import { useAvatarState } from '../hooks/useAvatarState';
 import { useAvatarLipSync } from '../hooks/useAvatarLipSync';
@@ -149,8 +149,11 @@ export default function Avatar3D({
           <ambientLight intensity={0.8} />
           <directionalLight position={[0, 2, 5]} intensity={1.5} />
           <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={1.0} />
+          <OrbitControls makeDefault />
           <Suspense fallback={null}>
-            <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
+            <Bounds fit clip observe margin={1.2}>
+              <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
+            </Bounds>
           </Suspense>
         </Canvas>
       </div>
