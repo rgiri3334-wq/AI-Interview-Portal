@@ -169,15 +169,15 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
     
     a.pacingOffset = lerpToward(a.pacingOffset, targetPacingOffset, dt * 2);
 
-    // 4. Apply Rotations to ReadyPlayerMe / Mixamo bone hierarchy
-    const head = nodes.Head || nodes.mixamorigHead;
-    const neck = nodes.Neck || nodes.mixamorigNeck;
-    const spine = nodes.Spine || nodes.Spine2 || nodes.mixamorigSpine || nodes.mixamorigSpine2;
+    // 4. Apply Rotations to ReadyPlayerMe / Mixamo / VRChat bone hierarchy
+    const head = nodes.Head || nodes.mixamorigHead || nodes.Head_06;
+    const neck = nodes.Neck || nodes.mixamorigNeck || nodes.Neck_05;
+    const spine = nodes.Spine || nodes.Spine2 || nodes.mixamorigSpine || nodes.mixamorigSpine2 || nodes.Spine2_04 || nodes.Spine_02;
     
-    const rightArm = nodes.RightArm || nodes.mixamorigRightArm;
-    const rightForeArm = nodes.RightForeArm || nodes.mixamorigRightForeArm;
-    const leftArm = nodes.LeftArm || nodes.mixamorigLeftArm;
-    const leftForeArm = nodes.LeftForeArm || nodes.mixamorigLeftForeArm;
+    const rightArm = nodes.RightArm || nodes.mixamorigRightArm || nodes.RightArm_035;
+    const rightForeArm = nodes.RightForeArm || nodes.mixamorigRightForeArm || nodes.RightForeArm_036;
+    const leftArm = nodes.LeftArm || nodes.mixamorigLeftArm || nodes.LeftArm_011;
+    const leftForeArm = nodes.LeftForeArm || nodes.mixamorigLeftForeArm || nodes.LeftForeArm_012;
 
     if (head) {
       head.rotation.x = a.headPitch;
@@ -231,7 +231,8 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
   });
 
   return (
-    <group ref={groupRef} dispose={null}>
+    // Rotate 90 degrees on X to stand her upright, since the VRChat model was laying face down
+    <group ref={groupRef} dispose={null} rotation={[Math.PI / 2, 0, 0]}>
       <primitive object={scene} />
     </group>
   );
