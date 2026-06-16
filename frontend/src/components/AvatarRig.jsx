@@ -14,7 +14,6 @@ const lerpToward = (current, target, factor) => {
 };
 
 export default function AvatarRig({ avatarState, mouthOpenRef }) {
-  // Simple loading without draco
   useGLTF.preload('/avatar.glb');
   const { nodes, scene } = useGLTF('/avatar.glb');
   const groupRef = useRef();
@@ -31,7 +30,7 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
     gesturePhase: 0,
     lookPhaseX: 0, lookPhaseY: 0,
     pacingOffset: 0, pacingPhase: 0,
-    currentGesture: 0, // 0 = rest, 1 = sweep, 2 = chop, 3 = think
+    currentGesture: 0,
     gestureTimer: 0,
   });
 
@@ -169,15 +168,15 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
     
     a.pacingOffset = lerpToward(a.pacingOffset, targetPacingOffset, dt * 2);
 
-    // 4. Apply Rotations to ReadyPlayerMe / Mixamo / VRChat bone hierarchy
-    const head = nodes.Head || nodes.mixamorigHead || nodes.Head_06;
-    const neck = nodes.Neck || nodes.mixamorigNeck || nodes.Neck_05;
-    const spine = nodes.Spine || nodes.Spine2 || nodes.mixamorigSpine || nodes.mixamorigSpine2 || nodes.Spine2_04 || nodes.Spine_02;
+    // 4. Apply Rotations to standard Mixamo / ReadyPlayerMe bone hierarchy
+    const head = nodes.Head || nodes.mixamorigHead;
+    const neck = nodes.Neck || nodes.mixamorigNeck;
+    const spine = nodes.Spine || nodes.Spine2 || nodes.mixamorigSpine || nodes.mixamorigSpine2;
     
-    const rightArm = nodes.RightArm || nodes.mixamorigRightArm || nodes.RightArm_035;
-    const rightForeArm = nodes.RightForeArm || nodes.mixamorigRightForeArm || nodes.RightForeArm_036;
-    const leftArm = nodes.LeftArm || nodes.mixamorigLeftArm || nodes.LeftArm_011;
-    const leftForeArm = nodes.LeftForeArm || nodes.mixamorigLeftForeArm || nodes.LeftForeArm_012;
+    const rightArm = nodes.RightArm || nodes.mixamorigRightArm;
+    const rightForeArm = nodes.RightForeArm || nodes.mixamorigRightForeArm;
+    const leftArm = nodes.LeftArm || nodes.mixamorigLeftArm;
+    const leftForeArm = nodes.LeftForeArm || nodes.mixamorigLeftForeArm;
 
     if (head) {
       head.rotation.x = a.headPitch;
@@ -208,13 +207,12 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
       leftForeArm.rotation.x = a.leftForeArmPitch;
     }
 
-    // Apply Pacing translation to the group
     if (groupRef.current) {
       groupRef.current.position.x = a.pacingOffset;
     }
 
     // 5. Procedural Lip Sync
-    if (mouthOpenRef) {
+    if (mouthOpenRef && scene) {
       const openAmount = mouthOpenRef.current ?? 0;
       scene.traverse((child) => {
         if (child.isMesh && child.morphTargetInfluences && child.morphTargetDictionary) {
@@ -231,7 +229,8 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
   });
 
   return (
-    <group ref={groupRef} dispose={null} position={[0, -1.5, 0]}>
+    // Standard portrait framing. No bounds fitting, no VRChat X-rotations.
+    <group ref={groupRef} dispose={null} position={[0, -1.6, 0]} scale={1.2}>
       <primitive object={scene} />
     </group>
   );

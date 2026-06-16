@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
-import { Environment, ContactShadows, useGLTF, Bounds } from '@react-three/drei';
+import { Environment, ContactShadows, useGLTF } from '@react-three/drei';
 import AvatarRig from './AvatarRig';
 import { useAvatarState } from '../hooks/useAvatarState';
 import { useAvatarLipSync } from '../hooks/useAvatarLipSync';
