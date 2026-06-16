@@ -12,6 +12,7 @@ export function useWebSocketSTT({ onSilenceDetected, silenceDelayMs = 2000 } = {
   const pendingResolveRef    = useRef(null);
   const wsRef                = useRef(null);
   const mediaRecorderRef     = useRef(null);
+  const globalStreamRef      = useRef(null);
   const recognitionRef       = useRef(null);
   const silenceTimerRef      = useRef(null);
   const onSilenceDetectedRef = useRef(onSilenceDetected);
@@ -170,13 +171,17 @@ export function useWebSocketSTT({ onSilenceDetected, silenceDelayMs = 2000 } = {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
-      });
+      let stream = globalStreamRef.current;
+      if (!stream || !stream.active) {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          } 
+        });
+        globalStreamRef.current = stream;
+      }
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
       mediaRecorderRef.current.ondataavailable = (event) => {
@@ -227,7 +232,7 @@ export function useWebSocketSTT({ onSilenceDetected, silenceDelayMs = 2000 } = {
         
         mediaRecorderRef.current.onstop = safeTrigger;
         mediaRecorderRef.current.stop();
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        // Do NOT stop tracks here. Reusing the stream prevents 500ms audio loss at the start of the next answer!
         
         // Safety Fallback: If onstop fails to fire (common Chrome bug when tracks are stopped)
         setTimeout(safeTrigger, 1000);
@@ -257,7 +262,9 @@ export function useWebSocketSTT({ onSilenceDetected, silenceDelayMs = 2000 } = {
           if (mediaRecorderRef.current.state !== 'inactive') {
             mediaRecorderRef.current.stop();
           }
-          mediaRecorderRef.current.stream?.getTracks().forEach(track => track.stop());
+          if (globalStreamRef.current) {
+            globalStreamRef.current.getTracks().forEach(track => track.stop());
+          }
         } catch (e) {}
       }
       if (recognitionRef.current) {

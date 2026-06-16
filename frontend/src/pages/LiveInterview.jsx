@@ -167,7 +167,7 @@ export default function LiveInterview() {
     startListening,
     stopListening,
     resetTranscript,
-  } = useWebSocketSTT({ onSilenceDetected: handleSilenceDetected, silenceDelayMs: 2000 }); // Sprint 3: Reduced from 4500ms → 2000ms for snappier auto-submit
+  } = useWebSocketSTT({ onSilenceDetected: handleSilenceDetected, silenceDelayMs: 4000 }); // Fix: Increased to 4000ms so candidate doesn't get cut off while pausing
   // isListening is passed to Avatar3D for the LISTENING state display
 
   const lastCueWordCount = useRef(0);
@@ -680,6 +680,7 @@ export default function LiveInterview() {
 
   const doEndInterview = async (h, terminationReason = null) => {
     setPhase('ending');
+    stopVoice();
     stopHuman();
     
     const interviewId = sessionStorage.getItem('interview_id');
