@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, Mic, MicOff, Video, VideoOff, TerminalSquare, PhoneOff } from 'lucide-react';
 import { Editor } from '@monaco-editor/react';
 
 import { apiClient } from '../api/apiClient';
@@ -53,6 +53,7 @@ export default function LiveInterview() {
   const [loadingStatus, setLoadingStatus] = useState('Computing...');
   const [warnings, setWarnings] = useState(0);
   const [textFallback, setTextFallback] = useState('');
+  const [isCodeWorkspaceOpen, setIsCodeWorkspaceOpen] = useState(false);
 
   const proctoringLogsRef = useRef([]);
   const [fullscreenLock, setFullscreenLock] = useState(false);
@@ -914,14 +915,6 @@ export default function LiveInterview() {
           <div className="text-red-400/80 uppercase tracking-widest text-xs flex items-center gap-2">
             <ShieldAlert size={14} className="text-red-500 animate-pulse" /> Proctoring Active
           </div>
-          <button onClick={() => {
-            if (window.confirm("Are you sure you want to end and submit the interview now?")) {
-              doEndInterview(history);
-            }
-          }} className="relative group overflow-hidden px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-all duration-300 ease-out font-bold tracking-widest shadow-lg">
-            <div className="absolute inset-0 w-1/4 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-150%] group-hover:translate-x-[400%] transition-transform duration-700"></div>
-            End & Submit
-          </button>
         </div>
       </header>
 
@@ -936,10 +929,10 @@ export default function LiveInterview() {
           </motion.div>
         )}
       </AnimatePresence>
-      <main className="flex-1 p-8 grid grid-cols-12 gap-8 max-w-[1600px] mx-auto w-full">
+      <main className="flex-1 p-4 md:p-8 flex gap-8 max-w-[1600px] mx-auto w-full overflow-hidden relative">
 
         {/* LEFT COLUMN: AI Video Conference Feed */}
-        <div className="col-span-7 flex flex-col gap-6 h-full">
+        <div className={`flex flex-col gap-6 h-full transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isCodeWorkspaceOpen ? 'w-[50%]' : 'w-full max-w-5xl mx-auto'}`}>
           
           <div className={`relative bg-black rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] flex-1 min-h-[500px] flex flex-col justify-end group transition-all duration-700 ${isSpeaking ? 'shadow-[0_0_80px_rgba(59,130,246,0.15)] border-blue-500/20' : isListening ? 'shadow-[0_0_80px_rgba(34,197,94,0.1)] border-green-500/20' : 'border-white/5'} border`}>
             
@@ -1042,16 +1035,18 @@ export default function LiveInterview() {
             </AnimatePresence>
 
             {/* Live Closed Captions (Bottom overlay) */}
-            <div className="relative z-20 w-full px-8 pb-8 pt-24 bg-gradient-to-t from-black via-black/70 to-transparent">
-              <h2 className="text-xl md:text-2xl text-white font-medium leading-relaxed drop-shadow-lg text-center max-w-2xl mx-auto">
+            <div className="relative z-20 w-full px-12 pb-12 pt-40 bg-gradient-to-t from-black via-black/90 to-transparent flex flex-col items-center">
+              {/* AI TTS Caption */}
+              <h2 className="text-3xl md:text-4xl text-white font-semibold leading-tight drop-shadow-[0_4px_20px_rgba(0,0,0,1)] text-center max-w-4xl mx-auto tracking-wide">
                 {loading ? loadingStatus : displayedQuestion}
               </h2>
               
-              <div className="mt-6 text-center min-h-[30px] flex items-center justify-center">
-                {finalTranscript && <span className="text-yellow-400 font-medium text-[15px] drop-shadow-md bg-black/40 px-3 py-1 rounded-lg">{finalTranscript} </span>}
-                {interimTranscript && <span className="text-yellow-400/60 italic text-[15px] drop-shadow-md bg-black/20 px-3 py-1 rounded-lg ml-2">{interimTranscript}</span>}
+              {/* Candidate SST Caption */}
+              <div className="mt-8 text-center min-h-[40px] flex items-center justify-center max-w-3xl">
+                {finalTranscript && <span className="text-green-400 font-medium text-xl drop-shadow-[0_2px_10px_rgba(0,0,0,1)] bg-black/60 px-6 py-2 rounded-2xl">{finalTranscript} </span>}
+                {interimTranscript && <span className="text-green-400/70 italic text-xl drop-shadow-[0_2px_10px_rgba(0,0,0,1)] bg-black/40 px-6 py-2 rounded-2xl ml-2">{interimTranscript}</span>}
                 {!finalTranscript && !interimTranscript && !isListening && !isSpeaking && !loading && (
-                  <span className="text-white/40 text-sm font-medium">Listening for your response...</span>
+                  <span className="text-white/30 text-base font-medium tracking-widest uppercase">Listening...</span>
                 )}
               </div>
             </div>
@@ -1079,10 +1074,59 @@ export default function LiveInterview() {
               )}
             </div>
           </div>
+
+          {/* Floating Control Toolbar (Google Meet Style) */}
+          <div className="flex justify-center mt-2">
+            <div className="bg-slate-900/80 backdrop-blur-2xl border border-white/10 rounded-full px-6 py-3 flex items-center gap-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+              {/* Mic Toggle */}
+              <button 
+                onClick={() => setMicOn(!micOn)} 
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg ${micOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-600 hover:bg-red-700 text-white'}`}
+                title={micOn ? "Mute Microphone" : "Unmute Microphone"}
+              >
+                {micOn ? <Mic size={20} /> : <MicOff size={20} />}
+              </button>
+              
+              {/* Camera Toggle */}
+              <button 
+                onClick={() => setCamOn(!camOn)} 
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg ${camOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-600 hover:bg-red-700 text-white'}`}
+                title={camOn ? "Stop Video" : "Start Video"}
+              >
+                {camOn ? <Video size={20} /> : <VideoOff size={20} />}
+              </button>
+
+              <div className="w-[1px] h-8 bg-white/10 mx-2"></div>
+
+              {/* Code Workspace Toggle */}
+              <button 
+                onClick={() => setIsCodeWorkspaceOpen(!isCodeWorkspaceOpen)} 
+                className={`px-6 h-12 rounded-full flex items-center gap-2 font-bold tracking-wide transition-all shadow-lg ${isCodeWorkspaceOpen ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}
+              >
+                <TerminalSquare size={18} />
+                {isCodeWorkspaceOpen ? 'Close Editor' : 'Open Editor'}
+              </button>
+
+              <div className="w-[1px] h-8 bg-white/10 mx-2"></div>
+
+              {/* End Interview */}
+              <button 
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to end and submit the interview now?")) {
+                    doEndInterview(history);
+                  }
+                }} 
+                className="px-6 h-12 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 font-bold tracking-wide transition-all shadow-lg hover:shadow-red-500/20"
+              >
+                <PhoneOff size={18} />
+                End
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* RIGHT COLUMN: Code Workspace & Tools */}
-        <div className="col-span-5 flex flex-col gap-6 h-full">
+        {/* RIGHT COLUMN: Code Workspace & Tools (Sliding Panel) */}
+        <div className={`flex flex-col gap-6 h-full transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] overflow-hidden ${isCodeWorkspaceOpen ? 'w-[50%] opacity-100 translate-x-0' : 'w-0 opacity-0 translate-x-12'}`}>
 
           {/* Code/Workspace Area */}
           <div className="bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl flex-1 flex flex-col shadow-2xl overflow-hidden min-h-[500px]">
