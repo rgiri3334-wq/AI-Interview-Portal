@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
-import { Environment, ContactShadows, useGLTF } from '@react-three/drei';
+import { ContactShadows, useGLTF, Html } from '@react-three/drei';
 import AvatarRig from './AvatarRig';
 import { useAvatarState } from '../hooks/useAvatarState';
 import { useAvatarLipSync } from '../hooks/useAvatarLipSync';
@@ -143,10 +143,15 @@ export default function Avatar3D({
       {/* ── 3D Canvas Container ─────────────────────────────────── */}
       <div className="absolute inset-0 z-10">
         <Canvas camera={{ position: [0, -0.2, 1.2], fov: 35 }}>
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[0, 2, 5]} intensity={1.2} />
-          <Environment preset="city" />
-          <Suspense fallback={null}>
+          <ambientLight intensity={0.8} />
+          <directionalLight position={[0, 2, 5]} intensity={1.5} />
+          <Suspense fallback={
+            <Html center>
+              <div className="text-sm font-bold text-slate-500 animate-pulse whitespace-nowrap bg-white/80 px-4 py-2 rounded-full shadow">
+                Booting 3D Engine...
+              </div>
+            </Html>
+          }>
             <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
           </Suspense>
           <ContactShadows opacity={0.4} scale={5} blur={2} far={4} resolution={256} color="#000000" position={[0, -1.5, 0]} />

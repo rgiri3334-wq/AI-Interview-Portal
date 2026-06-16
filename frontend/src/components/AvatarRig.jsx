@@ -39,6 +39,32 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
   const avatarStateRef = useRef(avatarState);
   useEffect(() => { avatarStateRef.current = avatarState; }, [avatarState]);
 
+  // Performance Hack for Low-End GPUs
+  // Prevents WebGL Context Loss and meshes vanishing out of bounds
+  useEffect(() => {
+    if (scene) {
+      scene.traverse((child) => {
+        if (child.isMesh) {
+          child.frustumCulled = false;
+          child.castShadow = false;
+          child.receiveShadow = false;
+          
+          // Force Basic Material to bypass complex lighting/skinning shader crashes on Intel GPUs
+          if (child.material) {
+            const oldMat = child.material;
+            child.material = new THREE.MeshBasicMaterial({
+              map: oldMat.map || null,
+              color: oldMat.color || new THREE.Color(0xcccccc),
+              skinning: true,
+              morphTargets: true
+            });
+            oldMat.dispose();
+          }
+        }
+      });
+    }
+  }, [scene]);
+
   useFrame((state, delta) => {
     if (!nodes) return;
     
