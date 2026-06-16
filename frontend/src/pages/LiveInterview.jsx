@@ -167,6 +167,7 @@ export default function LiveInterview() {
     startListening,
     stopListening,
     resetTranscript,
+    shutdown: shutdownSTT,
   } = useWebSocketSTT({ onSilenceDetected: handleSilenceDetected, silenceDelayMs: 4000 }); // Fix: Increased to 4000ms so candidate doesn't get cut off while pausing
   // isListening is passed to Avatar3D for the LISTENING state display
 
@@ -682,6 +683,17 @@ export default function LiveInterview() {
     setPhase('ending');
     stopVoice();
     stopHuman();
+
+    // FORCEFULLY KILL ALL HARDWARE ACCESS
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) videoRef.current.srcObject = null;
+    
+    stopListening(false);
+    shutdownSTT();
+    forceStopAllTracks();
     
     const interviewId = sessionStorage.getItem('interview_id');
     if (interviewId) {

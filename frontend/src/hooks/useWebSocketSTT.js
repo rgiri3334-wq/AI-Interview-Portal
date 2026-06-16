@@ -280,6 +280,13 @@ export function useWebSocketSTT({ onSilenceDetected, silenceDelayMs = 2000 } = {
     };
   }, []);
 
+  const shutdown = useCallback(() => {
+    if (globalStreamRef.current) {
+      globalStreamRef.current.getTracks().forEach(track => track.stop());
+      globalStreamRef.current = null;
+    }
+  }, []);
+
   return {
     isListening,
     finalTranscript,
@@ -287,6 +294,7 @@ export function useWebSocketSTT({ onSilenceDetected, silenceDelayMs = 2000 } = {
     startListening,
     stopListening,
     resetTranscript,
-    setFinalTranscript
+    setFinalTranscript,
+    shutdown
   };
 }
