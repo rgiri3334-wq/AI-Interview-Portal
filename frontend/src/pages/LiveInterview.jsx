@@ -797,10 +797,10 @@ export default function LiveInterview() {
   if (phase === 'ready' || phase === 'initializing') {
     return (
       <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col justify-center items-center p-6">
-        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div className="w-full max-w-5xl flex flex-col md:flex-row gap-8 items-center justify-center">
 
           {/* LEFT: Avatar — visible immediately, no loading delay */}
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-4 shrink-0">
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200"
               style={{ width: '280px', height: '340px' }}>
               <Avatar3D
@@ -819,7 +819,7 @@ export default function LiveInterview() {
           </div>
 
           {/* RIGHT: Readiness Check Panel */}
-          <div className="bg-white border border-sterling-border rounded-3xl p-8 shadow-sm">
+          <div className="bg-white border border-sterling-border rounded-3xl p-8 shadow-sm w-full flex-1">
             {/* Logo */}
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-md border border-slate-800">
