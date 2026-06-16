@@ -229,8 +229,8 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
   });
 
   return (
-    // Standard portrait framing. No bounds fitting, no VRChat X-rotations.
-    <group ref={groupRef} dispose={null} position={[0, -1.6, 0]} scale={1.2}>
+    // Scaled down to 0.85 and moved down to frame the head and shoulders perfectly
+    <group ref={groupRef} dispose={null} position={[0, -1.45, 0]} scale={0.85}>
       <primitive object={scene} />
     </group>
   );
