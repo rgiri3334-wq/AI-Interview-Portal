@@ -2884,6 +2884,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
         except:
             return val_str
 
+    resume_dict = None
     if latest_resume:
         resume_dict = {
             "resume_id": str(latest_resume.resume_id) if latest_resume.resume_id else "",
