@@ -599,6 +599,7 @@ export default function LiveInterview() {
         // Natural human-like HR goodbye
         const finalGoodbye = res.eq_feedback + " That wraps up our interview for today. Thank you for your time. Our team will review your evaluation and follow up with you shortly. Have a great day!";
         setQuestion("Interview Complete. You may close this window.");
+        setLoading(false); // Fix: show question text instead of loading status
         try {
           await speak(finalGoodbye);
           // Wait to ensure candidate hears the TTS before unmounting component
@@ -622,6 +623,7 @@ export default function LiveInterview() {
         if (!isMounted.current) return;
         if (combined.trim()) {
           setQuestion(combined);
+          setLoading(false); // Fix: Turn off loading so TTS captions show up!
           await speak(combined);
         }
       } else {
@@ -644,6 +646,7 @@ export default function LiveInterview() {
         if (!isMounted.current) return;
         if (combined.trim()) {
           setQuestion(combined);
+          setLoading(false); // Fix: Turn off loading so TTS captions show up!
           await speak(combined);
         }
       }
@@ -662,6 +665,7 @@ export default function LiveInterview() {
       setError(isTimeout ? 'AI Core Timeout (30s). Retrying...' : 'Connection to AI Core unstable. Please try submitting again.');
 
       try {
+        setLoading(false); // Fix: Turn off loading so TTS captions show up
         await speak(fallbackMsg);
       } catch (ttsError) {
         console.error("TTS Fallback failed. Proceeding silently.", ttsError);
