@@ -697,6 +697,9 @@ export default function LiveInterview() {
   const doEndInterview = async (h, terminationReason = null) => {
     setPhase('ending');
     stopHuman();
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+    }
     
     const interviewId = sessionStorage.getItem('interview_id');
     if (interviewId) {
