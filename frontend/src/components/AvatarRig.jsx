@@ -9,32 +9,17 @@ const AVATAR_STATES = {
   IDLE: 'idle'
 };
 
-// Preload both the model mesh and the avatar animations
-useGLTF.preload('/model.glb');
+// Preload the avatar model
 useGLTF.preload('/avatar.glb');
 
 export default function AvatarRig({ avatarState, mouthOpenRef }) {
   const groupRef = useRef();
   
-  // 1. Load the visible human mesh from model.glb
-  const { scene } = useGLTF('/model.glb');
+  // Load the mesh and animations directly from avatar.glb
+  const { scene, animations } = useGLTF('/avatar.glb');
   
-  // 2. Load the animations from avatar.glb (the pink robot)
-  const { animations } = useGLTF('/avatar.glb');
-
-  // Fix the bone names: avatar.glb uses 'mixamorig:BoneName', but model.glb uses 'BoneName'
-  const retargetedAnimations = React.useMemo(() => {
-    return animations.map(clip => {
-      const newClip = clip.clone();
-      newClip.tracks.forEach(track => {
-        track.name = track.name.replace('mixamorig:', '');
-      });
-      return newClip;
-    });
-  }, [animations]);
-  
-  // 3. Bind the extracted animations to the human mesh group
-  const { actions } = useAnimations(retargetedAnimations, groupRef);
+  // Bind the animations to the mesh group
+  const { actions } = useAnimations(animations, groupRef);
 
   const avatarStateRef = useRef(avatarState);
   useEffect(() => { avatarStateRef.current = avatarState; }, [avatarState]);
