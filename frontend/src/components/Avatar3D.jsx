@@ -7,7 +7,7 @@ import { useAvatarState } from '../hooks/useAvatarState';
 import { useAvatarLipSync } from '../hooks/useAvatarLipSync';
 
 // Preload the standard avatar file that the user will replace
-useGLTF.preload('/interviewer.glb');
+useGLTF.preload('/models/avatar.glb');
 
 // ── Audio visualizer bars ──────────────────────────────────────────────────
 function AudioBars({ audioLevel, count = 5 }) {
@@ -142,16 +142,14 @@ export default function Avatar3D({
 
       {/* ── 3D Canvas Container ─────────────────────────────────── */}
       <div className="absolute inset-0 z-10">
-        <Canvas 
-          camera={{ position: [0, -0.2, 1.2], fov: 35 }} 
-          dpr={1} 
-          gl={{ powerPreference: "low-power", antialias: false, precision: "lowp" }}
-        >
-          <ambientLight intensity={0.8} />
-          <directionalLight position={[0, 2, 5]} intensity={1.5} />
+        <Canvas camera={{ position: [0, -0.2, 1.2], fov: 35 }}>
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[0, 2, 5]} intensity={1.2} />
+          <Environment preset="city" />
           <Suspense fallback={null}>
             <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
           </Suspense>
+          <ContactShadows opacity={0.4} scale={5} blur={2} far={4} resolution={256} color="#000000" position={[0, -1.5, 0]} />
         </Canvas>
       </div>
 
