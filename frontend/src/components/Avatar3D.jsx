@@ -142,7 +142,11 @@ export default function Avatar3D({
 
       {/* ── 3D Canvas Container ─────────────────────────────────── */}
       <div className="absolute inset-0 z-10">
-        <Canvas camera={{ position: [0, -0.2, 1.2], fov: 35 }}>
+        <Canvas 
+          camera={{ position: [0, -0.2, 1.2], fov: 35 }} 
+          dpr={[1, 1.5]} 
+          gl={{ powerPreference: "low-power", antialias: false }}
+        >
           <ambientLight intensity={0.6} />
           <directionalLight position={[0, 2, 5]} intensity={1.2} />
           <Environment preset="city" />
