@@ -201,7 +201,7 @@ export function useWebSocketSTT({ onSilenceDetected, silenceDelayMs = 2000 } = {
   const stopListening = useCallback((triggerTranscription = true) => {
     return new Promise((resolve) => {
       if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch (e) {}
+        try { recognitionRef.current.stop(); } catch (e) {}
       }
       
       const doTrigger = () => {

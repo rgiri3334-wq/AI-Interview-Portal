@@ -161,14 +161,13 @@ export default function LiveInterview() {
     };
   }, [forceStopAllTracks, stopVoice, stopHuman]);
 
-  const handleSilenceDetected = useCallback(() => {
+  const handleSilenceDetected = () => {
     // Fix #14: Check isSubmittingRef *before* checking loading to prevent double-fire
     // BUG-14 fix: Use phaseRef.current (always fresh) instead of stale `phase` closure value
     if (!isSubmittingRef.current && !isSpeaking && phaseRef.current === 'interviewing') {
       handleSubmitAnswer();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSpeaking]);
+  };
 
   const {
     isListening,
@@ -178,7 +177,7 @@ export default function LiveInterview() {
     stopListening,
     resetTranscript,
     shutdown: shutdownSTT,
-  } = useWebSocketSTT({ onSilenceDetected: handleSilenceDetected, silenceDelayMs: 4000 }); // Fix: Increased to 4000ms so candidate doesn't get cut off while pausing
+  } = useWebSocketSTT({ onSilenceDetected: handleSilenceDetected, silenceDelayMs: 8000 }); // Fix: Increased to 8000ms so candidate doesn't get cut off while pausing
   // isListening is passed to Avatar3D for the LISTENING state display
 
   const lastCueWordCount = useRef(0);
