@@ -2936,6 +2936,15 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
         except:
             return val_str
 
+    def _parse_experience(val):
+        if not val: return 0.0
+        val_str = str(val).lower()
+        import re
+        match = re.search(r"(\d+(\.\d+)?)", val_str)
+        if match:
+            return float(match.group(1))
+        return 0.0
+
     resume_dict = None
     if latest_resume:
         resume_dict = {
@@ -2943,7 +2952,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
             "resume_score": float(latest_resume.resume_score) if latest_resume.resume_score else 0.0,
             "extracted_text": str(latest_resume.extracted_text) if latest_resume.extracted_text else "",
             "skills_detected": _safe_parse_list(str(latest_resume.skills_detected) if latest_resume.skills_detected else None),
-            "experience_years": float(latest_resume.experience_years) if latest_resume.experience_years else 0.0,
+            "experience_years": _parse_experience(latest_resume.experience_years),
             "education_summary": _safe_parse_string(str(latest_resume.education_summary) if latest_resume.education_summary else None),
             "projects_summary": _safe_parse_string(str(latest_resume.projects_summary) if latest_resume.projects_summary else None),
             "certifications": str(latest_resume.certifications) if latest_resume.certifications else "",
