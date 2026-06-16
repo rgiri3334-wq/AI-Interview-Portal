@@ -8,7 +8,7 @@ import { Editor } from '@monaco-editor/react';
 import CinematicAvatar from './LiveInterview/components/CinematicAvatar';
 import FloatingToolbar from './LiveInterview/components/FloatingToolbar';
 import SlidingCodeWorkspace from './LiveInterview/components/SlidingCodeWorkspace';
-import { Editor } from '@monaco-editor/react';
+
 
 import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png'; // Fix #1: Use bundled asset, not absolute machine path
