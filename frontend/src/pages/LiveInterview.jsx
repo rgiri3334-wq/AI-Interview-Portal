@@ -4,12 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert } from 'lucide-react';
 import { Editor } from '@monaco-editor/react';
 
-// Cinematic Components
-import CinematicAvatar from './LiveInterview/components/CinematicAvatar';
-import FloatingToolbar from './LiveInterview/components/FloatingToolbar';
-import SlidingCodeWorkspace from './LiveInterview/components/SlidingCodeWorkspace';
-
-
 import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png'; // Fix #1: Use bundled asset, not absolute machine path
 import Avatar3D from '../components/Avatar3D';
@@ -59,7 +53,6 @@ export default function LiveInterview() {
   const [loadingStatus, setLoadingStatus] = useState('Computing...');
   const [warnings, setWarnings] = useState(0);
   const [textFallback, setTextFallback] = useState('');
-  const [isCodeWorkspaceOpen, setIsCodeWorkspaceOpen] = useState(false);
 
   const proctoringLogsRef = useRef([]);
   const [fullscreenLock, setFullscreenLock] = useState(false);
@@ -697,9 +690,6 @@ export default function LiveInterview() {
   const doEndInterview = async (h, terminationReason = null) => {
     setPhase('ending');
     stopHuman();
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-    }
     
     const interviewId = sessionStorage.getItem('interview_id');
     if (interviewId) {
@@ -799,11 +789,11 @@ export default function LiveInterview() {
   // ── Pre-render avatar on ready screen so it's visible immediately ────────
   if (phase === 'ready' || phase === 'initializing') {
     return (
-      <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col justify-center items-center p-6 overflow-hidden">
-        <div className="w-full max-w-6xl flex flex-row gap-8 items-stretch justify-center">
+      <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col justify-center items-center p-6">
+        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
 
           {/* LEFT: Avatar — visible immediately, no loading delay */}
-          <div className="flex flex-col items-center gap-4 shrink-0">
+          <div className="flex flex-col items-center gap-4">
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200"
               style={{ width: '280px', height: '340px' }}>
               <Avatar3D
@@ -822,7 +812,7 @@ export default function LiveInterview() {
           </div>
 
           {/* RIGHT: Readiness Check Panel */}
-          <div className="bg-white border border-sterling-border rounded-3xl p-8 shadow-sm w-full flex-1">
+          <div className="bg-white border border-sterling-border rounded-3xl p-8 shadow-sm">
             {/* Logo */}
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-md border border-slate-800">
@@ -924,6 +914,14 @@ export default function LiveInterview() {
           <div className="text-red-400/80 uppercase tracking-widest text-xs flex items-center gap-2">
             <ShieldAlert size={14} className="text-red-500 animate-pulse" /> Proctoring Active
           </div>
+          <button onClick={() => {
+            if (window.confirm("Are you sure you want to end and submit the interview now?")) {
+              doEndInterview(history);
+            }
+          }} className="relative group overflow-hidden px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-all duration-300 ease-out font-bold tracking-widest shadow-lg">
+            <div className="absolute inset-0 w-1/4 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-150%] group-hover:translate-x-[400%] transition-transform duration-700"></div>
+            End & Submit
+          </button>
         </div>
       </header>
 
@@ -938,63 +936,243 @@ export default function LiveInterview() {
           </motion.div>
         )}
       </AnimatePresence>
-      <main className="flex-1 p-4 md:p-8 flex gap-8 max-w-[1600px] mx-auto w-full overflow-hidden relative z-10">
-        
-        {/* LEFT COLUMN: Cinematic AI Experience */}
-        <div className={`flex flex-col gap-6 h-full transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isCodeWorkspaceOpen ? 'w-[50%]' : 'w-full max-w-6xl mx-auto'}`}>
-          <CinematicAvatar
-            isSpeaking={isSpeaking}
-            isListening={isListening}
-            loading={loading}
-            loadingStatus={loadingStatus}
-            phase={phase}
-            qIndex={qIndex}
-            warnings={warnings}
-            getAudioFrequency={getAudioFrequency}
-            postureHint={postureHint}
-            isRecording={isRecording}
-            displayedQuestion={displayedQuestion}
-            finalTranscript={finalTranscript}
-            interimTranscript={interimTranscript}
-            MAX_QUESTIONS={MAX_QUESTIONS}
-            memoizedVideo={memoizedVideo}
-            camOn={camOn}
-            camError={camError}
-            micOn={micOn}
-            setMicOn={setMicOn}
-            setCamOn={setCamOn}
-            textFallback={textFallback}
-            setTextFallback={setTextFallback}
-            handleSubmitAnswer={handleSubmitAnswer}
-          />
+      <main className="flex-1 p-8 grid grid-cols-12 gap-8 max-w-[1600px] mx-auto w-full">
+
+        {/* LEFT COLUMN: AI Video Conference Feed */}
+        <div className="col-span-7 flex flex-col gap-6 h-full">
           
-          <FloatingToolbar 
-            micOn={micOn} setMicOn={setMicOn}
-            camOn={camOn} setCamOn={setCamOn}
-            isCodeWorkspaceOpen={isCodeWorkspaceOpen} setIsCodeWorkspaceOpen={setIsCodeWorkspaceOpen}
-            onEndInterview={() => {
-              if (window.confirm("Are you sure you want to end and submit the interview now?")) {
-                doEndInterview(history);
-              }
-            }}
-          />
+          <div className={`relative bg-black rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] flex-1 min-h-[500px] flex flex-col justify-end group transition-all duration-700 ${isSpeaking ? 'shadow-[0_0_80px_rgba(59,130,246,0.15)] border-blue-500/20' : isListening ? 'shadow-[0_0_80px_rgba(34,197,94,0.1)] border-green-500/20' : 'border-white/5'} border`}>
+            
+            {/* The AI Avatar taking full width/height */}
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-slate-900 to-black">
+              <div className="w-full h-full opacity-90 transition-opacity duration-500">
+                <Avatar3D
+                  getAudioFrequency={getAudioFrequency}
+                  isSpeaking={isSpeaking}
+                  isListening={isListening}
+                  isLoading={loading}
+                  phase={phase}
+                  qIndex={qIndex}
+                  warnings={warnings}
+                />
+              </div>
+            </div>
+
+            {/* Status Overlay (Top Left) */}
+            <div className="absolute top-5 left-5 z-20 flex gap-3 items-center">
+              {isRecording ? (
+                <div className="bg-red-600/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg border border-red-500/50">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  REC
+                </div>
+              ) : null}
+              {loading && (
+                <div className="bg-black/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  {loadingStatus}
+                </div>
+              )}
+              {isSpeaking && !loading && (
+                <div className="bg-blue-600/80 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full border border-blue-500/50 flex items-center gap-2">
+                  <div className="flex gap-0.5 items-end h-3">
+                    <div className="w-1 bg-white h-1 animate-[pulse_1s_ease-in-out_infinite]"></div>
+                    <div className="w-1 bg-white h-2 animate-[pulse_1s_ease-in-out_infinite_0.2s]"></div>
+                    <div className="w-1 bg-white h-3 animate-[pulse_1s_ease-in-out_infinite_0.4s]"></div>
+                    <div className="w-1 bg-white h-1.5 animate-[pulse_1s_ease-in-out_infinite_0.6s]"></div>
+                  </div>
+                  HR Speaking
+                </div>
+              )}
+            </div>
+
+            {/* Question Counter (Top Center) */}
+            <div className="absolute top-5 left-1/2 -translate-x-1/2 z-20">
+              <span className="bg-black/50 backdrop-blur-md text-white/80 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full border border-white/10 shadow-lg">
+                Question {qIndex + 1} of {MAX_QUESTIONS}
+              </span>
+            </div>
+
+            {/* Picture-in-Picture Webcam (Top Right) - DRAGGABLE */}
+            <motion.div 
+              drag 
+              dragConstraints={{ left: -600, right: 0, top: 0, bottom: 400 }}
+              dragMomentum={false}
+              className="absolute top-5 right-5 z-40 w-64 h-40 bg-black/80 backdrop-blur-xl rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/10 cursor-grab active:cursor-grabbing hover:border-white/30 transition-colors"
+            >
+              {memoizedVideo}
+              {(!camOn || camError) && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white/70 text-xs font-bold">
+                  Video Offline
+                </div>
+              )}
+              {/* Mic/Cam Toggle Overlay on hover */}
+              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 to-transparent flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <button onClick={(e) => { e.stopPropagation(); setMicOn(!micOn); }} className={`p-2 rounded-lg transition-colors ${micOn ? 'bg-white/20 hover:bg-white/40 text-white' : 'bg-red-500/80 hover:bg-red-500 text-white'}`} title={micOn ? "Mute Microphone" : "Unmute Microphone"}>
+                  {micOn ? '🎙️' : '🔇'}
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); setCamOn(!camOn); }} className={`p-2 rounded-lg transition-colors ${camOn ? 'bg-white/20 hover:bg-white/40 text-white' : 'bg-red-500/80 hover:bg-red-500 text-white'}`} title={camOn ? "Stop Video" : "Start Video"}>
+                  {camOn ? '📹' : '📵'}
+                </button>
+              </div>
+              
+              
+              {/* Audio visualizer for candidate when listening */}
+              {micOn && isListening && (
+                <div className="absolute bottom-2 right-2 flex gap-0.5 items-end h-3 opacity-70">
+                  <div className="w-1 bg-green-400 rounded-t h-1 animate-[bounce_1s_ease-in-out_infinite]"></div>
+                  <div className="w-1 bg-green-400 rounded-t h-2 animate-[bounce_1s_ease-in-out_infinite_0.2s]"></div>
+                  <div className="w-1 bg-green-400 rounded-t h-3 animate-[bounce_1s_ease-in-out_infinite_0.4s]"></div>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Posture Hint */}
+            <AnimatePresence>
+              {postureHint && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                  className="absolute top-20 right-5 z-30 flex items-center gap-2 bg-amber-500/90 backdrop-blur-md text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg border border-amber-400/50 pointer-events-none max-w-xs text-right"
+                >
+                  <span className="leading-snug">{postureHint}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Live Closed Captions (Bottom overlay) */}
+            <div className="relative z-20 w-full px-8 pb-8 pt-24 bg-gradient-to-t from-black via-black/70 to-transparent">
+              <h2 className="text-xl md:text-2xl text-white font-medium leading-relaxed drop-shadow-lg text-center max-w-2xl mx-auto">
+                {loading ? loadingStatus : displayedQuestion}
+              </h2>
+              
+              <div className="mt-6 text-center min-h-[30px] flex items-center justify-center">
+                {finalTranscript && <span className="text-yellow-400 font-medium text-[15px] drop-shadow-md bg-black/40 px-3 py-1 rounded-lg">{finalTranscript} </span>}
+                {interimTranscript && <span className="text-yellow-400/60 italic text-[15px] drop-shadow-md bg-black/20 px-3 py-1 rounded-lg ml-2">{interimTranscript}</span>}
+                {!finalTranscript && !interimTranscript && !isListening && !isSpeaking && !loading && (
+                  <span className="text-white/40 text-sm font-medium">Listening for your response...</span>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Text Fallback Input */}
+          <div className="bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-xl relative z-20">
+            <div className="relative">
+              <input
+                type="text"
+                value={textFallback}
+                onChange={(e) => setTextFallback(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSubmitAnswer(); }}
+                placeholder={(!isSpeaking && finalTranscript) ? "✅ Answer captured. Press Enter or click Submit to continue." : "Need to type? Enter your response here..."}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3 pr-28 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-red-600 focus:bg-white/10 transition-all duration-300 shadow-inner"
+                disabled={loading || isSpeaking}
+              />
+              {(!isSpeaking && finalTranscript && !loading) && (
+                <button
+                  onClick={handleSubmitAnswer}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-red-600 to-red-800 text-white text-xs font-bold px-5 py-2 rounded-lg shadow-lg animate-[pulse_2s_ease-in-out_infinite] transition-all active:scale-95 border border-red-500/50"
+                >
+                  Submit
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* RIGHT COLUMN: Code Workspace */}
-        <SlidingCodeWorkspace 
-          isCodeWorkspaceOpen={isCodeWorkspaceOpen}
-          language={language}
-          setLanguage={setLanguage}
-          SUPPORTED_LANGUAGES={SUPPORTED_LANGUAGES}
-          memoizedEditor={memoizedEditor}
-          getCode={getCode}
-          setOverlayMsg={setOverlayMsg}
-          setLoadingStatus={setLoadingStatus}
-          setLoading={setLoading}
-          loading={loading}
-          isSpeaking={isSpeaking}
-          handleSubmitAnswer={handleSubmitAnswer}
-        />
+        {/* RIGHT COLUMN: Code Workspace & Tools */}
+        <div className="col-span-5 flex flex-col gap-6 h-full">
+
+          {/* Code/Workspace Area */}
+          <div className="bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl flex-1 flex flex-col shadow-2xl overflow-hidden min-h-[500px]">
+            {/* macOS-style Editor Header */}
+            <div className="bg-white/5 border-b border-white/10 px-6 py-3 flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                {/* Traffic Lights */}
+                <div className="flex gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                </div>
+                <span className="text-xs font-bold text-slate-300 tracking-widest uppercase">Technical Workspace</span>
+              </div>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="bg-black/50 border border-white/10 text-xs text-white outline-none cursor-pointer px-3 py-1.5 rounded-lg shadow-sm font-medium hover:border-white/30 focus:border-red-500 transition-all appearance-none"
+              >
+                {SUPPORTED_LANGUAGES.map(l => (
+                  <option key={l.id} value={l.id}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Editor Body */}
+            <div className="flex-1 w-full relative">
+              {memoizedEditor}
+            </div>
+
+            {/* Editor Footer */}
+            <div className="bg-white/5 border-t border-white/10 p-4 flex justify-between items-center">
+              <button onClick={async () => {
+                const code = getCode();
+                if (language === 'javascript' || language === 'typescript') {
+                  try {
+                    const logs = [];
+                    const originalLog = console.log;
+                    console.log = (...args) => logs.push(args.join(' '));
+                    // eslint-disable-next-line no-new-func
+                    new Function(code)();
+                    console.log = originalLog;
+                    setOverlayMsg("Output:\n" + (logs.join('\n') || "Execution complete. No output."));
+                  } catch (e) {
+                    setOverlayMsg("Syntax Error:\n" + e.message);
+                  }
+                } else if (language === 'python') {
+                  setLoadingStatus("Compiling Python...");
+                  setLoading(true);
+                  try {
+                    const res = await apiClient.executeCode({ code, language: 'python' });
+                    setOverlayMsg(res.error ? "Python Execution Error:\n" + res.output : "Python Output:\n" + (res.output || "Execution complete. No output."));
+                  } catch (err) {
+                    setOverlayMsg("Failed to connect to backend execution engine.");
+                  }
+                  setLoading(false);
+                } else {
+                  setOverlayMsg(`Syntactic validation for ${language} passed successfully. Output simulation not available in browser sandbox.`);
+                }
+              }}
+                className="text-xs font-bold tracking-wider uppercase text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors px-5 py-2.5 border border-transparent hover:border-white/10"
+                disabled={loading}
+              >
+                {language === 'python' ? 'Run Backend Sandbox' : 'Run Code Locally'}
+              </button>
+              
+              <button
+                onClick={() => {
+                  if (!isSpeaking && !loading) {
+                    handleSubmitAnswer();
+                  }
+                }}
+                disabled={isSpeaking || loading}
+                className="relative overflow-hidden group bg-white hover:bg-slate-100 text-black font-black uppercase tracking-widest px-8 py-3 rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] active:scale-95 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:active:scale-100 disabled:shadow-none"
+              >
+                <div className="absolute inset-0 bg-black/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out skew-x-12 disabled:hidden"></div>
+                <span className="relative z-10 flex items-center gap-2">
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                      Analyzing...
+                    </>
+                  ) : 'Submit Response'}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
       </main>
 
       {/* Modern Proctoring Overlay Modal */}

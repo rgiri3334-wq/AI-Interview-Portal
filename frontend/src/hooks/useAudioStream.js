@@ -28,14 +28,14 @@ export function useAudioStream() {
   // ── Voice preload ───────────────────────────────────────────────────────
   const getPreferredVoice = useCallback(() => {
     const voices = window.speechSynthesis.getVoices();
-    // Priority: warm male voices → Indian English Male → Google UK/US Male → any male
+    // Priority: warm female voices → Indian English → Google UK/US → any
     return (
-      voices.find(v => v.name === 'Microsoft Ravi - English (India)')   ||
-      voices.find(v => v.name === 'Google UK English Male')             ||
-      voices.find(v => v.name === 'Microsoft David - English (United States)') ||
-      voices.find(v => v.name.includes('David'))                        ||
-      voices.find(v => v.name.includes('Google') && v.lang.startsWith('en') && v.name.includes('Male')) ||
-      voices.find(v => v.lang.startsWith('en') && v.gender === 'male')  ||
+      voices.find(v => v.name === 'Microsoft Heera - English (India)')  ||
+      voices.find(v => v.name === 'Google UK English Female')           ||
+      voices.find(v => v.name.includes('Samantha'))                     ||
+      voices.find(v => v.name.includes('Google') && v.lang.startsWith('en')) ||
+      voices.find(v => v.name.includes('Zira'))                         ||
+      voices.find(v => v.lang.startsWith('en') && v.gender === 'female') ||
       voices.find(v => v.lang.startsWith('en'))                         ||
       null
     );
@@ -178,7 +178,7 @@ export function useAudioStream() {
         utterance.rate  = 0.95;  // Slightly slower = warmer, more human
       }
       
-      utterance.pitch = 0.95;  // Slightly lower = professional male tone
+      utterance.pitch = 1.05;  // Slightly higher = professional female tone
       utterance.volume = 1.0;
 
       const finalize = () => {

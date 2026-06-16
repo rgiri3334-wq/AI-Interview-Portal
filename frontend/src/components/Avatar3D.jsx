@@ -6,37 +6,8 @@ import AvatarRig from './AvatarRig';
 import { useAvatarState } from '../hooks/useAvatarState';
 import { useAvatarLipSync } from '../hooks/useAvatarLipSync';
 
-// ── Error Boundary for WebGL Crashes ───────────────────────────────────────
-class WebGLErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-  static getDerivedStateFromError(error) {
-    return { hasError: true };
-  }
-  componentDidCatch(error, errorInfo) {
-    console.error("WebGL crashed:", error, errorInfo);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 rounded-2xl z-10">
-          <div className="w-32 h-32 rounded-full bg-slate-300 animate-pulse flex items-center justify-center shadow-lg border-4 border-white">
-            <span className="text-slate-500 text-sm font-bold">Audio Only</span>
-          </div>
-          <p className="mt-4 text-xs font-semibold text-slate-500 max-w-[200px] text-center">
-            Your GPU ran out of memory. Switched to Audio-Only mode.
-          </p>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-// Preload the highly-optimized avatar file
-useGLTF.preload('/model_opt.glb');
+// Preload the standard avatar file that the user will replace
+useGLTF.preload('/interviewer.glb');
 
 // ── Audio visualizer bars ──────────────────────────────────────────────────
 function AudioBars({ audioLevel, count = 5 }) {
@@ -171,30 +142,15 @@ export default function Avatar3D({
 
       {/* ── 3D Canvas Container ─────────────────────────────────── */}
       <div className="absolute inset-0 z-10">
-        <WebGLErrorBoundary>
-          <Canvas 
-            camera={{ position: [0, -0.2, 1.2], fov: 35 }} 
-            dpr={0.8} 
-            gl={{ 
-              antialias: false, 
-              powerPreference: "default",
-              precision: "mediump",
-              preserveDrawingBuffer: false,
-              alpha: false
-            }}
-            onContextLost={(e) => {
-              console.error("WebGL Context Lost! The GPU ran out of memory.");
-            }}
-          >
-            <color attach="background" args={['#e8edf2']} />
-            <ambientLight intensity={0.8} />
-            <directionalLight position={[0, 2, 5]} intensity={1.5} />
-            <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={1.0} />
-            <Suspense fallback={null}>
-              <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
-            </Suspense>
-          </Canvas>
-        </WebGLErrorBoundary>
+        <Canvas camera={{ position: [0, -0.2, 1.2], fov: 35 }}>
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[0, 2, 5]} intensity={1.2} />
+          <Environment preset="city" />
+          <Suspense fallback={null}>
+            <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
+          </Suspense>
+          <ContactShadows opacity={0.4} scale={5} blur={2} far={4} resolution={256} color="#000000" position={[0, -1.5, 0]} />
+        </Canvas>
       </div>
 
       {/* ── State indicator badge (top-right) ─────────────────────── */}

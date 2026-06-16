@@ -252,11 +252,9 @@ export function useWebSocketSTT({ onSilenceDetected, silenceDelayMs = 2000 } = {
       if (wsRef.current) {
         wsRef.current.close();
       }
-      if (mediaRecorderRef.current) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         try {
-          if (mediaRecorderRef.current.state !== 'inactive') {
-            mediaRecorderRef.current.stop();
-          }
+          mediaRecorderRef.current.stop();
           mediaRecorderRef.current.stream?.getTracks().forEach(track => track.stop());
         } catch (e) {}
       }

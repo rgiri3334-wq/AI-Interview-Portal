@@ -2866,35 +2866,30 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
     # Fetch Resume
     resumes = sorted(c.resumes, key=lambda r: r.created_at, reverse=True)  # type: ignore
     latest_resume = resumes[0] if resumes else None
-    def _safe_parse_list(val, default=None):
-        if default is None:
-            default = []
+    def _safe_parse_list(val, default=[]):
         if not val: return default
-        val_str = str(val)
-        try: return json.loads(val_str)
-        except: return [s.strip() for s in val_str.split(",")]
+        try: return json.loads(val)
+        except: return [s.strip() for s in val.split(",")] if isinstance(val, str) else default
 
     def _safe_parse_string(val, default=""):
         if not val: return default
-        val_str = str(val)
         try:
-            parsed = json.loads(val_str)
-            if isinstance(parsed, list): return "\n".join([str(x) for x in parsed])
+            parsed = json.loads(val)
+            if isinstance(parsed, list): return "\n".join(parsed)
             return str(parsed)
         except:
-            return val_str
+            return str(val)
 
-    resume_dict = None
     if latest_resume:
         resume_dict = {
-            "resume_id": str(latest_resume.resume_id) if latest_resume.resume_id else "",
-            "resume_score": float(latest_resume.resume_score) if latest_resume.resume_score else 0.0,
-            "extracted_text": str(latest_resume.extracted_text) if latest_resume.extracted_text else "",
-            "skills_detected": _safe_parse_list(str(latest_resume.skills_detected) if latest_resume.skills_detected else None),
-            "experience_years": float(latest_resume.experience_years) if latest_resume.experience_years else 0.0,
-            "education_summary": _safe_parse_string(str(latest_resume.education_summary) if latest_resume.education_summary else None),
-            "projects_summary": _safe_parse_string(str(latest_resume.projects_summary) if latest_resume.projects_summary else None),
-            "certifications": str(latest_resume.certifications) if latest_resume.certifications else "",
+            "resume_id": latest_resume.resume_id,
+            "resume_score": latest_resume.resume_score,
+            "extracted_text": latest_resume.extracted_text,
+            "skills_detected": _safe_parse_list(latest_resume.skills_detected),
+            "experience_years": latest_resume.experience_years,
+            "education_summary": _safe_parse_string(latest_resume.education_summary),
+            "projects_summary": _safe_parse_string(latest_resume.projects_summary),
+            "certifications": latest_resume.certifications,
         }
         
     # Fetch Audit Trail (Security & Admin logs)
