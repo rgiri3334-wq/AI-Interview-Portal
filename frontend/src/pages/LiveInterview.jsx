@@ -5,9 +5,12 @@ import { ShieldAlert } from 'lucide-react';
 import { Editor } from '@monaco-editor/react';
 
 import { apiClient } from '../api/apiClient';
-import logoUrl from '../assets/sterling_logo.png'; // Fix #1: Use bundled asset, not absolute machine path
-import Avatar3D from '../components/Avatar3D';
-import PreFlightCheck from '../components/PreFlightCheck'; // Sprint 2
+import logoUrl from '../assets/sterling_logo.png';
+import PreFlightCheck from '../components/PreFlightCheck';
+
+import AvatarStage from '../components/interview/AvatarStage';
+import BottomControlBar from '../components/interview/BottomControlBar';
+import WorkspaceDrawer from '../components/interview/WorkspaceDrawer';
 
 import { useWebSocketSTT } from '../hooks/useWebSocketSTT';
 import { useAudioStream } from '../hooks/useAudioStream';
@@ -57,6 +60,12 @@ export default function LiveInterview() {
   const proctoringLogsRef = useRef([]);
   const [fullscreenLock, setFullscreenLock] = useState(false);
   const [focusLock, setFocusLock] = useState(false);
+
+  // New UI States
+  const [theme, setTheme] = useState('dark');
+  const [isCodeOpen, setIsCodeOpen] = useState(false);
+  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  const toggleCode = () => setIsCodeOpen(prev => !prev);
 
   const addProctoringLog = useCallback((eventDescription) => {
     const logEntry = {
@@ -897,14 +906,47 @@ export default function LiveInterview() {
     );
   }
 
+  const handleRunCode = async () => {
+    const code = getCode();
+    if (language === 'javascript' || language === 'typescript') {
+      try {
+        const logs = [];
+        const originalLog = console.log;
+        console.log = (...args) => logs.push(args.join(' '));
+        // eslint-disable-next-line no-new-func
+        new Function(code)();
+        console.log = originalLog;
+        setOverlayMsg("Output:\n" + (logs.join('\n') || "Execution complete. No output."));
+      } catch (e) {
+        setOverlayMsg("Syntax Error:\n" + e.message);
+      }
+    } else if (language === 'python') {
+      setLoadingStatus("Compiling Python...");
+      setLoading(true);
+      try {
+        const res = await apiClient.executeCode({ code, language: 'python' });
+        setOverlayMsg(res.error ? "Python Execution Error:\n" + res.output : "Python Output:\n" + (res.output || "Execution complete. No output."));
+      } catch (err) {
+        setOverlayMsg("Failed to connect to backend execution engine.");
+      }
+      setLoading(false);
+    } else {
+      setOverlayMsg(`Syntactic validation for ${language} passed successfully. Output simulation not available in browser sandbox.`);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-slate-200 font-sans flex flex-col relative overflow-hidden">
+    <div className={`fixed inset-0 h-screen w-screen overflow-hidden flex flex-col ${theme === 'dark' ? 'bg-[#000000] text-slate-200' : 'bg-slate-50 text-slate-900'}`}>
       {/* Cinematic ambient background glow */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-red-900/20 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-900/10 blur-[120px] rounded-full pointer-events-none"></div>
+      {theme === 'dark' && (
+        <>
+          <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-red-900/20 blur-[120px] rounded-full pointer-events-none"></div>
+          <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-900/10 blur-[120px] rounded-full pointer-events-none"></div>
+        </>
+      )}
 
       {/* HEADER - Matching the screenshot's top nav */}
-      <header className="bg-black/40 backdrop-blur-2xl border-b border-white/10 px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+      <header className={`${theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-white/40 border-red-200'} backdrop-blur-2xl border-b px-8 py-4 flex justify-between items-center sticky top-0 z-50`}>
         {/* Logo Area */}
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-black/60 rounded-xl flex items-center justify-center shrink-0 shadow-lg border border-white/10">
@@ -944,269 +986,89 @@ export default function LiveInterview() {
           </motion.div>
         )}
       </AnimatePresence>
-      <main className="flex-1 p-8 grid grid-cols-12 gap-8 max-w-[1600px] mx-auto w-full">
+      <main className="flex-1 w-full relative">
+        <AvatarStage
+          phase={phase}
+          qIndex={qIndex}
+          warnings={warnings}
+          isSpeaking={isSpeaking}
+          isListening={isListening}
+          loading={loading}
+          loadingStatus={loadingStatus}
+          displayedQuestion={displayedQuestion}
+          finalTranscript={finalTranscript}
+          interimTranscript={interimTranscript}
+          theme={theme}
+          isCodeOpen={isCodeOpen}
+        />
 
-        {/* LEFT COLUMN: AI Video Conference Feed */}
-        <div className="col-span-7 flex flex-col gap-6 h-full">
-          
-          <div className={`relative bg-black rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] flex-1 min-h-[500px] flex flex-col justify-end group transition-all duration-700 ${isSpeaking ? 'shadow-[0_0_80px_rgba(59,130,246,0.15)] border-blue-500/20' : isListening ? 'shadow-[0_0_80px_rgba(34,197,94,0.1)] border-green-500/20' : 'border-white/5'} border`}>
-            
-            {/* The AI Avatar taking full width/height */}
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-slate-900 to-black">
-              <div className="w-full h-full opacity-90 transition-opacity duration-500">
-                <Avatar3D
-                  getAudioFrequency={getAudioFrequency}
-                  isSpeaking={isSpeaking}
-                  isListening={isListening}
-                  isLoading={loading}
-                  phase={phase}
-                  qIndex={qIndex}
-                  warnings={warnings}
-                />
-              </div>
+        <WorkspaceDrawer
+          isOpen={isCodeOpen}
+          onClose={() => setIsCodeOpen(false)}
+          theme={theme}
+          language={language}
+          setLanguage={setLanguage}
+          memoizedEditor={memoizedEditor}
+          runCode={handleRunCode}
+          handleSubmitAnswer={handleSubmitAnswer}
+          isSpeaking={isSpeaking}
+          loading={loading}
+        />
+
+        <BottomControlBar
+          isListening={isListening}
+          micOn={micOn}
+          theme={theme}
+          toggleTheme={toggleTheme}
+          isCodeOpen={isCodeOpen}
+          toggleCode={toggleCode}
+          endInterview={() => {
+            if (window.confirm("Are you sure you want to end and submit the interview now?")) {
+              doEndInterview(history);
+            }
+          }}
+        />
+
+        {/* Floating Utilities */}
+        <div className="absolute top-5 left-5 z-20 flex gap-3 items-center pointer-events-none">
+          {isRecording ? (
+            <div className="bg-red-600/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg border border-red-500/50">
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              REC
             </div>
-
-            {/* Status Overlay (Top Left) */}
-            <div className="absolute top-5 left-5 z-20 flex gap-3 items-center">
-              {isRecording ? (
-                <div className="bg-red-600/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg border border-red-500/50">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  REC
-                </div>
-              ) : null}
-              {loading && (
-                <div className="bg-black/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
-                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  {loadingStatus}
-                </div>
-              )}
-              {isSpeaking && !loading && (
-                <div className="bg-blue-600/80 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full border border-blue-500/50 flex items-center gap-2">
-                  <div className="flex gap-0.5 items-end h-3">
-                    <div className="w-1 bg-white h-1 animate-[pulse_1s_ease-in-out_infinite]"></div>
-                    <div className="w-1 bg-white h-2 animate-[pulse_1s_ease-in-out_infinite_0.2s]"></div>
-                    <div className="w-1 bg-white h-3 animate-[pulse_1s_ease-in-out_infinite_0.4s]"></div>
-                    <div className="w-1 bg-white h-1.5 animate-[pulse_1s_ease-in-out_infinite_0.6s]"></div>
-                  </div>
-                  HR Speaking
-                </div>
-              )}
-            </div>
-
-            {/* Question Counter (Top Center) */}
-            <div className="absolute top-5 left-1/2 -translate-x-1/2 z-20">
-              <span className="bg-black/50 backdrop-blur-md text-white/80 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full border border-white/10 shadow-lg">
-                Question {qIndex + 1} of {MAX_QUESTIONS}
-              </span>
-            </div>
-
-            {/* Picture-in-Picture Webcam (Top Right) - DRAGGABLE */}
-            <motion.div 
-              drag 
-              dragConstraints={{ left: -600, right: 0, top: 0, bottom: 400 }}
-              dragMomentum={false}
-              className="absolute top-5 right-5 z-40 w-64 h-40 bg-black/80 backdrop-blur-xl rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/10 cursor-grab active:cursor-grabbing hover:border-white/30 transition-colors"
-            >
-              {memoizedVideo}
-              {(!camOn || camError) && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white/70 text-xs font-bold">
-                  Video Offline
-                </div>
-              )}
-              {/* Mic/Cam Toggle Overlay on hover */}
-              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 to-transparent flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <button onClick={(e) => { e.stopPropagation(); setMicOn(!micOn); }} className={`p-2 rounded-lg transition-colors ${micOn ? 'bg-white/20 hover:bg-white/40 text-white' : 'bg-red-500/80 hover:bg-red-500 text-white'}`} title={micOn ? "Mute Microphone" : "Unmute Microphone"}>
-                  {micOn ? '🎙️' : '🔇'}
-                </button>
-                <button onClick={(e) => { e.stopPropagation(); setCamOn(!camOn); }} className={`p-2 rounded-lg transition-colors ${camOn ? 'bg-white/20 hover:bg-white/40 text-white' : 'bg-red-500/80 hover:bg-red-500 text-white'}`} title={camOn ? "Stop Video" : "Start Video"}>
-                  {camOn ? '📹' : '📵'}
-                </button>
-              </div>
-              
-              
-              {/* Audio visualizer for candidate when listening */}
-              {micOn && isListening && (
-                <div className="absolute bottom-2 right-2 flex gap-0.5 items-end h-3 opacity-70">
-                  <div className="w-1 bg-green-400 rounded-t h-1 animate-[bounce_1s_ease-in-out_infinite]"></div>
-                  <div className="w-1 bg-green-400 rounded-t h-2 animate-[bounce_1s_ease-in-out_infinite_0.2s]"></div>
-                  <div className="w-1 bg-green-400 rounded-t h-3 animate-[bounce_1s_ease-in-out_infinite_0.4s]"></div>
-                </div>
-              )}
-            </motion.div>
-
-            {/* Posture Hint */}
-            <AnimatePresence>
-              {postureHint && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.25 }}
-                  className="absolute top-20 right-5 z-30 flex items-center gap-2 bg-amber-500/90 backdrop-blur-md text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg border border-amber-400/50 pointer-events-none max-w-xs text-right"
-                >
-                  <span className="leading-snug">{postureHint}</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Cinematic Dynamic Captions */}
-            <div className="absolute inset-x-0 bottom-0 z-20 w-full px-8 pb-10 pt-32 bg-gradient-to-t from-black/95 via-black/80 to-transparent pointer-events-none flex flex-col items-center justify-end min-h-[160px]">
-              <AnimatePresence mode="wait">
-                {isSpeaking || loading ? (
-                  <motion.div 
-                    key="ai-speaking"
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                    className="flex flex-col items-center text-center max-w-4xl"
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-[pulse_1s_ease-in-out_infinite]"></div>
-                      <span className="text-[11px] font-black tracking-[0.2em] uppercase text-blue-400">AI Interviewer</span>
-                    </div>
-                    <h2 className="text-2xl md:text-3xl text-white font-medium leading-relaxed drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
-                      {loading ? loadingStatus : displayedQuestion}
-                    </h2>
-                  </motion.div>
-                ) : (finalTranscript || interimTranscript || isListening) ? (
-                  <motion.div 
-                    key="candidate-speaking"
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                    className="flex flex-col items-center text-center max-w-4xl"
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-[11px] font-black tracking-[0.2em] uppercase text-emerald-400">Candidate</span>
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-[pulse_1s_ease-in-out_infinite]"></div>
-                    </div>
-                    <div className="min-h-[40px] flex items-center justify-center">
-                      <p className="text-xl md:text-2xl leading-relaxed drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] text-white">
-                        {finalTranscript && <span className="text-emerald-50 font-medium">{finalTranscript} </span>}
-                        {interimTranscript && <span className="text-emerald-200/70 italic">{interimTranscript}</span>}
-                        {!finalTranscript && !interimTranscript && isListening && (
-                          <span className="text-emerald-500/50 italic font-medium">Listening to your response...</span>
-                        )}
-                      </p>
-                    </div>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-            </div>
-          </div>
-          
-          {/* Text Fallback Input */}
-          <div className="bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-xl relative z-20">
-            <div className="relative">
-              <input
-                type="text"
-                value={textFallback}
-                onChange={(e) => setTextFallback(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSubmitAnswer(); }}
-                placeholder={(!isSpeaking && finalTranscript) ? "✅ Answer captured. Submitting automatically..." : "Need to type? Enter your response here..."}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3 pr-28 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-red-600 focus:bg-white/10 transition-all duration-300 shadow-inner"
-                disabled={loading || isSpeaking}
-              />
-              {(!isSpeaking && finalTranscript && !loading) && (
-                <button
-                  onClick={handleSubmitAnswer}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-red-600 to-red-800 text-white text-xs font-bold px-5 py-2 rounded-lg shadow-lg animate-[pulse_2s_ease-in-out_infinite] transition-all active:scale-95 border border-red-500/50"
-                >
-                  Submit
-                </button>
-              )}
-            </div>
-          </div>
+          ) : null}
         </div>
 
-        {/* RIGHT COLUMN: Code Workspace & Tools */}
-        <div className="col-span-5 flex flex-col gap-6 h-full">
-
-          {/* Code/Workspace Area */}
-          <div className="bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl flex-1 flex flex-col shadow-2xl overflow-hidden min-h-[500px]">
-            {/* macOS-style Editor Header */}
-            <div className="bg-white/5 border-b border-white/10 px-6 py-3 flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                {/* Traffic Lights */}
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
-                </div>
-                <span className="text-xs font-bold text-slate-300 tracking-widest uppercase">Technical Workspace</span>
-              </div>
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="bg-black/50 border border-white/10 text-xs text-white outline-none cursor-pointer px-3 py-1.5 rounded-lg shadow-sm font-medium hover:border-white/30 focus:border-red-500 transition-all appearance-none"
-              >
-                {SUPPORTED_LANGUAGES.map(l => (
-                  <option key={l.id} value={l.id}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Editor Body */}
-            <div className="flex-1 w-full relative">
-              {memoizedEditor}
-            </div>
-
-            {/* Editor Footer */}
-            <div className="bg-white/5 border-t border-white/10 p-4 flex justify-between items-center">
-              <button onClick={async () => {
-                const code = getCode();
-                if (language === 'javascript' || language === 'typescript') {
-                  try {
-                    const logs = [];
-                    const originalLog = console.log;
-                    console.log = (...args) => logs.push(args.join(' '));
-                    // eslint-disable-next-line no-new-func
-                    new Function(code)();
-                    console.log = originalLog;
-                    setOverlayMsg("Output:\n" + (logs.join('\n') || "Execution complete. No output."));
-                  } catch (e) {
-                    setOverlayMsg("Syntax Error:\n" + e.message);
-                  }
-                } else if (language === 'python') {
-                  setLoadingStatus("Compiling Python...");
-                  setLoading(true);
-                  try {
-                    const res = await apiClient.executeCode({ code, language: 'python' });
-                    setOverlayMsg(res.error ? "Python Execution Error:\n" + res.output : "Python Output:\n" + (res.output || "Execution complete. No output."));
-                  } catch (err) {
-                    setOverlayMsg("Failed to connect to backend execution engine.");
-                  }
-                  setLoading(false);
-                } else {
-                  setOverlayMsg(`Syntactic validation for ${language} passed successfully. Output simulation not available in browser sandbox.`);
-                }
-              }}
-                className="text-xs font-bold tracking-wider uppercase text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors px-5 py-2.5 border border-transparent hover:border-white/10"
-                disabled={loading}
-              >
-                {language === 'python' ? 'Run Backend Sandbox' : 'Run Code Locally'}
-              </button>
-              
-              <button
-                onClick={() => {
-                  if (!isSpeaking && !loading) {
-                    handleSubmitAnswer();
-                  }
-                }}
-                disabled={isSpeaking || loading}
-                className="relative overflow-hidden group bg-white hover:bg-slate-100 text-black font-black uppercase tracking-widest px-8 py-3 rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] active:scale-95 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:active:scale-100 disabled:shadow-none"
-              >
-                <div className="absolute inset-0 bg-black/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out skew-x-12 disabled:hidden"></div>
-                <span className="relative z-10 flex items-center gap-2">
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                      Analyzing...
-                    </>
-                  ) : 'Submit Response'}
-                </span>
-              </button>
-            </div>
-          </div>
+        {/* Question Counter */}
+        <div className="absolute top-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+          <span className="bg-black/50 backdrop-blur-md text-white/80 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full border border-white/10 shadow-lg">
+            Question {qIndex + 1} of {MAX_QUESTIONS}
+          </span>
         </div>
+
+        {/* PIP Webcam (Top Right) */}
+        <motion.div 
+          drag 
+          dragConstraints={{ left: -600, right: 0, top: 0, bottom: 400 }}
+          dragMomentum={false}
+          className="absolute top-5 right-5 z-40 w-64 h-40 bg-black/80 backdrop-blur-xl rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/10 cursor-grab active:cursor-grabbing hover:border-white/30 transition-colors"
+        >
+          {memoizedVideo}
+          {(!camOn || camError) && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white/70 text-xs font-bold">
+              Video Offline
+            </div>
+          )}
+          <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 to-transparent flex justify-center gap-2 opacity-0 hover:opacity-100 transition-opacity duration-300">
+            <button onClick={(e) => { e.stopPropagation(); setMicOn(!micOn); }} className={`p-2 rounded-lg transition-colors ${micOn ? 'bg-white/20 hover:bg-white/40 text-white' : 'bg-red-500/80 hover:bg-red-500 text-white'}`} title={micOn ? "Mute Microphone" : "Unmute Microphone"}>
+              {micOn ? '🎙️' : '🔇'}
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); setCamOn(!camOn); }} className={`p-2 rounded-lg transition-colors ${camOn ? 'bg-white/20 hover:bg-white/40 text-white' : 'bg-red-500/80 hover:bg-red-500 text-white'}`} title={camOn ? "Stop Video" : "Start Video"}>
+              {camOn ? '📹' : '📵'}
+            </button>
+          </div>
+        </motion.div>
+
       </main>
 
       {/* Modern Proctoring Overlay Modal */}

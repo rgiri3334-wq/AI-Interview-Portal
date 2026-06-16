@@ -1,0 +1,102 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Mic, MicOff, Code2, Moon, Sun, PhoneOff } from 'lucide-react';
+
+export default function BottomControlBar({
+  isListening,
+  micOn,
+  theme,
+  toggleTheme,
+  isCodeOpen,
+  toggleCode,
+  endInterview
+}) {
+  const isDark = theme === 'dark';
+
+  const barClasses = isDark
+    ? "bg-black/80 backdrop-blur-3xl border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+    : "bg-white/90 backdrop-blur-3xl border-red-200 shadow-[0_-10px_40px_rgba(220,38,38,0.1)]";
+
+  const btnClasses = isDark
+    ? "hover:bg-white/10 text-white border-white/5"
+    : "hover:bg-red-50 text-black border-red-100";
+
+  const activeBtnClasses = isDark
+    ? "bg-red-500/20 text-red-500 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+    : "bg-red-100 text-red-600 border-red-300 shadow-[0_0_15px_rgba(220,38,38,0.2)]";
+
+  return (
+    <motion.div 
+      initial={{ y: 100 }}
+      animate={{ y: 0 }}
+      transition={{ type: 'spring', damping: 25, stiffness: 200, delay: 0.2 }}
+      className={`absolute bottom-6 left-1/2 -translate-x-1/2 px-8 py-4 rounded-full border flex items-center gap-6 z-40 ${barClasses}`}
+    >
+      {/* Mic Status */}
+      <div className="flex flex-col items-center gap-1 group relative">
+        <button className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300 ${micOn ? (isDark ? 'bg-white/10 text-white border-white/10' : 'bg-slate-100 text-black border-slate-200') : 'bg-red-500/20 text-red-500 border-red-500/50'}`}>
+          {micOn ? <Mic size={20} className={isListening ? 'animate-pulse text-emerald-400' : ''} /> : <MicOff size={20} />}
+        </button>
+        <span className="absolute -top-8 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          Mic {micOn ? 'Active' : 'Muted'}
+        </span>
+      </div>
+
+      <div className={`w-px h-8 ${isDark ? 'bg-white/10' : 'bg-red-200'}`}></div>
+
+      {/* Code Editor Toggle */}
+      <div className="flex flex-col items-center gap-1 group relative">
+        <button 
+          onClick={toggleCode}
+          className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300 ${isCodeOpen ? activeBtnClasses : btnClasses}`}
+        >
+          <Code2 size={20} />
+        </button>
+        <span className="absolute -top-8 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          {isCodeOpen ? 'Close Code' : 'Open Code'}
+        </span>
+      </div>
+
+      {/* Theme Toggle */}
+      <div className="flex flex-col items-center gap-1 group relative">
+        <button 
+          onClick={toggleTheme}
+          className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300 ${btnClasses} overflow-hidden relative`}
+        >
+          <motion.div
+            initial={false}
+            animate={{ y: isDark ? 0 : 40, opacity: isDark ? 1 : 0 }}
+            className="absolute"
+          >
+            <Moon size={20} />
+          </motion.div>
+          <motion.div
+            initial={false}
+            animate={{ y: isDark ? -40 : 0, opacity: isDark ? 0 : 1 }}
+            className="absolute text-amber-500"
+          >
+            <Sun size={20} />
+          </motion.div>
+        </button>
+        <span className="absolute -top-8 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          Toggle Theme
+        </span>
+      </div>
+
+      <div className={`w-px h-8 ${isDark ? 'bg-white/10' : 'bg-red-200'}`}></div>
+
+      {/* End Interview */}
+      <div className="flex flex-col items-center gap-1 group relative">
+        <button 
+          onClick={endInterview}
+          className="w-16 h-12 rounded-full flex items-center justify-center bg-red-600 hover:bg-red-500 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all duration-300 hover:scale-105 active:scale-95"
+        >
+          <PhoneOff size={22} />
+        </button>
+        <span className="absolute -top-8 bg-red-600 text-white font-bold text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          End Interview
+        </span>
+      </div>
+    </motion.div>
+  );
+}
