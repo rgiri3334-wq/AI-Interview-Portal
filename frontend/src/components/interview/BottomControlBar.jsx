@@ -1,10 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Mic, MicOff, Code2, Moon, Sun, PhoneOff } from 'lucide-react';
+import { Mic, MicOff, Code2, Moon, Sun, PhoneOff, Video, VideoOff } from 'lucide-react';
 
 export default function BottomControlBar({
   isListening,
   micOn,
+  toggleMic,
+  camOn,
+  toggleCam,
   theme,
   toggleTheme,
   isCodeOpen,
@@ -15,34 +18,54 @@ export default function BottomControlBar({
 
   const barClasses = isDark
     ? "bg-black/80 backdrop-blur-3xl border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
-    : "bg-white/90 backdrop-blur-3xl border-red-200 shadow-[0_-10px_40px_rgba(220,38,38,0.1)]";
+    : "bg-white/95 backdrop-blur-3xl border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]";
 
   const btnClasses = isDark
-    ? "hover:bg-white/10 text-white border-white/5"
-    : "hover:bg-red-50 text-black border-red-100";
+    ? "bg-transparent hover:bg-white/10 text-white border-white/10"
+    : "bg-white hover:bg-slate-100 text-slate-800 border-slate-200 shadow-sm";
 
   const activeBtnClasses = isDark
     ? "bg-red-500/20 text-red-500 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
-    : "bg-red-100 text-red-600 border-red-300 shadow-[0_0_15px_rgba(220,38,38,0.2)]";
+    : "bg-red-50 text-red-600 border-red-200 shadow-[0_0_15px_rgba(220,38,38,0.15)]";
+
+  const errorBtnClasses = isDark
+    ? "bg-red-500/20 text-red-500 border-red-500/50"
+    : "bg-red-100 text-red-600 border-red-300 shadow-sm";
 
   return (
     <motion.div 
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       transition={{ type: 'spring', damping: 25, stiffness: 200, delay: 0.2 }}
-      className={`absolute bottom-6 left-1/2 -translate-x-1/2 px-8 py-4 rounded-full border flex items-center gap-6 z-40 ${barClasses}`}
+      className={`absolute bottom-6 left-1/2 -translate-x-1/2 px-8 py-4 rounded-[2rem] border flex items-center gap-6 z-40 ${barClasses}`}
     >
       {/* Mic Status */}
       <div className="flex flex-col items-center gap-1 group relative">
-        <button className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300 ${micOn ? (isDark ? 'bg-white/10 text-white border-white/10' : 'bg-slate-100 text-black border-slate-200') : 'bg-red-500/20 text-red-500 border-red-500/50'}`}>
-          {micOn ? <Mic size={20} className={isListening ? 'animate-pulse text-emerald-400' : ''} /> : <MicOff size={20} />}
+        <button 
+          onClick={toggleMic}
+          className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300 ${micOn ? btnClasses : errorBtnClasses}`}
+        >
+          {micOn ? <Mic size={20} className={isListening ? 'animate-pulse text-emerald-500' : ''} /> : <MicOff size={20} />}
         </button>
         <span className="absolute -top-8 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
           Mic {micOn ? 'Active' : 'Muted'}
         </span>
       </div>
 
-      <div className={`w-px h-8 ${isDark ? 'bg-white/10' : 'bg-red-200'}`}></div>
+      {/* Cam Status */}
+      <div className="flex flex-col items-center gap-1 group relative">
+        <button 
+          onClick={toggleCam}
+          className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300 ${camOn ? btnClasses : errorBtnClasses}`}
+        >
+          {camOn ? <Video size={20} className="text-blue-500" /> : <VideoOff size={20} />}
+        </button>
+        <span className="absolute -top-8 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          Camera {camOn ? 'Active' : 'Off'}
+        </span>
+      </div>
+
+      <div className={`w-px h-8 ${isDark ? 'bg-white/10' : 'bg-slate-200'}`}></div>
 
       {/* Code Editor Toggle */}
       <div className="flex flex-col items-center gap-1 group relative">
@@ -83,13 +106,13 @@ export default function BottomControlBar({
         </span>
       </div>
 
-      <div className={`w-px h-8 ${isDark ? 'bg-white/10' : 'bg-red-200'}`}></div>
+      <div className={`w-px h-8 ${isDark ? 'bg-white/10' : 'bg-slate-200'}`}></div>
 
       {/* End Interview */}
       <div className="flex flex-col items-center gap-1 group relative">
         <button 
           onClick={endInterview}
-          className="w-16 h-12 rounded-full flex items-center justify-center bg-red-600 hover:bg-red-500 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all duration-300 hover:scale-105 active:scale-95"
+          className="w-16 h-12 rounded-[1.5rem] flex items-center justify-center bg-red-600 hover:bg-red-500 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all duration-300 hover:scale-105 active:scale-95"
         >
           <PhoneOff size={22} />
         </button>

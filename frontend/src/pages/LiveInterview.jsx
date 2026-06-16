@@ -979,7 +979,13 @@ export default function LiveInterview() {
           </motion.div>
         )}
       </AnimatePresence>
-      <main className="flex-1 w-full relative">
+      <motion.main 
+        className="flex-1 w-full relative"
+        initial={false}
+        animate={{ rotateY: theme === 'dark' ? 0 : 360 }}
+        transition={{ duration: 1.2, type: 'spring', bounce: 0.3 }}
+        style={{ transformStyle: 'preserve-3d', perspective: '1200px' }}
+      >
         <AvatarStage
           phase={phase}
           qIndex={qIndex}
@@ -1011,6 +1017,9 @@ export default function LiveInterview() {
         <BottomControlBar
           isListening={isListening}
           micOn={micOn}
+          toggleMic={() => setMicOn(!micOn)}
+          camOn={camOn}
+          toggleCam={() => setCamOn(!camOn)}
           theme={theme}
           toggleTheme={toggleTheme}
           isCodeOpen={isCodeOpen}
@@ -1052,17 +1061,9 @@ export default function LiveInterview() {
               Video Offline
             </div>
           )}
-          <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 to-transparent flex justify-center gap-2 opacity-0 hover:opacity-100 transition-opacity duration-300">
-            <button onClick={(e) => { e.stopPropagation(); setMicOn(!micOn); }} className={`p-2 rounded-lg transition-colors ${micOn ? 'bg-white/20 hover:bg-white/40 text-white' : 'bg-red-500/80 hover:bg-red-500 text-white'}`} title={micOn ? "Mute Microphone" : "Unmute Microphone"}>
-              {micOn ? '🎙️' : '🔇'}
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); setCamOn(!camOn); }} className={`p-2 rounded-lg transition-colors ${camOn ? 'bg-white/20 hover:bg-white/40 text-white' : 'bg-red-500/80 hover:bg-red-500 text-white'}`} title={camOn ? "Stop Video" : "Start Video"}>
-              {camOn ? '📹' : '📵'}
-            </button>
-          </div>
         </motion.div>
 
-      </main>
+      </motion.main>
 
       {/* Modern Proctoring Overlay Modal */}
       <AnimatePresence>
