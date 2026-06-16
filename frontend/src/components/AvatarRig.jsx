@@ -77,8 +77,9 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
     let targetHeadYaw = swayX;
     let targetHeadRoll = swayY;
     
-    let targetSpinePitch = breath * 1.5;
-    let targetSpineYaw = swayX * 0.5;
+    // Spine is completely locked (perfect static posture)
+    let targetSpinePitch = 0;
+    let targetSpineYaw = 0;
     
     // Default arms (relaxed down at sides)
     let targetRightArmRoll = 1.15; 
@@ -95,7 +96,6 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
     if (cur === AVATAR_STATES.SPEAKING) {
       a.speakBobPhase += dt * 4.0;
       targetHeadPitch = Math.sin(a.speakBobPhase) * 0.02 + 0.05; // Nodding while speaking
-      targetSpinePitch += 0.05; // Lean in to engage
 
       // Gesture Controller
       a.gestureTimer -= dt;
@@ -128,7 +128,6 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
     } else if (cur === AVATAR_STATES.LISTENING) {
       targetHeadPitch = 0.1 + Math.sin(a.t * 2) * 0.02; // Nodding slowly
       targetHeadYaw = 0.08; // Head tilt
-      targetSpinePitch = 0.12; // Leaning in very close
       
       targetRightArmRoll = 0.8;
       targetRightForeArmPitch = -1.2;
@@ -140,14 +139,10 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
       a.lookPhaseY += dt * 2.0;
       targetHeadPitch = -0.15 + Math.sin(a.lookPhaseY) * 0.05; // Looking up
       targetHeadYaw = 0.2 + Math.cos(a.lookPhaseX) * 0.1; // Looking around
-      targetSpinePitch = -0.05; // Leaning back
       
       targetRightArmRoll = 0.2;
       targetRightArmYaw = -0.5;
       targetRightForeArmPitch = -2.0;
-      
-      a.pacingPhase += dt * 1.0;
-      targetPacingOffset = Math.sin(a.pacingPhase) * 0.15; // Pace left and right slightly
     }
 
     // 3. Smooth Interpolation
