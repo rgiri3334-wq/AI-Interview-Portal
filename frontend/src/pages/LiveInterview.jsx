@@ -799,8 +799,8 @@ export default function LiveInterview() {
   // ── Pre-render avatar on ready screen so it's visible immediately ────────
   if (phase === 'ready' || phase === 'initializing') {
     return (
-      <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col justify-center items-center p-6">
-        <div className="w-full max-w-5xl flex flex-col md:flex-row gap-8 items-center justify-center">
+      <div className="min-h-screen bg-sterling-bg text-sterling-text font-sans flex flex-col justify-center items-center p-6 overflow-hidden">
+        <div className="w-full max-w-6xl flex flex-row gap-8 items-stretch justify-center">
 
           {/* LEFT: Avatar — visible immediately, no loading delay */}
           <div className="flex flex-col items-center gap-4 shrink-0">

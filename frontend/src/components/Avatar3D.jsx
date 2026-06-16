@@ -146,9 +146,9 @@ export default function Avatar3D({
           camera={{ position: [0, -0.2, 1.2], fov: 35 }} 
           dpr={[1, 1.5]} 
         >
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[0, 2, 5]} intensity={1.2} />
-          <Environment preset="city" />
+          <ambientLight intensity={0.8} />
+          <directionalLight position={[0, 2, 5]} intensity={1.5} />
+          <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={1.0} />
           <Suspense fallback={null}>
             <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
           </Suspense>
