@@ -12,7 +12,8 @@ export default function BottomControlBar({
   toggleTheme,
   isCodeOpen,
   toggleCode,
-  endInterview
+  endInterview,
+  submitAnswer
 }) {
   const isDark = theme === 'dark';
 
