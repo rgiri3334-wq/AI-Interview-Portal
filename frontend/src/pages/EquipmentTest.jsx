@@ -45,7 +45,10 @@ export default function EquipmentTest() {
     const checkMedia = async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        if (!isMounted) return;
+        if (!isMounted) {
+          stream.getTracks().forEach(t => t.stop());
+          return;
+        }
         
         if (videoRef.current) {
           videoRef.current.srcObject = stream;

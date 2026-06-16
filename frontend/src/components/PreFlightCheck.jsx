@@ -181,6 +181,11 @@ export default function PreFlightCheck({ onPass, candidateName = 'Candidate', jo
   const [showCompliance, setShowCompliance] = useState(false);
   const [complianceChecked, setComplianceChecked] = useState(false);
 
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    return () => { isMountedRef.current = false; };
+  }, []);
+
   // ── Release all preflight streams ────────────────────────────────────────
   const releaseStreams = useCallback(() => {
     if (camStreamRef.current) {
@@ -308,6 +313,10 @@ export default function PreFlightCheck({ onPass, candidateName = 'Candidate', jo
     }
     try {
       const camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      if (!isMountedRef.current) {
+        camStream.getTracks().forEach(t => t.stop());
+        return;
+      }
       camStreamRef.current = camStream;
       if (videoRef.current) videoRef.current.srcObject = camStream;
       setCamStatus(STATUS.PASS);
@@ -327,6 +336,10 @@ export default function PreFlightCheck({ onPass, candidateName = 'Candidate', jo
     }
     try {
       const micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      if (!isMountedRef.current) {
+        micStream.getTracks().forEach(t => t.stop());
+        return;
+      }
       micStreamRef.current = micStream;
       setMicStatus(STATUS.PASS);
       setMicDetail('Microphone detected. Speak to test your level.');
