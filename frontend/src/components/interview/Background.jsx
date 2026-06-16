@@ -47,7 +47,7 @@ export default function Background({ theme }) {
       {!isDark && (
         <>
           <motion.div 
-            className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-red-500/15 blur-[100px] rounded-full"
+            className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-red-500/25 blur-[100px] rounded-full"
             animate={{ 
               x: [0, -30, 0], 
               y: [0, 40, 0],
@@ -56,7 +56,7 @@ export default function Background({ theme }) {
             transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div 
-            className="absolute bottom-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-red-400/10 blur-[120px] rounded-full"
+            className="absolute bottom-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-red-400/20 blur-[120px] rounded-full"
             animate={{ 
               x: [0, 50, 0], 
               y: [0, -30, 0],

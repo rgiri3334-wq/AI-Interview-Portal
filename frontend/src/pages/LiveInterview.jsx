@@ -941,26 +941,26 @@ export default function LiveInterview() {
       <header className={`${theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-white/40 border-red-200'} backdrop-blur-2xl border-b px-8 py-4 flex justify-between items-center sticky top-0 z-50`}>
         {/* Logo Area */}
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-black/60 rounded-xl flex items-center justify-center shrink-0 shadow-lg border border-white/10">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg border ${theme === 'dark' ? 'bg-black/60 border-white/10' : 'bg-white border-red-100'}`}>
             <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain mix-blend-screen" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
             <div className="hidden w-9 h-9 bg-red-600 text-white flex items-center justify-center font-bold text-sm">S</div>
           </div>
           <div className="leading-tight">
-            <h1 className="text-sm font-black tracking-[0.2em] text-white">STERLING</h1>
-            <h2 className="text-xs tracking-widest text-slate-400">E-MOBILITY</h2>
+            <h1 className={`text-sm font-black tracking-[0.2em] ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>STERLING</h1>
+            <h2 className={`text-xs tracking-widest ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>E-MOBILITY</h2>
           </div>
         </div>
 
         {/* Nav Links - Restricted for Candidate */}
         <div className="hidden md:flex gap-8 text-sm font-bold items-center">
-          <div className="text-red-400/80 uppercase tracking-widest text-xs flex items-center gap-2">
+          <div className={`uppercase tracking-widest text-xs flex items-center gap-2 ${theme === 'dark' ? 'text-red-400/80' : 'text-red-600'}`}>
             <ShieldAlert size={14} className="text-red-500 animate-pulse" /> Proctoring Active
           </div>
           <button onClick={() => {
             if (window.confirm("Are you sure you want to end and submit the interview now?")) {
               doEndInterview(history);
             }
-          }} className="relative group overflow-hidden px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-all duration-300 ease-out font-bold tracking-widest shadow-lg">
+          }} className={`relative group overflow-hidden px-6 py-2 border rounded-xl transition-all duration-300 ease-out font-bold tracking-widest shadow-lg ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white' : 'bg-red-50 hover:bg-red-100 border-red-200 text-red-600'}`}>
             <div className="absolute inset-0 w-1/4 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-150%] group-hover:translate-x-[400%] transition-transform duration-700"></div>
             End & Submit
           </button>
@@ -1042,7 +1042,7 @@ export default function LiveInterview() {
 
         {/* Question Counter */}
         <div className="absolute top-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-          <span className="bg-black/50 backdrop-blur-md text-white/80 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full border border-white/10 shadow-lg">
+          <span className={`backdrop-blur-md text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full border shadow-lg ${theme === 'dark' ? 'bg-black/50 text-white/80 border-white/10' : 'bg-white/80 text-red-600 border-red-200'}`}>
             Question {qIndex + 1} of {MAX_QUESTIONS}
           </span>
         </div>
