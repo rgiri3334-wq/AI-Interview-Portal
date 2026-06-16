@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF, useAnimations } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 
 const AVATAR_STATES = {
   SPEAKING: 'speaking',
@@ -9,51 +9,28 @@ const AVATAR_STATES = {
   IDLE: 'idle'
 };
 
-// Preload the avatar model
-useGLTF.preload('/avatar.glb');
+const lerpToward = (current, target, factor) => {
+  return current + (target - current) * factor;
+};
 
 export default function AvatarRig({ avatarState, mouthOpenRef }) {
+  useGLTF.preload('/model_opt.glb');
+  const { nodes, scene } = useGLTF('/model_opt.glb');
   const groupRef = useRef();
-  
-  // Load the mesh and animations directly from avatar.glb
-  const { scene, animations } = useGLTF('/avatar.glb');
-  
-  // Bind the animations to the mesh group
-  const { actions } = useAnimations(animations, groupRef);
+
+  const anim = useRef({
+    t: 0,
+    headPitch: 0, headYaw: 0, headRoll: 0,
+    breathPhase: 0,
+    speakBobPhase: 0,
+    swayPhase: 0,
+    lookPhaseX: 0, lookPhaseY: 0,
+    blinkTimer: Math.random() * 3 + 1,
+    blinkPhase: 0, // 0 = open, 1 = fully closed
+  });
 
   const avatarStateRef = useRef(avatarState);
   useEffect(() => { avatarStateRef.current = avatarState; }, [avatarState]);
-
-  // Handle Animation Transitions
-  useEffect(() => {
-    if (!actions) return;
-    
-    let cur = AVATAR_STATES.IDLE;
-    if (avatarState) {
-      if (avatarState.isSpeaking) cur = AVATAR_STATES.SPEAKING;
-      else if (avatarState.isLoading) cur = AVATAR_STATES.THINKING;
-      else if (avatarState.isListening) cur = AVATAR_STATES.LISTENING;
-    }
-
-    // Decide which animation to play based on state
-    let targetAnim = 'idle';
-    if (cur === AVATAR_STATES.SPEAKING) targetAnim = 'agree'; 
-    else if (cur === AVATAR_STATES.THINKING) targetAnim = 'idle';
-    else if (cur === AVATAR_STATES.LISTENING) targetAnim = 'idle';
-
-    if (!actions[targetAnim]) targetAnim = 'idle'; // Fallback
-
-    if (actions[targetAnim]) {
-      // Fade out all other animations and fade in the target
-      Object.values(actions).forEach(action => {
-        if (action.name === targetAnim) {
-          action.reset().fadeIn(0.5).play();
-        } else {
-          action.fadeOut(0.5);
-        }
-      });
-    }
-  }, [avatarState, actions]);
 
   useEffect(() => {
     if (scene) {
@@ -65,25 +42,108 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
     }
   }, [scene]);
 
-  useFrame(() => {
-    if (!scene) return;
+  useFrame((state, delta) => {
+    if (!nodes || !scene) return;
     
-    // Apply Lip Sync Morph Targets dynamically on top of the running animation
-    const openAmount = (mouthOpenRef && mouthOpenRef.current) ? mouthOpenRef.current : 0;
-    scene.traverse((child) => {
-      if (child.isMesh && child.morphTargetInfluences && child.morphTargetDictionary) {
-        const dict = child.morphTargetDictionary;
-        const influences = child.morphTargetInfluences;
-        
-        if (dict.viseme_O !== undefined) influences[dict.viseme_O] = openAmount * 0.8;
-        if (dict.viseme_aa !== undefined) influences[dict.viseme_aa] = openAmount * 0.6;
-        if (dict.mouthOpen !== undefined) influences[dict.mouthOpen] = openAmount * 0.5;
-        if (dict.jawOpen !== undefined) influences[dict.jawOpen] = openAmount * 0.4;
+    // Clamp delta to prevent massive jumps on lag spikes
+    const dt = Math.min(delta, 0.05);
+    const a = anim.current;
+    
+    // Convert avatarState object props into a string enum if passed as object
+    let cur = AVATAR_STATES.IDLE;
+    if (avatarStateRef.current) {
+      if (avatarStateRef.current.isSpeaking) cur = AVATAR_STATES.SPEAKING;
+      else if (avatarStateRef.current.isLoading) cur = AVATAR_STATES.THINKING;
+      else if (avatarStateRef.current.isListening) cur = AVATAR_STATES.LISTENING;
+    }
+    
+    a.t += dt;
+
+    // 1. Core Life Systems (Breathing & Micro-sway)
+    a.breathPhase += dt * 1.8; // Relaxed breathing
+    const breath = Math.sin(a.breathPhase) * 0.015;
+    
+    a.swayPhase += dt * 0.4;
+    const swayX = Math.sin(a.swayPhase) * 0.03;
+    const swayY = Math.cos(a.swayPhase * 0.8) * 0.02;
+
+    // Default Targets (Idle Posture)
+    let targetHeadPitch = breath;
+    let targetHeadYaw = swayX;
+    let targetHeadRoll = swayY;
+
+    // 2. Behavioral State Machine
+    if (cur === AVATAR_STATES.SPEAKING) {
+      a.speakBobPhase += dt * 4.0;
+      targetHeadPitch = Math.sin(a.speakBobPhase) * 0.02 + 0.05; // Nodding while speaking
+    } else if (cur === AVATAR_STATES.LISTENING) {
+      targetHeadPitch = 0.1 + Math.sin(a.t * 2) * 0.02; // Nodding slowly
+      targetHeadYaw = 0.08; // Head tilt
+    } else if (cur === AVATAR_STATES.THINKING) {
+      a.lookPhaseX += dt * 1.5;
+      a.lookPhaseY += dt * 2.0;
+      targetHeadPitch = -0.15 + Math.sin(a.lookPhaseY) * 0.05; // Looking up
+      targetHeadYaw = 0.2 + Math.cos(a.lookPhaseX) * 0.1; // Looking around
+    }
+
+    // 3. Smooth Interpolation
+    a.headPitch = lerpToward(a.headPitch, targetHeadPitch, dt * 5);
+    a.headYaw = lerpToward(a.headYaw, targetHeadYaw, dt * 5);
+    a.headRoll = lerpToward(a.headRoll, targetHeadRoll, dt * 5);
+
+    // 4. Apply Rotations to standard Mixamo / ReadyPlayerMe bone hierarchy
+    const head = nodes.Head || nodes.mixamorigHead;
+    const neck = nodes.Neck || nodes.mixamorigNeck;
+
+    if (head) {
+      head.rotation.x = a.headPitch;
+      head.rotation.y = a.headYaw;
+      head.rotation.z = a.headRoll;
+    }
+    if (neck) {
+      neck.rotation.x = a.headPitch * 0.5;
+    }
+
+    // 5. Procedural Eye Blinks
+    a.blinkTimer -= dt;
+    if (a.blinkTimer <= 0) {
+      // Start a blink (fast close, slightly slower open)
+      a.blinkPhase += dt * 10.0;
+      if (a.blinkPhase >= Math.PI) {
+        a.blinkPhase = 0;
+        a.blinkTimer = 2.0 + Math.random() * 4.0; // Next blink in 2-6 seconds
       }
-    });
+    }
+    const blinkAmount = a.blinkPhase > 0 ? Math.max(0, Math.sin(a.blinkPhase)) : 0;
+
+    // 6. Apply Morph Targets (Lip Sync & Blinking)
+    if (scene) {
+      const openAmount = (mouthOpenRef && mouthOpenRef.current) ? mouthOpenRef.current : 0;
+      scene.traverse((child) => {
+        if (child.isMesh && child.morphTargetInfluences && child.morphTargetDictionary) {
+          const dict = child.morphTargetDictionary;
+          const influences = child.morphTargetInfluences;
+          
+          // Lip Sync
+          if (dict.viseme_O !== undefined) influences[dict.viseme_O] = openAmount * 0.8;
+          if (dict.viseme_aa !== undefined) influences[dict.viseme_aa] = openAmount * 0.6;
+          if (dict.mouthOpen !== undefined) influences[dict.mouthOpen] = openAmount * 0.5;
+          if (dict.jawOpen !== undefined) influences[dict.jawOpen] = openAmount * 0.4;
+
+          // Eye Blinks (Support standard Mixamo/RPM morph names)
+          if (dict.eyeBlinkLeft !== undefined) influences[dict.eyeBlinkLeft] = blinkAmount;
+          if (dict.eyeBlinkRight !== undefined) influences[dict.eyeBlinkRight] = blinkAmount;
+          if (dict.eyeBlink_L !== undefined) influences[dict.eyeBlink_L] = blinkAmount;
+          if (dict.eyeBlink_R !== undefined) influences[dict.eyeBlink_R] = blinkAmount;
+          if (dict.eyesClosed !== undefined) influences[dict.eyesClosed] = blinkAmount;
+          if (dict.blink !== undefined) influences[dict.blink] = blinkAmount;
+        }
+      });
+    }
   });
 
   return (
+    // Scaled down to 0.85 and moved down to frame the head and shoulders perfectly
     <group ref={groupRef} dispose={null} position={[0, -1.45, 0]} scale={0.85}>
       <primitive object={scene} />
     </group>

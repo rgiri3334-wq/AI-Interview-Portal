@@ -35,8 +35,8 @@ class WebGLErrorBoundary extends React.Component {
   }
 }
 
-// Preload the model
-useGLTF.preload('/avatar.glb');
+// Preload the highly-optimized avatar file
+useGLTF.preload('/model_opt.glb');
 
 // ── Audio visualizer bars ──────────────────────────────────────────────────
 function AudioBars({ audioLevel, count = 5 }) {
