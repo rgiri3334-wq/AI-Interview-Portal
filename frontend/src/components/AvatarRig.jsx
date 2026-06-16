@@ -103,6 +103,10 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
     const neck = nodes.Neck || nodes.mixamorigNeck;
     const leftArm = nodes.LeftArm || nodes.mixamorigLeftArm;
     const rightArm = nodes.RightArm || nodes.mixamorigRightArm;
+    const leftShoulder = nodes.LeftShoulder || nodes.mixamorigLeftShoulder;
+    const rightShoulder = nodes.RightShoulder || nodes.mixamorigRightShoulder;
+    const leftForeArm = nodes.LeftForeArm || nodes.mixamorigLeftForeArm;
+    const rightForeArm = nodes.RightForeArm || nodes.mixamorigRightForeArm;
 
     if (head) {
       head.rotation.x = a.headPitch;
@@ -113,11 +117,13 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
       neck.rotation.x = a.headPitch * 0.5;
     }
 
-    // Procedurally drop arms if no animations are present to prevent T-pose
-    if (!animations || animations.length === 0) {
-      if (leftArm) leftArm.rotation.z = 1.2; // roughly 70 degrees down
-      if (rightArm) rightArm.rotation.z = -1.2;
-    }
+    // Procedurally force a relaxed posture to override any T-pose animations
+    if (leftShoulder) leftShoulder.rotation.z = Math.PI / 16;
+    if (rightShoulder) rightShoulder.rotation.z = -Math.PI / 16;
+    if (leftArm) { leftArm.rotation.z = 1.2; leftArm.rotation.x = 0.1; }
+    if (rightArm) { rightArm.rotation.z = -1.2; rightArm.rotation.x = 0.1; }
+    if (leftForeArm) leftForeArm.rotation.x = -0.3;
+    if (rightForeArm) rightForeArm.rotation.x = -0.3;
 
     // 5. Procedural Eye Blinks
     a.blinkTimer -= dt;
