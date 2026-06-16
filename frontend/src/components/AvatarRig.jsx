@@ -14,8 +14,8 @@ const lerpToward = (current, target, factor) => {
 };
 
 export default function AvatarRig({ avatarState, mouthOpenRef }) {
-  useGLTF.preload('/model.glb');
-  const { nodes, scene } = useGLTF('/model.glb');
+  useGLTF.preload('/model_opt.glb');
+  const { nodes, scene } = useGLTF('/model_opt.glb');
   const groupRef = useRef();
 
   const anim = useRef({
