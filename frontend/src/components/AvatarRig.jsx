@@ -14,7 +14,7 @@ const lerpToward = (current, target, factor) => {
 };
 
 export default function AvatarRig({ avatarState, mouthOpenRef }) {
-  const { nodes, scene, animations } = useGLTF('/model_opt.glb');
+  const { nodes, scene, animations } = useGLTF('/avatar.glb');
   const groupRef = useRef();
   const { actions, names } = useAnimations(animations, groupRef);
 
@@ -117,13 +117,9 @@ export default function AvatarRig({ avatarState, mouthOpenRef }) {
       neck.rotation.x = a.headPitch * 0.5;
     }
 
-    // Procedurally force a relaxed posture to override any T-pose animations
-    if (leftShoulder) leftShoulder.rotation.z = Math.PI / 16;
-    if (rightShoulder) rightShoulder.rotation.z = -Math.PI / 16;
-    if (leftArm) { leftArm.rotation.z = 1.2; leftArm.rotation.x = 0.1; }
-    if (rightArm) { rightArm.rotation.z = -1.2; rightArm.rotation.x = 0.1; }
-    if (leftForeArm) leftForeArm.rotation.x = -0.3;
-    if (rightForeArm) rightForeArm.rotation.x = -0.3;
+    // Procedural arm rotations removed because they corrupt the mesh weights
+    if (leftArm) { leftArm.rotation.z = 0; leftArm.rotation.x = 0; }
+    if (rightArm) { rightArm.rotation.z = 0; rightArm.rotation.x = 0; }
 
     // 5. Procedural Eye Blinks
     a.blinkTimer -= dt;
