@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Mic, MicOff, Code2, Moon, Sun, PhoneOff, Video, VideoOff } from 'lucide-react';
+import { Mic, MicOff, Code2, Moon, Sun, PhoneOff, Video, VideoOff, Send } from 'lucide-react';
 
 export default function BottomControlBar({
   isListening,
@@ -102,7 +102,22 @@ export default function BottomControlBar({
           </motion.div>
         </button>
         <span className="absolute -top-8 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-          Toggle Theme
+          {isDark ? 'Light Mode' : 'Dark Mode'}
+        </span>
+      </div>
+
+      <div className={`w-px h-8 ${isDark ? 'bg-white/10' : 'bg-slate-200'}`}></div>
+
+      {/* Submit Answer */}
+      <div className="flex flex-col items-center gap-1 group relative">
+        <button 
+          onClick={submitAnswer}
+          className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300 ${isDark ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 shadow-[0_0_15px_rgba(16,185,129,0.1)]'}`}
+        >
+          <Send size={18} className="ml-1" />
+        </button>
+        <span className="absolute -top-8 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+          Submit Answer
         </span>
       </div>
 
@@ -112,11 +127,11 @@ export default function BottomControlBar({
       <div className="flex flex-col items-center gap-1 group relative">
         <button 
           onClick={endInterview}
-          className="w-16 h-12 rounded-[1.5rem] flex items-center justify-center bg-red-600 hover:bg-red-500 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all duration-300 hover:scale-105 active:scale-95"
+          className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300 ${errorBtnClasses} hover:bg-red-500 hover:text-white`}
         >
-          <PhoneOff size={22} />
+          <PhoneOff size={20} />
         </button>
-        <span className="absolute -top-8 bg-red-600 text-white font-bold text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+        <span className="absolute -top-8 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
           End Interview
         </span>
       </div>

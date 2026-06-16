@@ -177,7 +177,7 @@ export default function LiveInterview() {
     stopListening,
     resetTranscript,
     shutdown: shutdownSTT,
-  } = useWebSocketSTT({ onSilenceDetected: handleSilenceDetected, silenceDelayMs: 8000 }); // Fix: Increased to 8000ms so candidate doesn't get cut off while pausing
+  } = useWebSocketSTT({ onSilenceDetected: handleSilenceDetected, silenceDelayMs: 4500 }); // Adaptive silence: waits 3.5s to 5.5s depending on answer length
   // isListening is passed to Avatar3D for the LISTENING state display
 
   const lastCueWordCount = useRef(0);
@@ -1028,6 +1028,7 @@ export default function LiveInterview() {
               doEndInterview(history);
             }
           }}
+          submitAnswer={handleSubmitAnswer}
         />
 
         {/* Floating Utilities */}
