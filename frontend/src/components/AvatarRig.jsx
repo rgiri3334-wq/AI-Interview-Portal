@@ -10,8 +10,8 @@ const damp = (current, target, factor, dt) => {
 };
 
 export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenRef }) {
-  const { nodes, materials, scene } = useGLTF('/interviewer.glb', true, true, (error) => {
-    console.error("Failed to load /interviewer.glb.", error);
+  const { nodes, materials, scene } = useGLTF('/models/avatar.glb', true, true, (error) => {
+    console.error("Failed to load /models/avatar.glb.", error);
   });
 
   const groupRef = useRef();
