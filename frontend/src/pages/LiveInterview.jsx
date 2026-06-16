@@ -1032,19 +1032,55 @@ export default function LiveInterview() {
               )}
             </AnimatePresence>
 
-            {/* Live Closed Captions (Bottom overlay) */}
-            <div className="relative z-20 w-full px-8 pb-8 pt-24 bg-gradient-to-t from-black via-black/70 to-transparent">
-              <h2 className="text-xl md:text-2xl text-white font-medium leading-relaxed drop-shadow-lg text-center max-w-2xl mx-auto">
-                {loading ? loadingStatus : displayedQuestion}
-              </h2>
+            {/* Elegant Dual-Track Subtitles Overlay */}
+            <div className="relative z-20 w-full px-8 pb-8 pt-32 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col gap-4">
               
-              <div className="mt-6 text-center min-h-[30px] flex items-center justify-center">
-                {finalTranscript && <span className="text-yellow-400 font-medium text-[15px] drop-shadow-md bg-black/40 px-3 py-1 rounded-lg">{finalTranscript} </span>}
-                {interimTranscript && <span className="text-yellow-400/60 italic text-[15px] drop-shadow-md bg-black/20 px-3 py-1 rounded-lg ml-2">{interimTranscript}</span>}
-                {!finalTranscript && !interimTranscript && !isListening && !isSpeaking && !loading && (
-                  <span className="text-white/40 text-sm font-medium">Listening for your response...</span>
+              {/* AI TTS Track */}
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                className="self-start max-w-3xl flex flex-col items-start gap-1.5 w-full"
+              >
+                <div className="flex items-center gap-2 px-2">
+                  <div className={`w-1.5 h-1.5 rounded-full ${isSpeaking ? 'bg-blue-500 animate-pulse' : 'bg-slate-600'}`}></div>
+                  <span className="text-xs font-bold tracking-widest uppercase text-slate-400">AI Interviewer</span>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl rounded-tl-sm px-6 py-4 shadow-xl">
+                  <p className="text-lg md:text-xl text-white font-medium leading-relaxed drop-shadow-sm">
+                    {loading ? loadingStatus : displayedQuestion}
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* Candidate STT Track */}
+              <AnimatePresence>
+                {(finalTranscript || interimTranscript || isListening) && !loading && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                    className="self-end max-w-3xl flex flex-col items-end gap-1.5 mt-2 w-full"
+                  >
+                    <div className="flex items-center gap-2 px-2">
+                      <span className="text-xs font-bold tracking-widest uppercase text-emerald-400">You</span>
+                      <div className={`w-1.5 h-1.5 rounded-full ${isListening ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'}`}></div>
+                    </div>
+                    <div className="bg-emerald-950/40 backdrop-blur-md border border-emerald-500/20 rounded-2xl rounded-tr-sm px-6 py-4 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+                      <p className="text-[15px] md:text-base leading-relaxed text-right">
+                        {finalTranscript && <span className="text-emerald-50 font-medium">{finalTranscript} </span>}
+                        {interimTranscript && <span className="text-emerald-200/70 italic">{interimTranscript}</span>}
+                        {!finalTranscript && !interimTranscript && isListening && (
+                          <span className="text-emerald-500/50 italic flex items-center gap-2 justify-end">
+                            Listening...
+                            <span className="flex gap-0.5 ml-1">
+                               <span className="w-1 h-1 bg-emerald-500/50 rounded-full animate-[bounce_1s_infinite]"></span>
+                               <span className="w-1 h-1 bg-emerald-500/50 rounded-full animate-[bounce_1s_infinite_0.2s]"></span>
+                               <span className="w-1 h-1 bg-emerald-500/50 rounded-full animate-[bounce_1s_infinite_0.4s]"></span>
+                            </span>
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </motion.div>
                 )}
-              </div>
+              </AnimatePresence>
             </div>
           </div>
           
