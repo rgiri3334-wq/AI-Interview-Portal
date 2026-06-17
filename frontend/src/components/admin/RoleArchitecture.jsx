@@ -180,10 +180,10 @@ export default function RoleArchitecture({
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 flex justify-between">
-                  <span>Hard-Reject Threshold (Technical)</span>
+                  <span>Silent Rejection Recommendation Threshold</span>
                   <span className="text-red-600 font-black">{roleConfigs.hard_reject_score || 50}%</span>
                 </label>
-                <p className="text-[10px] text-slate-400 mb-2 leading-relaxed">Minimum acceptable technical score to pass.</p>
+                <p className="text-[10px] text-slate-400 mb-2 leading-relaxed">If the technical score falls below this, AI flags a "Reject" recommendation. The candidate will NOT be notified.</p>
                 <input 
                   type="range"
                   min="0" max="100"
