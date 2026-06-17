@@ -269,7 +269,8 @@ async def verify_admin_jwt(request: Request, call_next):
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Return clean JSON for Pydantic validation errors instead of HTML traceback."""
-    return JSONResponse(
+    origin = request.headers.get("origin", "")
+    resp = JSONResponse(
         status_code=422,
         content={
             "error": "Validation Error",
@@ -277,12 +278,19 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "hint": "Check request body schema against API docs at /docs",
         },
     )
+    if origin:
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Access-Control-Allow-Credentials"] = "true"
+        resp.headers["Access-Control-Allow-Methods"] = "*"
+        resp.headers["Access-Control-Allow-Headers"] = "*"
+    return resp
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Catch-all — return JSON, never HTML tracebacks."""
     logger.error(f"Unhandled exception on {request.url}: {exc}", exc_info=True)
-    return JSONResponse(
+    origin = request.headers.get("origin", "")
+    resp = JSONResponse(
         status_code=500,
         content={
             "error": "Internal Server Error",
@@ -290,6 +298,12 @@ async def global_exception_handler(request: Request, exc: Exception):
             "path": str(request.url),
         },
     )
+    if origin:
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Access-Control-Allow-Credentials"] = "true"
+        resp.headers["Access-Control-Allow-Methods"] = "*"
+        resp.headers["Access-Control-Allow-Headers"] = "*"
+    return resp
 
 # ── NLP Utilities ─────────────────────────────────────────────────────────
 FILLER_WORDS = {"um","uh","like","basically","literally","actually","so","right",
