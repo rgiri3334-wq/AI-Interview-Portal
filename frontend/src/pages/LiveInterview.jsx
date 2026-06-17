@@ -1,8 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert } from 'lucide-react';
-import { Editor } from '@monaco-editor/react';
+
+// Lazy-load Monaco Editor to break the circular init between @react-three/drei and @monaco-editor/react
+// This forces Vite/Rollup to put them in separate async chunks, eliminating the "Mn before init" crash.
+const Editor = React.lazy(() =>
+  import('@monaco-editor/react').then(mod => ({ default: mod.Editor }))
+);
 
 import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png';

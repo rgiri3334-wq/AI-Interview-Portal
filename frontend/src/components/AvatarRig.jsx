@@ -234,3 +234,5 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
     </group>
   );
 }
+
+useGLTF.preload('/avatar.glb');

@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-
+import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
 export function useHumanBehavior(
   videoRef,
@@ -73,7 +73,6 @@ export function useHumanBehavior(
     try {
       setStatus('loading');
       console.log('%c[Vision Engine] Initializing MediaPipe FaceLandmarker...', 'color:#00D1FF;font-weight:bold');
-      const { FilesetResolver, FaceLandmarker } = await import('@mediapipe/tasks-vision');
       const vision = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.12/wasm"
       );

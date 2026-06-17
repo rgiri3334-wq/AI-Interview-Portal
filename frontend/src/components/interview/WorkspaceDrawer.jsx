@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Code2, X } from 'lucide-react';
-import MonacoEditor from '@monaco-editor/react';
+// NOTE: Monaco Editor is lazy-loaded in LiveInterview.jsx to prevent circular dep with @react-three/drei
 
 export default function WorkspaceDrawer({
   isOpen,
@@ -80,7 +80,16 @@ export default function WorkspaceDrawer({
 
             {/* Editor Body */}
             <div className="flex-1 w-full relative">
-              {memoizedEditor}
+              <Suspense fallback={
+                <div className="w-full h-full flex items-center justify-center bg-black/50">
+                  <div className="flex items-center gap-3 text-white/50">
+                    <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm font-bold uppercase tracking-widest">Loading Editor...</span>
+                  </div>
+                </div>
+              }>
+                {memoizedEditor}
+              </Suspense>
             </div>
 
             {/* Action Bar (Run Code & Submit) */}
