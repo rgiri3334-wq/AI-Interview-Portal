@@ -1596,6 +1596,8 @@ async def get_candidate_pipeline(db: Session = Depends(get_db)):
             "created_at": c.registration_date,
             "global_score": float(latest.overall_score or 0) if latest else 0.0,
             "technical_score": float(getattr(latest, "technical_score", 0) or 0) if latest else 0.0,
+            "communication_score": float(getattr(latest, "communication_score", 0) or 0) if latest else 0.0,
+            "eq_score": float(getattr(latest, "behavioral_score", 0) or 0) if latest else 0.0,
             "hiring_decision": hiring_decision,
             "interview_status": "completed" if is_completed else "pending",
             "termination_reason": "PROCTORING_ACT" if hiring_decision == "PROCTORING_ACT" else None,
