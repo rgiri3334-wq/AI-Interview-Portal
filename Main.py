@@ -2892,7 +2892,7 @@ async def send_decision_email_manual(candidate_id: str, db: Session = Depends(ge
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
         
-    iv = db.query(InterviewSession).filter_by(candidate_id=candidate_id).order_by(InterviewSession.created_at.desc()).first()
+    iv = db.query(InterviewSession).filter_by(candidate_id=candidate_id).order_by(InterviewSession.started_at.desc()).first()
     if not iv:
         raise HTTPException(status_code=404, detail="No interview session found")
         
