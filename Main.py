@@ -278,21 +278,21 @@ async def reminder_worker():
                             """
                             send_notification_email(str(candidate.email), str(candidate.name), f"⏰ Reminder: Interview in {msg_time}", html)
                             
-                            b.reminder_stage = new_stage
+                            b.reminder_stage = new_stage  # type: ignore
                             db.commit()
                         else:
                             # Expire missed stages so they don't block subsequent reminders
                             if time_diff_mins <= 60 and b.reminder_stage < 1:
-                                b.reminder_stage = 1
+                                b.reminder_stage = 1  # type: ignore
                                 db.commit()
                             elif time_diff_mins <= 10 and b.reminder_stage < 2:
-                                b.reminder_stage = 2
+                                b.reminder_stage = 2  # type: ignore
                                 db.commit()
                             elif time_diff_mins <= 5 and b.reminder_stage < 3:
-                                b.reminder_stage = 3
+                                b.reminder_stage = 3  # type: ignore
                                 db.commit()
                             elif time_diff_mins <= 1 and b.reminder_stage < 4:
-                                b.reminder_stage = 4
+                                b.reminder_stage = 4  # type: ignore
                                 db.commit()
                     except Exception as parse_err:
                         # Log and skip if parsing fails
