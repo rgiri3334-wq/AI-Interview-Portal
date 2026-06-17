@@ -228,3 +228,4 @@ export default function GlobalContextFeed({ companyContext, handleSaveCompanyCon
     </motion.div>
   );
 }
+

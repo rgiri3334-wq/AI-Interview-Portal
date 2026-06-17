@@ -4,7 +4,7 @@ import {
   Database, UploadCloud, Plus, Trash2, Edit3, Save, X, 
   Sparkles, Tag, AlertOctagon 
 } from 'lucide-react';
-import { API_BASE } from '../../config/api';
+import { API_BASE, customFetch } from '../../config/api';
 
 const ManageableSelect = ({ label, options, value, onChange, onAdd, onDelete }) => {
   const [isAdding, setIsAdding] = useState(false);
@@ -83,7 +83,7 @@ export default function QuestionBank({
       return;
     }
     try {
-      const res = await fetch(`${API_BASE}/admin/questions`, {
+      const res = await customFetch(`${API_BASE}/admin/questions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
@@ -107,7 +107,7 @@ export default function QuestionBank({
     const formData = new FormData();
     formData.append('file', bulkFile);
     try {
-      const res = await fetch(`${API_BASE}/admin/questions/bulk`, {
+      const res = await customFetch(`${API_BASE}/admin/questions/bulk`, {
         method: 'POST',
         body: formData
       });
@@ -130,7 +130,7 @@ export default function QuestionBank({
 
   const saveEdit = async () => {
     try {
-      const res = await fetch(`${API_BASE}/admin/questions/${editingId}`, {
+      const res = await customFetch(`${API_BASE}/admin/questions/${editingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm)
@@ -165,6 +165,41 @@ export default function QuestionBank({
       {/* Left Column: Form & Bulk Import */}
       <div className="xl:col-span-1 space-y-6">
         
+        {/* Department & Role Manager (Restored) */}
+        <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <h3 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center tracking-tight">
+            <div className="w-10 h-10 bg-slate-50 text-slate-600 rounded-xl flex items-center justify-center mr-4 border border-slate-200">
+              <Database size={20} />
+            </div>
+            Department & Role Manager
+          </h3>
+          <p className="text-xs font-medium text-slate-500 mb-5 leading-relaxed">
+            Manage your organization's taxonomic structure here. You must create a Department and a Role before adding questions.
+          </p>
+          
+          <div className="space-y-6">
+            <ManageableSelect 
+              label="Select / Add Department"
+              options={Object.keys(companyStructure)}
+              value={form.department}
+              onChange={e => {
+                const newDept = e.target.value;
+                setForm({...form, department: newDept, role: companyStructure[newDept]?.[0] || ''});
+              }}
+              onAdd={addDepartment}
+              onDelete={deleteDepartment}
+            />
+            <ManageableSelect 
+              label="Select / Add Job Role"
+              options={companyStructure[form.department] || []}
+              value={form.role}
+              onChange={e => setForm({...form, role: e.target.value})}
+              onAdd={addRole}
+              onDelete={deleteRole}
+            />
+          </div>
+        </div>
+
         {/* Bulk Import */}
         <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] group">
           <h3 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center tracking-tight">
@@ -231,25 +266,31 @@ export default function QuestionBank({
           
           <form onSubmit={handleSubmit} className="relative z-10 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <ManageableSelect 
-                label="Department"
-                options={Object.keys(companyStructure)}
-                value={form.department}
-                onChange={e => {
-                  const newDept = e.target.value;
-                  setForm({...form, department: newDept, role: companyStructure[newDept]?.[0] || ''});
-                }}
-                onAdd={addDepartment}
-                onDelete={deleteDepartment}
-              />
-              <ManageableSelect 
-                label="Job Role"
-                options={companyStructure[form.department] || []}
-                value={form.role}
-                onChange={e => setForm({...form, role: e.target.value})}
-                onAdd={addRole}
-                onDelete={deleteRole}
-              />
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Target Department</label>
+                <select 
+                  value={form.department}
+                  onChange={e => {
+                    const newDept = e.target.value;
+                    setForm({...form, department: newDept, role: companyStructure[newDept]?.[0] || ''});
+                  }}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-red-500 transition-all appearance-none cursor-pointer"
+                >
+                  <option value="" disabled>Select Department</option>
+                  {Object.keys(companyStructure).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Target Role</label>
+                <select 
+                  value={form.role}
+                  onChange={e => setForm({...form, role: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-red-500 transition-all appearance-none cursor-pointer"
+                >
+                  <option value="" disabled>Select Role</option>
+                  {(companyStructure[form.department] || []).map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
             </div>
             
             <div>
@@ -389,3 +430,4 @@ export default function QuestionBank({
     </motion.div>
   );
 }
+

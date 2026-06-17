@@ -4,7 +4,7 @@ import {
   Settings2, UserCheck, Key, Shield, Layers, 
   Target, Info, Eye, Briefcase
 } from 'lucide-react';
-import { API_BASE } from '../../config/api';
+import { API_BASE, customFetch } from '../../config/api';
 
 const ManageableSelect = ({ label, options, value, onChange, onAdd, onDelete }) => {
   const [isAdding, setIsAdding] = useState(false);
@@ -285,3 +285,4 @@ export default function RoleArchitecture({
     </motion.div>
   );
 }
+

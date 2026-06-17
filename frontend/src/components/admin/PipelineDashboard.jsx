@@ -9,7 +9,7 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
   ResponsiveContainer, Tooltip, Legend
 } from 'recharts';
-import { API_BASE } from '../../config/api';
+import { API_BASE, customFetch } from '../../config/api';
 
 const getGrade = (score, isProctoringAct) => {
   if (isProctoringAct) return { letter: 'F', color: 'bg-red-100 text-red-700 border-red-300' };
@@ -101,7 +101,7 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
 
   const handleDecisionChange = async (id, decision) => {
     try {
-      const res = await fetch(`${API_BASE}/candidates/${id}`, {
+      const res = await customFetch(`${API_BASE}/candidates/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hiring_decision: decision })
@@ -136,7 +136,7 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
     let successCount = 0;
     for (let id of Array.from(selectedIds)) {
       try {
-         await fetch(`${API_BASE}/candidates/${id}`, { method: 'DELETE' });
+         await customFetch(`${API_BASE}/candidates/${id}`, { method: 'DELETE' });
          successCount++;
       } catch(e) {}
     }
@@ -506,3 +506,4 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
     </motion.div>
   );
 }
+

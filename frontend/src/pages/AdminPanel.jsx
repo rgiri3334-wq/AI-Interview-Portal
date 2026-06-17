@@ -5,7 +5,7 @@ import {
   Database, Activity, Radar
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE } from '../config/api';
+import { API_BASE, customFetch } from '../config/api';
 
 // Modules
 import PipelineDashboard from '../components/admin/PipelineDashboard';
@@ -14,6 +14,8 @@ import RoleArchitecture from '../components/admin/RoleArchitecture';
 import QuestionBank from '../components/admin/QuestionBank';
 import AnalyticsEngine from '../components/admin/AnalyticsEngine';
 import LiveIntervention from '../components/admin/LiveIntervention';
+
+import Sidebar from '../components/Layout/Sidebar';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -56,9 +58,9 @@ export default function AdminPanel() {
 
   const fetchPipeline = async () => {
     try {
-      const res = await fetch(`${API_BASE}/dashboard`);
+      const res = await customFetch(`${API_BASE}/dashboard`);
       const data = await res.json();
-      setPipeline(data);
+      setPipeline(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -68,9 +70,9 @@ export default function AdminPanel() {
 
   const fetchQuestions = async () => {
     try {
-      const res = await fetch(`${API_BASE}/admin/questions`);
+      const res = await customFetch(`${API_BASE}/admin/questions`);
       const data = await res.json();
-      setQuestions(data);
+      setQuestions(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -80,7 +82,7 @@ export default function AdminPanel() {
 
   const fetchConfig = async () => {
     try {
-      const res = await fetch(`${API_BASE}/admin/config`);
+      const res = await customFetch(`${API_BASE}/admin/config`);
       const data = await res.json();
       setCompanyStructure(data.company_structure || {});
       setPersonas(data.personas || []);
@@ -96,7 +98,7 @@ export default function AdminPanel() {
 
   const fetchGlobalContext = async () => {
     try {
-      const res = await fetch(`${API_BASE}/admin/config/global/company_context`);
+      const res = await customFetch(`${API_BASE}/admin/config/global/company_context`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setCompanyContext(data);
@@ -108,7 +110,7 @@ export default function AdminPanel() {
 
   const handleSaveCompanyContext = async (newContextArr) => {
     try {
-      await fetch(`${API_BASE}/admin/config/global/company_context`, {
+      await customFetch(`${API_BASE}/admin/config/global/company_context`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: newContextArr })
@@ -121,7 +123,7 @@ export default function AdminPanel() {
 
   const handleSaveRoleConfig = async (newConfig) => {
     try {
-      await fetch(`${API_BASE}/admin/config/role/${newConfig.job_role || 'ALL'}`, {
+      await customFetch(`${API_BASE}/admin/config/role/${newConfig.job_role || 'ALL'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newConfig)
@@ -135,7 +137,7 @@ export default function AdminPanel() {
   const handleDeleteQuestion = async (id) => {
     if (!window.confirm('Delete this rubric criterion?')) return;
     try {
-      await fetch(`${API_BASE}/admin/questions/${id}`, { method: 'DELETE' });
+      await customFetch(`${API_BASE}/admin/questions/${id}`, { method: 'DELETE' });
       setQuestions(questions.filter(q => q.id !== id));
       showToast("Criterion removed.");
     } catch {
@@ -191,7 +193,7 @@ export default function AdminPanel() {
   };
   
   const syncConfig = async (partialConfig) => {
-    await fetch(`${API_BASE}/admin/config`, {
+    await customFetch(`${API_BASE}/admin/config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(partialConfig)
@@ -219,9 +221,14 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-red-200 selection:text-red-900 pb-20">
-      
-      {/* Toast Notification */}
+    <div className="flex min-h-screen bg-slate-50 font-sans relative overflow-hidden text-slate-900">
+      <Sidebar />
+      <main className="flex-1 overflow-y-auto pb-20 relative">
+        {/* Absolute Ambient Background Gradients */}
+        <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-slate-100/80 to-transparent pointer-events-none" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-red-100 rounded-full blur-[100px] opacity-50 pointer-events-none" />
+        
+        {/* Toast Notification */}
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ opacity: 0, y: -50, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -50, scale: 0.9 }} className="fixed top-6 left-1/2 -translate-x-1/2 z-50">
@@ -330,8 +337,10 @@ export default function AdminPanel() {
           )}
 
         </AnimatePresence>
-      </div>
-
+        </div>
+      </main>
     </div>
   );
 }
+
+
