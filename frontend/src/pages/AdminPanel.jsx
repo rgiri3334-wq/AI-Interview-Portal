@@ -296,16 +296,17 @@ export default function AdminPanel() {
             </div>
           </div>
           
-          <div className="hidden lg:flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 shadow-inner">
+          <div className="hidden lg:flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-red-100 shadow-sm">
             {TABS.map(t => (
               <button
                 key={t.id}
                 onClick={() => setActiveTab(t.id)}
-                className={`relative px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${activeTab === t.id ? 'text-white' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'}`}
+                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
+                  activeTab === t.id 
+                    ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-[0_4px_14px_0_rgb(220,38,38,0.39)]' 
+                    : 'text-slate-500 hover:text-red-600 hover:bg-red-50'
+                }`}
               >
-                {activeTab === t.id && (
-                  <motion.div layoutId="activeTabBg" className="absolute inset-0 bg-slate-900 rounded-xl shadow-md" transition={{ type: "spring", stiffness: 400, damping: 30 }} />
-                )}
                 <span className="relative z-10 flex items-center gap-2">{t.icon} {t.label}</span>
               </button>
             ))}
