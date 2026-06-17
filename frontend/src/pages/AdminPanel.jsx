@@ -5,11 +5,20 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
 
-const customFetch = (url, options = {}) => {
+const customFetch = async (url, options = {}) => {
   const token = sessionStorage.getItem('adminToken');
   const headers = { ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  return fetch(url, { ...options, headers });
+  
+  const response = await fetch(url, { ...options, headers });
+  
+  // Intercept 401 Unauthorized globally for AdminPanel
+  if (response.status === 401) {
+    sessionStorage.removeItem('adminToken');
+    window.location.href = '/login';
+  }
+  
+  return response;
 };
 
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api`;
@@ -228,7 +237,7 @@ export default function AdminPanel() {
       
       const depts = Object.keys(structure);
       const firstDept = depts[0] || '';
-      const firstRole = firstDept ? structure[firstDept][0] : '';
+      const firstRole = firstDept ? structure[firstDept]?.[0] || '' : '';
       
       setForm(prev => ({ ...prev, department: firstDept, role: firstRole }));
       setRoleConfigs(prev => ({ ...prev, target_dept: firstDept, job_role: firstRole }));
