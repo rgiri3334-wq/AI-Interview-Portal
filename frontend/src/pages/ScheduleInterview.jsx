@@ -10,15 +10,29 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
+// Generate 30-min time slots from 9:00 AM to 5:00 PM
+const generateTimeSlots = () => {
+  const slots = [];
+  for (let h = 9; h <= 16; h++) {
+    slots.push(`${h === 9 ? '09' : h}:00`);
+    if (h !== 16) slots.push(`${h === 9 ? '09' : h}:30`);
+  }
+  return slots;
+};
+
+const TIME_SLOTS = generateTimeSlots();
+
 export default function ScheduleInterview() {
   const navigate = useNavigate();
   const candidateId = sessionStorage.getItem('candidateId');
 
-  const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null); // existing booking
   const [viewDate, setViewDate] = useState(new Date());
-  const [selectedSlot, setSelectedSlot] = useState(null);
+  
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedTime, setSelectedTime] = useState(null);
+  
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
@@ -27,11 +41,7 @@ export default function ScheduleInterview() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [sRes, bRes] = await Promise.all([
-        fetch(`${API_BASE}/api/slots/available`),
-        fetch(`${API_BASE}/api/candidates/${candidateId}/booking`)
-      ]);
-      if (sRes.ok) setSlots(await sRes.json());
+      const bRes = await fetch(`${API_BASE}/api/candidates/${candidateId}/booking`);
       if (bRes.ok) {
         const bData = await bRes.json();
         setBooking(bData.booking || null);
@@ -49,30 +59,31 @@ export default function ScheduleInterview() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = new Date().toISOString().slice(0, 10);
 
-  // Group slots by date
-  const slotsByDate = {};
-  slots.forEach(s => {
-    if (!slotsByDate[s.date]) slotsByDate[s.date] = [];
-    slotsByDate[s.date].push(s);
-  });
-
   const prevMonth = () => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   const nextMonth = () => setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
 
-  const slotsForDay = (day) => {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return slotsByDate[dateStr] || [];
-  };
-
   const handleBook = async () => {
-    if (!selectedSlot || !candidateId) return;
+    if (!selectedDate || !selectedTime || !candidateId) return;
     setConfirming(true);
     setError('');
+    
+    // Convert 24h back to nice format for display if needed
+    const [h, m] = selectedTime.split(':');
+    let hh = parseInt(h);
+    const ampm = hh >= 12 ? 'PM' : 'AM';
+    hh = hh % 12 || 12;
+    const formattedTime = `${hh}:${m} ${ampm}`;
+
     try {
-      const res = await fetch(`${API_BASE}/api/slots/book`, {
+      const res = await fetch(`${API_BASE}/api/slots/custom-book`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slot_id: selectedSlot.slot_id, candidate_id: candidateId }),
+        body: JSON.stringify({ 
+          candidate_id: candidateId,
+          date: selectedDate,
+          start_time: formattedTime,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata'
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Booking failed');
@@ -105,7 +116,7 @@ export default function ScheduleInterview() {
         </motion.div>
         <h1 className="text-3xl font-black text-slate-900 mb-3">Interview Scheduled!</h1>
         <p className="text-slate-500 font-medium mb-2">
-          <span className="font-bold text-slate-700">{selectedSlot?.date}</span> at <span className="font-bold text-red-600">{selectedSlot?.start_time}</span>
+          <span className="font-bold text-slate-700">{selectedDate}</span>
         </p>
         <p className="text-slate-400 text-sm mb-6">A confirmation has been sent to your email. Redirecting to your portal…</p>
         <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
@@ -137,7 +148,7 @@ export default function ScheduleInterview() {
                 <Clock size={20} className="text-amber-600" />
                 <div>
                   <p className="font-bold text-amber-800 text-sm">You already have an interview scheduled</p>
-                  <p className="text-amber-600 text-xs font-medium">{booking.date} at {booking.start_time} — {booking.end_time} ({booking.timezone})</p>
+                  <p className="text-amber-600 text-xs font-medium">{booking.slot.date} at {booking.slot.start_time} ({booking.slot.timezone})</p>
                 </div>
               </div>
               <button onClick={handleCancel} disabled={cancellingBooking}
@@ -175,42 +186,40 @@ export default function ScheduleInterview() {
             <div className="grid grid-cols-7 gap-1">
               {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-                const daySlots = slotsForDay(day);
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dateObj = new Date(year, month, day);
                 const isPast = dateStr < today;
-                const hasSlots = daySlots.length > 0;
-                const isSelected = selectedSlot?.date === dateStr;
+                const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+                const isSelectable = !isPast && !isWeekend;
+                const isSelected = selectedDate === dateStr;
 
                 return (
                   <motion.button key={day}
-                    whileHover={hasSlots && !isPast ? { scale: 1.08 } : {}}
-                    whileTap={hasSlots && !isPast ? { scale: 0.95 } : {}}
-                    disabled={isPast || !hasSlots}
+                    whileHover={isSelectable ? { scale: 1.08 } : {}}
+                    whileTap={isSelectable ? { scale: 0.95 } : {}}
+                    disabled={!isSelectable}
                     onClick={() => {
-                      if (hasSlots && daySlots.length === 1) {
-                        setSelectedSlot(daySlots[0]);
+                      if (isSelectable) {
+                        setSelectedDate(dateStr);
+                        setSelectedTime(null);
                       }
                     }}
                     className={`aspect-square flex flex-col items-center justify-center rounded-xl text-sm font-bold transition-all relative ${
-                      isPast ? 'text-slate-200 cursor-not-allowed' :
-                      hasSlots && isSelected ? 'bg-red-600 text-white shadow-[0_4px_14px_rgba(220,38,38,0.4)]' :
-                      hasSlots ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 cursor-pointer' :
-                      'text-slate-600 hover:bg-slate-50 cursor-default'
+                      isPast || isWeekend ? 'text-slate-200 cursor-not-allowed' :
+                      isSelected ? 'bg-red-600 text-white shadow-[0_4px_14px_rgba(220,38,38,0.4)]' :
+                      'text-slate-600 bg-slate-50 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 cursor-pointer'
                     }`}
                   >
                     {day}
-                    {hasSlots && !isPast && (
-                      <span className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-red-400'}`} />
-                    )}
                   </motion.button>
                 );
               })}
             </div>
 
             <div className="mt-4 flex items-center gap-4 text-xs text-slate-400 font-medium pt-4 border-t border-slate-100">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-100 border border-red-200" />Available</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-slate-50 border border-slate-200" />Available</span>
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-600" />Selected</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-slate-100" />Unavailable</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-white" />Unavailable (Weekends/Past)</span>
             </div>
           </motion.div>
 
@@ -218,47 +227,34 @@ export default function ScheduleInterview() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="flex flex-col gap-5">
 
-            {/* Slot List */}
+            {/* Time List */}
             <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_4px_30px_rgb(0,0,0,0.04)]">
               <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Clock size={14} /> Available Slots
+                <Clock size={14} /> Available Times
               </h3>
-              {loading ? (
-                <div className="flex items-center justify-center py-10">
-                  <div className="w-8 h-8 border-3 border-red-600 border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : slots.length === 0 ? (
+              {!selectedDate ? (
                 <div className="text-center py-8">
                   <Calendar size={40} className="text-slate-200 mx-auto mb-3" />
-                  <p className="text-slate-400 font-bold text-sm">No slots available yet.</p>
-                  <p className="text-slate-300 text-xs mt-1">Check back later or contact HR.</p>
+                  <p className="text-slate-400 font-bold text-sm">Select a date first.</p>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {slots.map(slot => {
-                    const isSelected = selectedSlot?.slot_id === slot.slot_id;
+                <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+                  {TIME_SLOTS.map(time => {
+                    const isSelected = selectedTime === time;
+                    let [h, m] = time.split(':');
+                    let hh = parseInt(h);
+                    const ampm = hh >= 12 ? 'PM' : 'AM';
+                    hh = hh % 12 || 12;
                     return (
-                      <motion.button key={slot.slot_id} onClick={() => setSelectedSlot(isSelected ? null : slot)}
-                        whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}
-                        className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left ${
+                      <motion.button key={time} onClick={() => setSelectedTime(time)}
+                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        className={`w-full py-3 rounded-xl border text-sm font-bold transition-all text-center ${
                           isSelected
-                            ? 'bg-red-50 border-red-300 shadow-sm'
-                            : 'bg-slate-50 border-slate-100 hover:border-red-200 hover:bg-red-50/30'
+                            ? 'bg-red-50 border-red-300 shadow-sm text-red-600'
+                            : 'bg-slate-50 border-slate-100 hover:border-red-200 text-slate-600 hover:bg-red-50/30'
                         }`}
                       >
-                        <div>
-                          <p className="font-extrabold text-sm text-slate-900">{new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
-                          <p className={`text-sm font-bold mt-0.5 ${isSelected ? 'text-red-600' : 'text-slate-500'}`}>
-                            {slot.start_time} — {slot.end_time}
-                          </p>
-                          <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-1"><MapPin size={9} />{slot.timezone}</p>
-                        </div>
-                        {isSelected && (
-                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-                            className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center shrink-0">
-                            <CheckCircle size={14} className="text-white" />
-                          </motion.div>
-                        )}
+                        {hh}:{m} {ampm}
                       </motion.button>
                     );
                   })}
@@ -268,19 +264,27 @@ export default function ScheduleInterview() {
 
             {/* Confirmation Panel */}
             <AnimatePresence>
-              {selectedSlot && (
+              {selectedDate && selectedTime && (
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                   className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_4px_30px_rgb(0,0,0,0.04)]">
                   <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                     <CheckCircle size={14} /> Confirm Slot
                   </h3>
                   <div className="bg-red-50 border border-red-100 rounded-2xl p-4 mb-4">
-                    <p className="font-black text-red-800 text-base">{new Date(selectedSlot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                    <p className="text-red-600 font-extrabold text-lg mt-1">{selectedSlot.start_time} — {selectedSlot.end_time}</p>
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><MapPin size={10} />{selectedSlot.timezone}</p>
+                    <p className="font-black text-red-800 text-base">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    <p className="text-red-600 font-extrabold text-lg mt-1">
+                      {(() => {
+                        let [h, m] = selectedTime.split(':');
+                        let hh = parseInt(h);
+                        const ampm = hh >= 12 ? 'PM' : 'AM';
+                        hh = hh % 12 || 12;
+                        return `${hh}:${m} ${ampm}`;
+                      })()}
+                    </p>
+                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><MapPin size={10} />{Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata'}</p>
                   </div>
                   <p className="text-slate-400 text-xs font-medium mb-4">
-                    📧 A confirmation email will be sent immediately. You can reschedule anytime before the interview window.
+                    📧 A confirmation email will be sent immediately.
                   </p>
                   {error && (
                     <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-red-600 text-sm font-bold">

@@ -2835,50 +2835,68 @@ async def send_decision_email_manual(candidate_id: str, db: Session = Depends(ge
     
     name = candidate.name or "Candidate"
     
-    if decision == "HIRED":
+    if decision in ("HIRE", "HIRED"):
         subject = f"🎉 Congratulations {name} — You've been selected!"
         html = f"""
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
+          <div style="text-align:center;margin-bottom:20px;">
+            <img src="https://raw.githubusercontent.com/rgiri3334-wq/AI-Interview-Portal/main/frontend/src/assets/sterling_logo.png" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
+          </div>
           <div style="background:#dc2626;padding:24px;border-radius:12px;text-align:center;margin-bottom:24px;">
             <h1 style="color:#fff;margin:0;font-size:28px;font-weight:900;">🎉 Congratulations!</h1>
           </div>
           <p style="font-size:16px;color:#1e293b;">Dear <strong>{name}</strong>,</p>
           <p style="font-size:16px;color:#475569;">We are absolutely delighted to inform you that you have been <strong style="color:#dc2626;">selected</strong> for the role you applied for.</p>
           <p style="font-size:15px;color:#475569;">Your performance in the interview was impressive, and the team is excited to have you on board. Our HR team will be in touch shortly with the next steps, offer letter, and onboarding details.</p>
-          <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px;margin:20px 0;text-align:center;">
-            <p style="font-size:14px;color:#dc2626;font-weight:700;margin:0;">🌟 Welcome to the team, {name.split()[0]}! We can't wait to see what you build.</p>
-          </div>
-          <p style="font-size:13px;color:#94a3b8;text-align:center;">Please log in to your candidate portal to view your full results.</p>
+          <p style="font-size:15px;color:#475569;margin-top:30px;">Thanks,<br/><strong>Sterling HR Team</strong></p>
         </div>
         """
-    elif decision in ("REJECTED", "REJECT", "NO_HIRE"):
+    elif decision in ("NO_HIRE", "NO HIRE", "REJECTED", "REJECT"):
         subject = f"Your Spark-Hire Application — An Update"
         html = f"""
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
+          <div style="text-align:center;margin-bottom:20px;">
+            <img src="https://raw.githubusercontent.com/rgiri3334-wq/AI-Interview-Portal/main/frontend/src/assets/sterling_logo.png" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
+          </div>
           <div style="background:#1e293b;padding:24px;border-radius:12px;text-align:center;margin-bottom:24px;">
             <h1 style="color:#fff;margin:0;font-size:24px;font-weight:900;">Application Update</h1>
           </div>
           <p style="font-size:16px;color:#1e293b;">Dear <strong>{name}</strong>,</p>
           <p style="font-size:16px;color:#475569;">Thank you for taking the time to interview with us. After careful consideration, we have decided to move forward with other candidates at this time.</p>
           <p style="font-size:15px;color:#475569;">This decision was not easy — you demonstrated genuine effort and preparation during your interview. We encourage you to continue applying and growing your skills.</p>
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:20px 0;">
-            <p style="font-size:14px;color:#475569;margin:0;">We wish you the very best in your career journey, {name.split()[0]}. Thank you for considering us.</p>
-          </div>
-          <p style="font-size:13px;color:#94a3b8;text-align:center;">You may log in to your portal to view your interview report and feedback.</p>
+          <p style="font-size:15px;color:#475569;margin-top:30px;">Thanks,<br/><strong>Sterling HR Team</strong></p>
         </div>
         """
     elif decision == "PENDING":
         subject = f"Your Interview is Under Review — Spark-Hire"
         html = f"""
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
+          <div style="text-align:center;margin-bottom:20px;">
+            <img src="https://raw.githubusercontent.com/rgiri3334-wq/AI-Interview-Portal/main/frontend/src/assets/sterling_logo.png" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
+          </div>
           <p style="font-size:16px;color:#1e293b;">Dear <strong>{name}</strong>,</p>
           <p style="font-size:16px;color:#475569;">Your interview has been received and is currently <strong>under review</strong> by our hiring team. We will update you as soon as a decision is made.</p>
-          <p style="font-size:13px;color:#94a3b8;text-align:center;">Log in to your portal to track your application status.</p>
+          <p style="font-size:15px;color:#475569;margin-top:30px;">Thanks,<br/><strong>Sterling HR Team</strong></p>
+        </div>
+        """
+    elif decision in ("PROCTORING_ACT", "PROCTORING ACT"):
+        subject = f"Action Required: Spark-Hire Interview Proctoring Review"
+        html = f"""
+        <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
+          <div style="text-align:center;margin-bottom:20px;">
+            <img src="https://raw.githubusercontent.com/rgiri3334-wq/AI-Interview-Portal/main/frontend/src/assets/sterling_logo.png" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
+          </div>
+          <div style="background:#f59e0b;padding:24px;border-radius:12px;text-align:center;margin-bottom:24px;">
+            <h1 style="color:#fff;margin:0;font-size:24px;font-weight:900;">Proctoring Review</h1>
+          </div>
+          <p style="font-size:16px;color:#1e293b;">Dear <strong>{name}</strong>,</p>
+          <p style="font-size:16px;color:#475569;">During the review of your recent Spark-Hire interview, our automated system flagged certain proctoring anomalies that require further verification.</p>
+          <p style="font-size:15px;color:#475569;">Our team will be reviewing this manually. If we need additional information or if a re-interview is required, we will reach out to you directly.</p>
+          <p style="font-size:15px;color:#475569;margin-top:30px;">Thanks,<br/><strong>Sterling HR Team</strong></p>
         </div>
         """
     else:
-        subject = f"Spark-Hire — Application Status Update"
-        html = f"<p>Dear {name}, your application status has been updated to: <strong>{decision}</strong>.</p>"
+        raise HTTPException(status_code=400, detail=f"Email templates are only supported for HIRE, NO HIRE, PENDING, and PROCTORING ACT. Current status is {decision}.")
 
     try:
         if candidate.email:
@@ -3345,6 +3363,12 @@ class BookSlotRequest(BaseModel):
     slot_id: str
     candidate_id: str
 
+class CustomBookSlotRequest(BaseModel):
+    candidate_id: str
+    date: str
+    start_time: str
+    timezone: str = "Asia/Kolkata"
+
 class RescheduleRequest(BaseModel):
     new_slot_id: str
 
@@ -3392,6 +3416,37 @@ async def get_all_slots(db: Session = Depends(get_db)):
         })
     return result
 
+@app.get("/api/admin/bookings", tags=["Admin", "Scheduling"])
+async def admin_get_all_bookings(db: Session = Depends(get_db)):
+    """Admin views all scheduled candidate bookings."""
+    bookings = db.query(SlotBooking).all()
+    result = []
+    for b in bookings:
+        candidate = b.candidate
+        slot = b.slot
+        if candidate and slot:
+            result.append({
+                "booking_id": b.booking_id,
+                "status": b.status,
+                "booked_at": b.booked_at,
+                "candidate": {
+                    "candidate_id": candidate.candidate_id,
+                    "name": candidate.name,
+                    "email": candidate.email,
+                    "role_applied": candidate.role_applied,
+                    "status": candidate.status
+                },
+                "slot": {
+                    "slot_id": slot.slot_id,
+                    "date": slot.date,
+                    "start_time": slot.start_time,
+                    "timezone": slot.timezone
+                }
+            })
+    # Sort by date
+    result.sort(key=lambda x: (x["slot"]["date"], x["slot"]["start_time"]))
+    return result
+
 @app.delete("/api/admin/slots/{slot_id}", tags=["Scheduling"])
 async def delete_slot(slot_id: str, db: Session = Depends(get_db)):
     """Admin deactivates a slot."""
@@ -3428,6 +3483,75 @@ async def get_available_slots(db: Session = Depends(get_db)):
                 "available": s.max_bookings - booked,
             })
     return result
+
+@app.post("/api/slots/custom-book", tags=["Scheduling"])
+async def custom_book_slot(data: CustomBookSlotRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Candidate books an interview slot on their own selected date/time."""
+    
+    # Check if candidate already has an active booking
+    existing = db.query(SlotBooking).filter_by(candidate_id=data.candidate_id, status="BOOKED").first()
+    if existing:
+        raise HTTPException(status_code=409, detail="You already have a scheduled interview. Please cancel it first to reschedule.")
+
+    candidate = db.query(Candidate).filter_by(candidate_id=data.candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+        
+    # Generate a slot automatically
+    slot_id = generate_enterprise_id(db, "SLT")
+    slot = InterviewSlot(
+        slot_id=slot_id,
+        date=data.date,
+        start_time=data.start_time,
+        end_time="TBD",
+        timezone=data.timezone,
+        max_bookings=1,
+        is_active=True
+    )
+    db.add(slot)
+    
+    booking_id = generate_enterprise_id(db, "BKG")
+    booking = SlotBooking(
+        booking_id=booking_id,
+        slot_id=slot_id,
+        candidate_id=data.candidate_id,
+        status="BOOKED"
+    )
+    db.add(booking)
+    db.commit()
+
+    # Send confirmation email in background
+    def send_booking_confirmation():
+        html = f"""
+        <html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:20px;color:#0f172a;">
+        <div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;border:1px solid #e2e8f0;border-top:4px solid #dc2626;">
+          <h2 style="color:#dc2626;font-weight:900;text-align:center;letter-spacing:1px;">SPARK-HIRE</h2>
+          <p style="text-align:center;color:#64748b;font-size:12px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;">Interview Confirmed</p>
+          <p>Hello <strong>{candidate.name}</strong>,</p>
+          <p>Your interview has been scheduled successfully! 🎉</p>
+          <div style="background:#f1f5f9;padding:20px;border-radius:8px;margin:20px 0;text-align:center;">
+            <p style="font-size:18px;font-weight:bold;color:#1e293b;margin:0;">📅 {slot.date}</p>
+            <p style="font-size:24px;font-weight:900;color:#dc2626;margin:8px 0;">{slot.start_time}</p>
+            <p style="font-size:12px;color:#64748b;margin:0;">{slot.timezone}</p>
+          </div>
+          <p style="color:#475569;">Please ensure your camera, microphone, and internet connection are ready before joining.</p>
+          <p style="color:#475569;">You will receive a reminder 24 hours and 1 hour before your interview.</p>
+          <p style="font-size:12px;color:#94a3b8;text-align:center;margin-top:30px;">Need to reschedule? Log in to your Spark-Hire portal and visit "My Interview".</p>
+          <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;"/>
+          <p style="font-size:12px;color:#94a3b8;text-align:center;">Sterling AI Interview Engine © Sterling E-Mobility</p>
+        </div></body></html>
+        """
+        if candidate.email:
+            send_notification_email(str(candidate.email), str(candidate.name), f"✅ Interview Confirmed — {slot.date} at {slot.start_time}", html)
+
+    background_tasks.add_task(send_booking_confirmation)
+
+    return {
+        "booking_id": booking_id,
+        "slot": {"date": slot.date, "start_time": slot.start_time, "timezone": slot.timezone},
+        "status": "BOOKED",
+        "message": "Interview scheduled! Check your email for confirmation."
+    }
 
 @app.post("/api/slots/book", tags=["Scheduling"])
 async def book_slot(data: BookSlotRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -3480,7 +3604,8 @@ async def book_slot(data: BookSlotRequest, background_tasks: BackgroundTasks, db
           <p style="font-size:12px;color:#94a3b8;text-align:center;">Sterling AI Interview Engine © Sterling E-Mobility</p>
         </div></body></html>
         """
-        send_notification_email(str(candidate.email), str(candidate.name), f"✅ Interview Confirmed — {slot.date} at {slot.start_time}", html)
+        if candidate.email:
+            send_notification_email(str(candidate.email), str(candidate.name), f"✅ Interview Confirmed — {slot.date} at {slot.start_time}", html)
 
     background_tasks.add_task(send_booking_confirmation)
 

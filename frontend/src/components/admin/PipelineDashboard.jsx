@@ -183,25 +183,30 @@ const SendEmailModal = ({ candidate, onClose, showToast }) => {
   const getPreviewContent = () => {
     const decision = candidate.hiring_decision || 'PENDING';
     const name = candidate.name || 'Candidate';
-    if (decision === 'HIRED') {
+    if (decision === 'HIRE' || decision === 'HIRED') {
       return {
         subject: `🎉 Congratulations ${name} — You've been selected!`,
-        body: `Dear ${name},\n\nWe are absolutely delighted to inform you that you have been selected for the role you applied for.\nYour performance in the interview was impressive, and the team is excited to have you on board. Our HR team will be in touch shortly with the next steps, offer letter, and onboarding details.\n\nPlease log in to your candidate portal to view your full results.`
+        body: `Dear ${name},\n\nWe are absolutely delighted to inform you that you have been selected for the role you applied for.\nYour performance in the interview was impressive, and the team is excited to have you on board. Our HR team will be in touch shortly with the next steps, offer letter, and onboarding details.\n\nThanks,\nSterling HR Team`
       };
-    } else if (decision === 'REJECTED' || decision === 'REJECT' || decision === 'NO_HIRE') {
+    } else if (decision === 'REJECTED' || decision === 'REJECT' || decision === 'NO_HIRE' || decision === 'NO HIRE') {
       return {
         subject: `Your Spark-Hire Application — An Update`,
-        body: `Dear ${name},\n\nThank you for taking the time to interview with us. After careful consideration, we have decided to move forward with other candidates at this time.\nThis decision was not easy — you demonstrated genuine effort and preparation during your interview. We encourage you to continue applying and growing your skills.\n\nYou may log in to your portal to view your interview report and feedback.`
+        body: `Dear ${name},\n\nThank you for taking the time to interview with us. After careful consideration, we have decided to move forward with other candidates at this time.\nThis decision was not easy — you demonstrated genuine effort and preparation during your interview. We encourage you to continue applying and growing your skills.\n\nThanks,\nSterling HR Team`
       };
     } else if (decision === 'PENDING') {
       return {
         subject: `Your Interview is Under Review — Spark-Hire`,
-        body: `Dear ${name},\n\nYour interview has been received and is currently under review by our hiring team. We will update you as soon as a decision is made.\n\nLog in to your portal to track your application status.`
+        body: `Dear ${name},\n\nYour interview has been received and is currently under review by our hiring team. We will update you as soon as a decision is made.\n\nThanks,\nSterling HR Team`
+      };
+    } else if (decision === 'PROCTORING_ACT' || decision === 'PROCTORING ACT') {
+      return {
+        subject: `Action Required: Spark-Hire Interview Proctoring Review`,
+        body: `Dear ${name},\n\nDuring the review of your recent Spark-Hire interview, our automated system flagged certain proctoring anomalies that require further verification.\nOur team will be reviewing this manually. If we need additional information or if a re-interview is required, we will reach out to you directly.\n\nThanks,\nSterling HR Team`
       };
     } else {
        return {
-        subject: `Spark-Hire — Application Status Update`,
-        body: `Dear ${name},\n\nYour application status has been updated to: ${decision}.`
+        subject: `Unsupported Status`,
+        body: `Error: Automated emails are only supported for HIRE, NO HIRE, PENDING, and PROCTORING ACT statuses. Current status is ${decision}. Please update the status before dispatching.`
       };
     }
   };
