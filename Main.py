@@ -1517,16 +1517,25 @@ async def get_candidate_pipeline(db: Session = Depends(get_db)):
         interviews = sorted(c.interviews, key=lambda i: i.started_at, reverse=True)  # type: ignore
         latest = interviews[0] if interviews else None
         resume = db.query(Resume).filter_by(candidate_id=c.candidate_id).order_by(Resume.resume_id.desc()).first()
+        # Get hiring_decision from FinalReport (single source of truth, same as dashboard)
+        report = db.query(FinalReport).filter_by(interview_id=latest.interview_id).first() if latest else None
+        hiring_decision = getattr(report, "hiring_decision", "PENDING") if report else "PENDING"
+        is_completed = bool(latest and (latest.completed_at or (latest.overall_score or 0) > 0 or hiring_decision == "PROCTORING_ACT"))
+
         results.append({
             "id": c.candidate_id,
+            "interview_id": latest.interview_id if latest else None,
             "name": c.name,
             "email": c.email,
             "job_role": (latest.role.role_name if (latest and latest.role) else ""),
             "experience": resume.experience_years if resume else "",
             "created_at": c.registration_date,
-            "global_score": latest.overall_score if latest else 0.0,
-            "hiring_decision": latest.recommendation if latest and latest.recommendation else "PENDING",
-            "status": "COMPLETED" if latest and latest.completed_at else "PENDING"
+            "global_score": float(latest.overall_score or 0) if latest else 0.0,
+            "technical_score": float(getattr(latest, "technical_score", 0) or 0) if latest else 0.0,
+            "hiring_decision": hiring_decision,
+            "interview_status": "completed" if is_completed else "pending",
+            "termination_reason": "PROCTORING_ACT" if hiring_decision == "PROCTORING_ACT" else None,
+            "status": "COMPLETED" if is_completed else "PENDING"
         })
     return results
 
