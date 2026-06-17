@@ -194,6 +194,68 @@ async def telemetry_worker():
             
         await asyncio.sleep(300)  # Wait 5 minutes before next ping
 
+async def reminder_worker():
+    """Background worker that runs every 1 minute to check for upcoming interviews and send 24-hour reminders."""
+    while True:
+        try:
+            db = SessionLocal()
+            try:
+                # Find bookings that are in BOOKED state and reminder_sent is False
+                bookings = db.query(SlotBooking).filter_by(status="BOOKED", reminder_sent=False).all()
+                for b in bookings:
+                    slot = b.slot
+                    candidate = b.candidate
+                    if not slot or not candidate or not candidate.email:
+                        continue
+                    
+                    try:
+                        from datetime import datetime, timedelta
+                        dt_str = f"{slot.date} {slot.start_time}"
+                        # Parse time with AM/PM or 24-hour format
+                        if "AM" in slot.start_time or "PM" in slot.start_time:
+                            slot_dt = datetime.strptime(dt_str, "%Y-%m-%d %I:%M %p")
+                        else:
+                            slot_dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+                        
+                        now = datetime.now()
+                        time_diff = slot_dt - now
+                        
+                        # If the interview is within the next 24 hours (and in the future), send reminder
+                        if timedelta(0) < time_diff <= timedelta(hours=24):
+                            html = f"""
+                            <html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:20px;color:#0f172a;">
+                            <div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;border:1px solid #e2e8f0;border-top:4px solid #f59e0b;">
+                              <div style="text-align:center;margin-bottom:20px;">
+                                <img src="https://raw.githubusercontent.com/rgiri3334-wq/AI-Interview-Portal/main/frontend/src/assets/sterling_logo.png" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
+                              </div>
+                              <h2 style="color:#f59e0b;font-weight:900;text-align:center;letter-spacing:1px;">SPARK-HIRE</h2>
+                              <p style="text-align:center;color:#64748b;font-size:12px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;">Interview Reminder</p>
+                              <p>Hello <strong>{candidate.name}</strong>,</p>
+                              <p>This is a friendly reminder that your Spark-Hire interview is coming up soon! ⏰</p>
+                              <div style="background:#fef3c7;padding:20px;border-radius:8px;margin:20px 0;text-align:center;">
+                                <p style="font-size:18px;font-weight:bold;color:#1e293b;margin:0;">📅 {slot.date}</p>
+                                <p style="font-size:24px;font-weight:900;color:#f59e0b;margin:8px 0;">{slot.start_time}</p>
+                                <p style="font-size:12px;color:#64748b;margin:0;">{slot.timezone}</p>
+                              </div>
+                              <p style="color:#475569;">Please log in to your candidate portal 5-10 minutes before your scheduled time.</p>
+                              <p style="font-size:12px;color:#94a3b8;text-align:center;margin-top:30px;">Thanks,<br/>Sterling HR Team</p>
+                            </div></body></html>
+                            """
+                            send_notification_email(str(candidate.email), str(candidate.name), f"⏰ Reminder: Interview at {slot.start_time}", html)
+                            
+                            b.reminder_sent = True  # type: ignore
+                            db.commit()
+                    except Exception as parse_err:
+                        # Log and skip if parsing fails
+                        logger.error(f"Error parsing date/time for slot {slot.slot_id}: {parse_err}")
+                        continue
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Reminder worker error: {e}")
+            
+        await asyncio.sleep(60)  # Check every 1 minute
+
 # ── Lifespan ──────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -201,9 +263,11 @@ async def lifespan(app: FastAPI):
     logger.info("Booting Enterprise AI Interview Engine v4.0...")
     init_db()
     
-    # Start the telemetry engine
+    # Start the background workers
     asyncio.create_task(telemetry_worker())
+    asyncio.create_task(reminder_worker())
     logger.info("Telemetry Engine Started. Pinging database every 5 minutes.")
+    logger.info("Reminder Engine Started. Checking for upcoming interviews every 1 minute.")
 
     key = os.getenv("GEMINI_API_KEY", "")
     if not key or key == "your_sterling ai_api_key_here":
