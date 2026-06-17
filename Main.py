@@ -3728,13 +3728,17 @@ async def mark_no_show(booking_id: str, db: Session = Depends(get_db)):
     candidate = db.query(Candidate).filter_by(candidate_id=booking.candidate_id).first()
     if candidate:
         slot = booking.slot
+        FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
         html = f"""
         <html><body style="font-family:Arial,sans-serif;padding:20px;color:#0f172a;">
         <div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;border:1px solid #e2e8f0;border-top:4px solid #f59e0b;">
           <h2 style="color:#f59e0b;font-weight:900;text-align:center;">Interview Missed</h2>
           <p>Hello <strong>{candidate.name}</strong>,</p>
           <p>We noticed you missed your scheduled interview on <strong>{slot.date} at {slot.start_time}</strong>.</p>
-          <p>No worries! Please log back into Spark-Hire to pick a new interview slot.</p>
+          <p>No worries! Please <a href="{FRONTEND_URL}/candidate-login" style="color:#dc2626;font-weight:bold;text-decoration:none;">log back into Spark-Hire</a> to pick a new interview slot.</p>
+          <div style="text-align:center;margin-top:20px;">
+            <a href="{FRONTEND_URL}/candidate-login" style="background-color:#dc2626;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;">Reschedule Now</a>
+          </div>
           <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;"/>
           <p style="font-size:12px;color:#94a3b8;text-align:center;">Sterling AI Interview Engine © Sterling E-Mobility</p>
         </div></body></html>
