@@ -120,7 +120,7 @@ export default function InterviewPrepKit() {
 
               {/* Avatar Canvas */}
               <div className="flex-1 relative bg-slate-900">
-                <Avatar3D isSpeaking={isSpeaking} />
+                <Avatar3D isSpeaking={isSpeaking} hideOverlays={true} />
               </div>
 
               {/* Captions Bar */}

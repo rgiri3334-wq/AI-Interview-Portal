@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Briefcase, Clock, Code, Upload, ArrowRight, CheckCircle, 
   AlertCircle, Github, Linkedin, DollarSign, MapPin, ArrowLeft, 
-  Lock, Globe, Phone, User
+  Lock, Globe, Phone, User, Calendar
 } from 'lucide-react';
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
@@ -40,6 +40,55 @@ const Field = ({ label, icon: Icon, value, disabled, alwaysFloat, children }) =>
   </div>
 );
 
+// ── Countdown Timer ───────────────────────────────────────────────────────────
+function CountdownTimer({ targetDate, targetTime, timezone, onExpire }) {
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  useEffect(() => {
+    const calc = () => {
+      const target = new Date(`${targetDate}T${targetTime}:00`);
+      const now = new Date();
+      const diff = target - now;
+      if (diff <= 0) { 
+        setTimeLeft(prev => {
+          if (!prev || !prev.expired) {
+            if (onExpire) onExpire();
+            return { expired: true };
+          }
+          return prev;
+        });
+        return; 
+      }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setTimeLeft({ h, m, s, expired: false });
+    };
+    calc();
+    const iv = setInterval(calc, 1000);
+    return () => clearInterval(iv);
+  }, [targetDate, targetTime, onExpire]);
+
+  if (!timeLeft) return null;
+  if (timeLeft.expired) return (
+    <div className="text-red-600 font-bold text-sm flex items-center gap-2 mt-2">
+      <AlertCircle size={16} /> Ready to start!
+    </div>
+  );
+
+  const pad = n => String(n).padStart(2, '0');
+  return (
+    <div className="flex items-center gap-3 mt-4">
+      {[{ v: timeLeft.h, u: 'hrs' }, { v: timeLeft.m, u: 'min' }, { v: timeLeft.s, u: 'sec' }].map(({ v, u }) => (
+        <div key={u} className="text-center bg-white/50 backdrop-blur-sm rounded-xl p-3 border border-red-100 shadow-sm min-w-[70px]">
+          <div className="text-3xl font-black text-red-600 tabular-nums leading-none">{pad(v)}</div>
+          <div className="text-[10px] font-bold text-red-400 uppercase tracking-widest mt-1">{u}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function CandidateDetails() {
   const navigate = useNavigate();
   const candidateId = sessionStorage.getItem('candidateId');
@@ -57,6 +106,9 @@ export default function CandidateDetails() {
   
   const [resumeFile, setResumeFile] = useState(null);
   const [resumeUrl, setResumeUrl] = useState(null);
+  const [booking, setBooking] = useState(null);
+  const [stage, setStage] = useState('REGISTERED');
+  const [isInterviewReady, setIsInterviewReady] = useState(false);
   
   const [loading, setLoading] = useState(false);
   const [resumeLoading, setResumeLoading] = useState(false);
@@ -93,8 +145,11 @@ export default function CandidateDetails() {
           const app = data.application || {};
           const c = data.candidate || {};
           const r = data.resume || {};
+          const b = data.booking || null;
           
           if (c.name) setCandidateName(c.name);
+          setBooking(b);
+          setStage(app.stage || 'REGISTERED');
           
           // Pre-populate fields
           setForm(prev => ({
@@ -160,7 +215,6 @@ export default function CandidateDetails() {
     try {
       if (!candidateId) throw new Error('Authentication lost. Please login again.');
 
-      // We are "Applying" only if they haven't applied yet, otherwise we just update.
       const appResult = await apiClient.applyForRole(candidateId, {
         job_role: form.job_role,
         experience: form.experience || 'Fresher (0 years)',
@@ -207,6 +261,11 @@ export default function CandidateDetails() {
     navigate('/');
   };
 
+  const handleStartInterview = () => {
+    if (!isInterviewReady) return;
+    navigate('/kyc-guidelines');
+  };
+
   if (initialLoad) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
@@ -232,7 +291,7 @@ export default function CandidateDetails() {
               className="flex justify-between items-center mb-12 bg-white/10 backdrop-blur-md border border-white/20 px-6 py-4 rounded-2xl shadow-lg">
               <button onClick={() => navigate('/candidate-home')}
                 className="flex items-center gap-2 text-white/90 hover:text-white font-bold text-sm transition-colors">
-                <ArrowLeft size={16} /> My Portal
+                <ArrowLeft size={16} /> Dashboard
               </button>
               <div className="font-bold text-white text-xl tracking-tight">Spark-Hire</div>
               <button onClick={handleLogout}
@@ -243,15 +302,26 @@ export default function CandidateDetails() {
           )}
 
           {/* Hero Banner */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10 text-white">
-            <h1 className="text-4xl md:text-5xl font-black mb-3 tracking-tight">
-              {hasAppliedRole ? 'Update Profile' : 'Complete Application'}
-            </h1>
-            <p className="text-red-100 font-medium text-lg max-w-2xl">
-              {hasAppliedRole 
-                ? `Update your background and portfolio details, ${candidateName.split(' ')[0]}. Your role is locked.`
-                : `Welcome ${candidateName.split(' ')[0]}! Select your desired role and complete your profile to proceed.`}
-            </p>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10 text-white flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+              <h1 className="text-4xl md:text-5xl font-black mb-3 tracking-tight">
+                Candidate Profile
+              </h1>
+              <p className="text-red-100 font-medium text-lg max-w-2xl">
+                {hasAppliedRole 
+                  ? `Update your background and portfolio details, ${candidateName.split(' ')[0]}.`
+                  : `Welcome ${candidateName.split(' ')[0]}! Complete your profile to proceed.`}
+              </p>
+            </div>
+            {hasAppliedRole && (
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col items-end shadow-xl">
+                <p className="text-[10px] uppercase tracking-widest font-black text-red-200 mb-1">Locked Role</p>
+                <div className="flex items-center gap-2">
+                  <Briefcase size={20} className="text-white" />
+                  <span className="text-xl font-black text-white">{form.job_role}</span>
+                </div>
+              </div>
+            )}
           </motion.div>
 
           {/* Form Content */}
@@ -259,27 +329,56 @@ export default function CandidateDetails() {
             className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
             
             <div className="space-y-6">
-              {/* Role Section */}
-              <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
-                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                    <Briefcase className="text-red-600" /> Target Role
-                  </h3>
-                  {hasAppliedRole && (
-                    <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-500 text-xs font-black uppercase tracking-wider rounded-lg border border-slate-200">
-                      <Lock size={12} /> Locked
-                    </span>
-                  )}
-                </div>
-
-                {hasAppliedRole ? (
-                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-slate-300" />
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Applied For</p>
-                    <p className="text-xl font-black text-slate-800">{form.job_role}</p>
-                    <p className="text-sm font-medium text-slate-500 mt-1">{form.department} Department</p>
+              
+              {/* Interview Status Card (Timer & Start Button) */}
+              {stage === 'INTERVIEW_SCHEDULED' && booking && (
+                <motion.div variants={itemVariants} className="bg-gradient-to-br from-red-50 to-white border border-red-100 rounded-3xl p-8 shadow-[0_8px_30px_rgba(220,38,38,0.08)] relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-red-100 rounded-full blur-[80px] opacity-60 -z-10" />
+                  
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                      <h3 className="text-xl font-black text-slate-900 flex items-center gap-2 mb-2">
+                        <Clock className="text-red-600" /> Interview Scheduled
+                      </h3>
+                      <p className="text-sm font-bold text-slate-500 mb-1">{booking.date} at {booking.start_time}</p>
+                      
+                      <CountdownTimer 
+                        targetDate={booking.date} 
+                        targetTime={booking.start_time} 
+                        timezone={booking.timezone}
+                        onExpire={() => setIsInterviewReady(true)}
+                      />
+                    </div>
+                    
+                    <button 
+                      type="button"
+                      disabled={!isInterviewReady}
+                      onClick={handleStartInterview}
+                      className={`px-8 py-5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl flex items-center gap-3 ${
+                        isInterviewReady 
+                          ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/30 hover:scale-105' 
+                          : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                      }`}
+                    >
+                      {isInterviewReady ? (
+                        <>START INTERVIEW <ArrowRight size={18} /></>
+                      ) : (
+                        <>WAITING FOR TIME <Clock size={18} /></>
+                      )}
+                    </button>
                   </div>
-                ) : (
+                </motion.div>
+              )}
+
+              {/* Role Section (if not locked) */}
+              {!hasAppliedRole && (
+                <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                    <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                      <Briefcase className="text-red-600" /> Target Role
+                    </h3>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Field label="Department" icon={Briefcase} value={form.department} alwaysFloat={true}>
@@ -306,8 +405,8 @@ export default function CandidateDetails() {
                       {fieldErrors.job_role && <p className="text-red-500 text-xs mt-2 font-bold px-2">⚠ {fieldErrors.job_role}</p>}
                     </div>
                   </div>
-                )}
-              </motion.div>
+                </motion.div>
+              )}
 
               {/* Background Section */}
               <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
@@ -436,7 +535,7 @@ export default function CandidateDetails() {
 
                 {/* Submit Button */}
                 <motion.button type="submit" disabled={loading || resumeLoading} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
-                  className="mt-6 w-full font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all uppercase tracking-widest text-sm bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-[0_8px_20px_rgba(220,38,38,0.3)] disabled:opacity-50 disabled:cursor-not-allowed">
+                  className="mt-6 w-full font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all uppercase tracking-widest text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
                   {loading ? "Saving..." : success ? "Saved Successfully ✓" : hasAppliedRole ? "Save Profile" : "Apply & Save"}
                 </motion.button>
                 

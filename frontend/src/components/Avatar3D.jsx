@@ -53,6 +53,7 @@ export default function Avatar3D({
   phase        = 'interviewing',
   qIndex       = 0,
   warnings     = 0,
+  hideOverlays = false,
 }) {
   const avatarState = useAvatarState({ isSpeaking, isListening, isLoading, phase, qIndex, warnings });
   const { mouthOpenRef, updateLipSync } = useAvatarLipSync(getAudioFrequency);
@@ -156,46 +157,52 @@ export default function Avatar3D({
       </div>
 
       {/* ── State indicator badge (top-right) ─────────────────────── */}
-      <div className="absolute top-3 right-3 z-30 pointer-events-none">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={avatarConfig.badgeText}
-            initial={{ opacity: 0, y: -6, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.2 }}
-            className={`text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm ${avatarConfig.badgeClass}`}
-          >
-            {avatarConfig.badgeText}
-          </motion.div>
-        </AnimatePresence>
-      </div>
+      {!hideOverlays && (
+        <div className="absolute top-3 right-3 z-30 pointer-events-none">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={avatarConfig.badgeText}
+              initial={{ opacity: 0, y: -6, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+              className={`text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm ${avatarConfig.badgeClass}`}
+            >
+              {avatarConfig.badgeText}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* ── Bottom status bar ─────────────────────────────────────── */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-        <div className="bg-white/92 backdrop-blur-md rounded-full border border-white/80 px-4 py-2 flex items-center gap-2.5 shadow-lg shadow-black/8">
-          {isSpeaking && (
-            <AudioBars audioLevel={audioLevel} count={5} />
-          )}
-          {isLoading && <ThinkingDots />}
-          {!isSpeaking && !isLoading && (
-            <div className={`w-2 h-2 rounded-full transition-all duration-300
-              ${isListening ? 'bg-red-500 animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.8)]'
-              : 'bg-emerald-500'}`}
-            />
-          )}
-          <span className="text-[10px] font-bold text-slate-600 tracking-wider uppercase whitespace-nowrap">
-            {isSpeaking ? 'Speaking' : isListening ? 'Listening' : isLoading ? 'Thinking...' : 'Active'}
-          </span>
+      {!hideOverlays && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+          <div className="bg-white/92 backdrop-blur-md rounded-full border border-white/80 px-4 py-2 flex items-center gap-2.5 shadow-lg shadow-black/8">
+            {isSpeaking && (
+              <AudioBars audioLevel={audioLevel} count={5} />
+            )}
+            {isLoading && <ThinkingDots />}
+            {!isSpeaking && !isLoading && (
+              <div className={`w-2 h-2 rounded-full transition-all duration-300
+                ${isListening ? 'bg-red-500 animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.8)]'
+                : 'bg-emerald-500'}`}
+              />
+            )}
+            <span className="text-[10px] font-bold text-slate-600 tracking-wider uppercase whitespace-nowrap">
+              {isSpeaking ? 'Speaking' : isListening ? 'Listening' : isLoading ? 'Thinking...' : 'Active'}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Name plate ─────────────────────────────────────────────── */}
-      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-        <div className="bg-slate-900/80 backdrop-blur-sm text-white text-[9px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-md shadow-lg">
-          Sterling AI Interviewer
+      {!hideOverlays && (
+        <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+          <div className="bg-slate-900/80 backdrop-blur-sm text-white text-[9px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-md shadow-lg">
+            Sterling AI Interviewer
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
