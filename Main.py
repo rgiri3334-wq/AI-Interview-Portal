@@ -228,10 +228,10 @@ async def reminder_worker():
                               <div style="text-align:center;margin-bottom:20px;">
                                 <img src="https://raw.githubusercontent.com/rgiri3334-wq/AI-Interview-Portal/main/frontend/src/assets/sterling_logo.png" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
                               </div>
-                              <h2 style="color:#f59e0b;font-weight:900;text-align:center;letter-spacing:1px;">SPARK-HIRE</h2>
+                              <h2 style="color:#f59e0b;font-weight:900;text-align:center;letter-spacing:1px;">STERLING E-MOBILITY</h2>
                               <p style="text-align:center;color:#64748b;font-size:12px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;">Interview Reminder</p>
                               <p>Hello <strong>{candidate.name}</strong>,</p>
-                              <p>This is a friendly reminder that your Spark-Hire interview is coming up soon! ⏰</p>
+                              <p>This is a friendly reminder that your Sterling E-Mobility interview is coming up soon! ⏰</p>
                               <div style="background:#fef3c7;padding:20px;border-radius:8px;margin:20px 0;text-align:center;">
                                 <p style="font-size:18px;font-weight:bold;color:#1e293b;margin:0;">📅 {slot.date}</p>
                                 <p style="font-size:24px;font-weight:900;color:#f59e0b;margin:8px 0;">{slot.start_time}</p>
@@ -2918,7 +2918,7 @@ async def send_decision_email_manual(candidate_id: str, db: Session = Depends(ge
         </div>
         """
     elif decision in ("NO_HIRE", "NO HIRE", "REJECTED", "REJECT"):
-        subject = f"Your Spark-Hire Application — An Update"
+        subject = f"Your Sterling E-Mobility Application — An Update"
         html = f"""
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
           <div style="text-align:center;margin-bottom:20px;">
@@ -2934,7 +2934,7 @@ async def send_decision_email_manual(candidate_id: str, db: Session = Depends(ge
         </div>
         """
     elif decision == "PENDING":
-        subject = f"Your Interview is Under Review — Spark-Hire"
+        subject = f"Your Interview is Under Review — Sterling E-Mobility"
         html = f"""
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
           <div style="text-align:center;margin-bottom:20px;">
@@ -2946,7 +2946,7 @@ async def send_decision_email_manual(candidate_id: str, db: Session = Depends(ge
         </div>
         """
     elif decision in ("PROCTORING_ACT", "PROCTORING ACT"):
-        subject = f"Action Required: Spark-Hire Interview Proctoring Review"
+        subject = f"Action Required: Sterling E-Mobility Interview Proctoring Review"
         html = f"""
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
           <div style="text-align:center;margin-bottom:20px;">
@@ -2956,7 +2956,7 @@ async def send_decision_email_manual(candidate_id: str, db: Session = Depends(ge
             <h1 style="color:#fff;margin:0;font-size:24px;font-weight:900;">Proctoring Review</h1>
           </div>
           <p style="font-size:16px;color:#1e293b;">Dear <strong>{name}</strong>,</p>
-          <p style="font-size:16px;color:#475569;">During the review of your recent Spark-Hire interview, our automated system flagged certain proctoring anomalies that require further verification.</p>
+          <p style="font-size:16px;color:#475569;">During the review of your recent Sterling E-Mobility interview, our automated system flagged certain proctoring anomalies that require further verification.</p>
           <p style="font-size:15px;color:#475569;">Our team will be reviewing this manually. If we need additional information or if a re-interview is required, we will reach out to you directly.</p>
           <p style="font-size:15px;color:#475569;margin-top:30px;">Thanks,<br/><strong>Sterling HR Team</strong></p>
         </div>
@@ -3382,7 +3382,7 @@ def send_notification_email(to_email: str, candidate_name: str, subject: str, ht
                 "content-type": "application/json"
             }
             data = {
-                "sender": {"name": "Spark-Hire by Sterling", "email": SMTP_USER},
+                "sender": {"name": "Sterling E-Mobility Interviews", "email": SMTP_USER},
                 "to": [{"email": to_email, "name": candidate_name}],
                 "subject": subject,
                 "htmlContent": html_body
@@ -3401,7 +3401,7 @@ def send_notification_email(to_email: str, candidate_name: str, subject: str, ht
     SMTP_PASS = os.getenv("SMTP_PASS", "")
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = f"Spark-Hire <{SMTP_USER}>"
+    msg["From"] = f"Sterling E-Mobility <{SMTP_USER}>"
     msg["To"] = to_email
     msg.attach(MIMEText(html_body, "html"))
     try:
@@ -3735,7 +3735,7 @@ async def mark_no_show(booking_id: str, db: Session = Depends(get_db)):
           <h2 style="color:#f59e0b;font-weight:900;text-align:center;">Interview Missed</h2>
           <p>Hello <strong>{candidate.name}</strong>,</p>
           <p>We noticed you missed your scheduled interview on <strong>{slot.date} at {slot.start_time}</strong>.</p>
-          <p>No worries! Please <a href="{FRONTEND_URL}/candidate-login" style="color:#dc2626;font-weight:bold;text-decoration:none;">log back into Spark-Hire</a> to pick a new interview slot.</p>
+          <p>No worries! Please <a href="{FRONTEND_URL}/candidate-login" style="color:#dc2626;font-weight:bold;text-decoration:none;">log back into your Sterling Portal</a> to pick a new interview slot.</p>
           <div style="text-align:center;margin-top:20px;">
             <a href="{FRONTEND_URL}/candidate-login" style="background-color:#dc2626;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;">Reschedule Now</a>
           </div>
@@ -3743,7 +3743,7 @@ async def mark_no_show(booking_id: str, db: Session = Depends(get_db)):
           <p style="font-size:12px;color:#94a3b8;text-align:center;">Sterling AI Interview Engine © Sterling E-Mobility</p>
         </div></body></html>
         """
-        send_notification_email(str(candidate.email), str(candidate.name), "⚠️ You missed your Spark-Hire interview — reschedule now", html)
+        send_notification_email(str(candidate.email), str(candidate.name), "⚠️ You missed your Sterling interview — reschedule now", html)
 
     return {"status": "no_show_marked"}
 

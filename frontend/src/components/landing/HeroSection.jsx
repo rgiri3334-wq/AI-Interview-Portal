@@ -50,7 +50,7 @@ export default function HeroSection() {
           initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 backdrop-blur border border-red-100 text-red-600 text-xs font-bold uppercase tracking-widest mb-8 shadow-sm"
         >
-          <Shield size={14} /> Spark-Hire · Powered by Sterling
+          <Shield size={14} /> Sterling E-Mobility · AI Interview Engine
         </motion.div>
 
         <h1 className="text-5xl md:text-7xl font-black leading-tight mb-8 tracking-tight text-slate-900 drop-shadow-sm mix-blend-multiply">

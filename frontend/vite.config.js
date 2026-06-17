@@ -6,11 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    open: true,  // Auto-open browser on npm run dev
+    open: true,
     fs: {
       allow: [
-        '..', // Allow serving files from one level up to the project root
-        'c:/Users/Niraj Singh/.gemini/antigravity/brain' // Allow external image
+        '..',
+        'c:/Users/Niraj Singh/.gemini/antigravity/brain'
       ]
     }
   },
@@ -18,28 +18,27 @@ export default defineConfig({
     chunkSizeWarningLimit: 3000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Force THREE.js and @react-three/* into their own chunk.
-          // This is the root-cause fix for the "Cannot access 'Mn' before initialization"
-          // crash: it prevents Rollup from creating a circular init order between
-          // the Three.js module graph and @monaco-editor/react.
-          'vendor-three': [
-            'three',
-            '@react-three/fiber',
-            '@react-three/drei',
-          ],
-          // Monaco Editor gets its own chunk so it's never in the same
-          // execution context as the Three.js chunk during module initialization.
-          'vendor-monaco': [
-            '@monaco-editor/react',
-          ],
-          // Keep React and core vendor libraries together
-          'vendor-react': [
-            'react',
-            'react-dom',
-            'react-router-dom',
-            'framer-motion',
-          ],
+        manualChunks(id) {
+          // Isolate Three.js / @react-three/* into their own chunk.
+          // Root-cause fix for "Cannot access 'Mn' before initialization":
+          // prevents Rollup creating a circular init order between the
+          // Three.js module graph and @monaco-editor/react.
+          if (
+            id.includes('node_modules/three/') ||
+            id.includes('node_modules/@react-three/')
+          ) {
+            return 'vendor-three';
+          }
+          // Monaco Editor gets its own chunk — completely separate from Three.js.
+          if (
+            id.includes('node_modules/@monaco-editor/') ||
+            id.includes('node_modules/monaco-editor/')
+          ) {
+            return 'vendor-monaco';
+          }
+          // NOTE: Do NOT catch-all other node_modules — Rollup will
+          // create a vendor chunk that cross-references vendor-three,
+          // creating a circular chunk warning. Let Rollup manage the rest.
         },
       },
     },

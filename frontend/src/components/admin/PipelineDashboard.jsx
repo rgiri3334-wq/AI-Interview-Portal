@@ -190,18 +190,18 @@ const SendEmailModal = ({ candidate, onClose, showToast }) => {
       };
     } else if (decision === 'REJECTED' || decision === 'REJECT' || decision === 'NO_HIRE' || decision === 'NO HIRE') {
       return {
-        subject: `Your Spark-Hire Application — An Update`,
+        subject: `Your Sterling E-Mobility Application — An Update`,
         body: `Dear ${name},\n\nThank you for taking the time to interview with us. After careful consideration, we have decided to move forward with other candidates at this time.\nThis decision was not easy — you demonstrated genuine effort and preparation during your interview. We encourage you to continue applying and growing your skills.\n\nThanks,\nSterling HR Team`
       };
     } else if (decision === 'PENDING') {
       return {
-        subject: `Your Interview is Under Review — Spark-Hire`,
+        subject: `Your Interview is Under Review — Sterling E-Mobility`,
         body: `Dear ${name},\n\nYour interview has been received and is currently under review by our hiring team. We will update you as soon as a decision is made.\n\nThanks,\nSterling HR Team`
       };
     } else if (decision === 'PROCTORING_ACT' || decision === 'PROCTORING ACT') {
       return {
-        subject: `Action Required: Spark-Hire Interview Proctoring Review`,
-        body: `Dear ${name},\n\nDuring the review of your recent Spark-Hire interview, our automated system flagged certain proctoring anomalies that require further verification.\nOur team will be reviewing this manually. If we need additional information or if a re-interview is required, we will reach out to you directly.\n\nThanks,\nSterling HR Team`
+        subject: `Action Required: Sterling Interview Proctoring Review`,
+        body: `Dear ${name},\n\nDuring the review of your recent Sterling E-Mobility interview, our automated system flagged certain proctoring anomalies that require further verification.\nOur team will be reviewing this manually. If we need additional information or if a re-interview is required, we will reach out to you directly.\n\nThanks,\nSterling HR Team`
       };
     } else {
        return {

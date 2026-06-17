@@ -11,7 +11,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-// Spark-Hire Design Tokens & Global Styles
+// Sterling E-Mobility Global Styles
 import './index.css';
 
 // Core Application Component / Router
@@ -19,12 +19,12 @@ import App from './App.jsx';
 
 // ── Enterprise Boot Diagnostics ──────────────────────────────────────────
 console.log(
-  "%c⚡ Spark-Hire AI Engine Booting...",
-  "color: #00D1FF; font-weight: bold; font-size: 14px; padding: 4px;"
+  "%c⚡ Sterling AI Interview Engine Booting...",
+  "color: #dc2626; font-weight: bold; font-size: 14px; padding: 4px;"
 );
 console.log(
-  "%cArchitect: Aditya Singh",
-  "color: #7B61FF; font-weight: bold; font-size: 12px; padding: 4px;"
+  "%cPowered by Sterling E-Mobility",
+  "color: #94a3b8; font-weight: bold; font-size: 12px; padding: 4px;"
 );
 
 // ── Strict DOM Mounting ──────────────────────────────────────────────────
