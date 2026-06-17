@@ -3728,7 +3728,7 @@ async def mark_no_show(booking_id: str, db: Session = Depends(get_db)):
     candidate = db.query(Candidate).filter_by(candidate_id=booking.candidate_id).first()
     if candidate:
         slot = booking.slot
-        FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+        FRONTEND_URL = os.getenv("FRONTEND_URL", "https://ai-interview-portal.vercel.app")
         html = f"""
         <html><body style="font-family:Arial,sans-serif;padding:20px;color:#0f172a;">
         <div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;border:1px solid #e2e8f0;border-top:4px solid #f59e0b;">
