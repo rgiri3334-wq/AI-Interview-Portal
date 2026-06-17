@@ -8,7 +8,7 @@ Database:     Supabase PostgreSQL (21 tables) via SQLAlchemy ORM
 =============================================================================
 """
 
-import os, re, json, time, uuid, logging, sqlite3, io, csv, hashlib, secrets
+import os, re, json, time, uuid, logging, sqlite3, io, csv, hashlib, secrets, asyncio
 import bcrypt
 import jwt
 import pytesseract
@@ -28,7 +28,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
-from database.database import Base, engine, get_db
+from database.database import Base, engine, get_db, SessionLocal
 from database.models import Department, JobRole, Candidate, Resume, InterviewSession, QuestionBank, InterviewQuestionsLog, CandidateAnswer, KeywordEvaluation, QuestionEvaluation, ConversationHistory, FinalReport, StatusLookup, GlobalConfig, OTPStore, AdminUser, SystemTelemetryLog, AdminActivityLog, SecurityEventLog, InterviewSlot, SlotBooking
 from database.db_utils import generate_enterprise_id
 
