@@ -2882,7 +2882,7 @@ async def send_decision_email_manual(candidate_id: str, db: Session = Depends(ge
 
     try:
         if candidate.email:
-            send_notification_email(candidate.email, name, subject, html)
+            send_notification_email(str(candidate.email), str(name), subject, html)
             return {"success": True, "message": "Email sent successfully"}
         else:
             raise HTTPException(status_code=400, detail="Candidate has no email address")
@@ -3398,7 +3398,7 @@ async def delete_slot(slot_id: str, db: Session = Depends(get_db)):
     slot = db.query(InterviewSlot).filter_by(slot_id=slot_id).first()
     if not slot:
         raise HTTPException(status_code=404, detail="Slot not found")
-    slot.is_active = False
+    slot.is_active = False  # type: ignore
     db.commit()
     return {"status": "deactivated"}
 
@@ -3480,7 +3480,7 @@ async def book_slot(data: BookSlotRequest, background_tasks: BackgroundTasks, db
           <p style="font-size:12px;color:#94a3b8;text-align:center;">Sterling AI Interview Engine © Sterling E-Mobility</p>
         </div></body></html>
         """
-        send_notification_email(candidate.email, candidate.name, f"✅ Interview Confirmed — {slot.date} at {slot.start_time}", html)
+        send_notification_email(str(candidate.email), str(candidate.name), f"✅ Interview Confirmed — {slot.date} at {slot.start_time}", html)
 
     background_tasks.add_task(send_booking_confirmation)
 
@@ -3520,7 +3520,7 @@ async def cancel_booking(booking_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Booking not found")
     if booking.status != "BOOKED":
         raise HTTPException(status_code=409, detail="Booking is not in BOOKED state")
-    booking.status = "CANCELLED"
+    booking.status = "CANCELLED"  # type: ignore
     db.commit()
     return {"status": "cancelled"}
 
@@ -3530,7 +3530,7 @@ async def mark_no_show(booking_id: str, db: Session = Depends(get_db)):
     booking = db.query(SlotBooking).filter_by(booking_id=booking_id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
-    booking.status = "NO_SHOW"
+    booking.status = "NO_SHOW"  # type: ignore
     db.commit()
 
     # Notify candidate
@@ -3548,7 +3548,7 @@ async def mark_no_show(booking_id: str, db: Session = Depends(get_db)):
           <p style="font-size:12px;color:#94a3b8;text-align:center;">Sterling AI Interview Engine © Sterling E-Mobility</p>
         </div></body></html>
         """
-        send_notification_email(candidate.email, candidate.name, "⚠️ You missed your Spark-Hire interview — reschedule now", html)
+        send_notification_email(str(candidate.email), str(candidate.name), "⚠️ You missed your Spark-Hire interview — reschedule now", html)
 
     return {"status": "no_show_marked"}
 
@@ -3562,7 +3562,7 @@ async def get_candidate_portal(candidate_id: str, db: Session = Depends(get_db))
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
-    interviews = sorted(candidate.interviews, key=lambda i: i.started_at, reverse=True)
+    interviews = sorted(candidate.interviews, key=lambda i: i.started_at, reverse=True)  # type: ignore
     latest = interviews[0] if interviews else None
 
     report = db.query(FinalReport).filter_by(interview_id=latest.interview_id).first() if latest else None
@@ -3647,7 +3647,7 @@ async def get_candidate_portal(candidate_id: str, db: Session = Depends(get_db))
         "booking": booking_data,
         "resume": {
             "uploaded": bool(resume),
-            "resume_score": float(resume.resume_score or 0) if resume else 0,
+            "resume_score": float(resume.resume_score or 0) if resume else 0,  # type: ignore
         },
         "attempts": attempts,
         "interview_id": latest.interview_id if latest else None,
