@@ -15,7 +15,11 @@ export const customFetch = async (url, options = {}) => {
   
   if (response.status === 401) {
     sessionStorage.removeItem('adminToken');
-    window.location.href = '/login';
+    sessionStorage.removeItem('isAuthenticated');
+    sessionStorage.removeItem('role');
+    sessionStorage.removeItem('adminEmail');
+    sessionStorage.removeItem('adminRole');
+    window.location.href = '/';
   }
   
   return response;
