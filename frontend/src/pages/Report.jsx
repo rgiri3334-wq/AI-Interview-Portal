@@ -597,7 +597,11 @@ export default function Report() {
                         </div>
                         <div className="mb-4 bg-white p-4 rounded border border-slate-200">
                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Candidate Response</span>
-                           <p className="text-slate-700 text-sm leading-relaxed">{qa.answer || <span className="italic text-slate-400">No response recorded</span>}</p>
+                           {qa.answer ? (
+                             <p className="text-slate-700 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: qa.answer }} />
+                           ) : (
+                             <p className="text-slate-700 text-sm leading-relaxed italic text-slate-400">No response recorded</p>
+                           )}
                         </div>
                         <div className="flex flex-wrap gap-4">
                           {qa.positive_keywords && qa.positive_keywords.length > 0 && (

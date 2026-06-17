@@ -428,6 +428,12 @@ CRITICAL RULE 5: If `next_admin_question` is provided, you MUST output it EXACTL
 You MUST gracefully pivot away from this topic. Use their detected emotion ({emotion}) to give a highly empathetic, reassuring `eq_feedback` to ease their frustration. 
 Then, set `action` to "normal" (or "skip") and generate a completely different, easier behavioral or communication question in `next_technical_question`. DO NOT ask about the same technical concept.''' if consecutive_failures >= 1 else ''}
 
+**Highlighting Rule (CRITICAL) - Color Coding the Answer:**
+You MUST evaluate the candidate's exact `answer` text and add HTML `<span class="...">` tags to highlight key words/phrases:
+- Wrap exceptionally good keywords or technically correct phrases in green: `<span class="text-green-600 font-black bg-green-50 px-1 rounded border border-green-200">good phrase</span>`
+- Wrap false, completely irrelevant, or technically incorrect terms (anti-patterns) in red: `<span class="text-red-600 font-black bg-red-50 px-1 rounded border border-red-200">bad phrase</span>`
+DO NOT modify the rest of the text, just inject the tags into the raw candidate answer and return it in `evaluated_answer`.
+
 Return ONLY this exact JSON (no explanation, no markdown):
 {{
   "action": "<normal|repeat|skip|small_talk>",
@@ -448,6 +454,7 @@ Return ONLY this exact JSON (no explanation, no markdown):
   "next_technical_question": "<Optional: next main interview question OR the repeated question if action is 'repeat'>",
   "key_insight_extracted": "<1-sentence summary of a unique point the candidate just made, or null>",
   "answer_quality": "<strong|average|weak|none>",
+  "evaluated_answer": "<The original candidate answer string, but with HTML <span> tags wrapping exceptionally good or bad terms as instructed>",
   "positive_keywords": ["<correct technical term used by candidate>"],
   "negative_keywords": ["<factually incorrect term or red flag used>"]
 }}

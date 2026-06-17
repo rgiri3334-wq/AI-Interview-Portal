@@ -57,7 +57,130 @@ const DecisionDropdown = ({ candidate, onUpdate }) => {
   );
 };
 
+const AiConfigModal = ({ candidate, onClose, showToast }) => {
+  const [config, setConfig] = useState({
+    persona: "Strictly Technical (System Design)",
+    weights: { tech: 40, comm: 20, eq: 20, conf: 20 }
+  });
+  const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await customFetch(`${API_BASE}/admin/config/global/ai_config_${candidate.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.value) {
+            setConfig(JSON.parse(data.value));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load candidate AI config", err);
+      }
+    };
+    fetchConfig();
+  }, [candidate.id]);
+
+  const handleSave = async () => {
+    const totalWeight = Object.values(config.weights).reduce((a, b) => a + b, 0);
+    if (totalWeight !== 100) {
+      return showToast("Weights must sum exactly to 100", "error");
+    }
+    setLoading(true);
+    try {
+      const payload = {
+        key: `ai_config_${candidate.id}`,
+        value: JSON.stringify(config)
+      };
+      const res = await customFetch(`${API_BASE}/admin/config/global`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        showToast("Candidate AI Configuration saved successfully!");
+        onClose();
+      } else {
+        throw new Error("Failed to save config");
+      }
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 to-red-600" />
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-extrabold flex items-center gap-3">
+             <Settings2 className="text-red-500" /> AI Interview Config
+          </h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+        <p className="text-sm font-bold text-slate-500 mb-6 border-b border-slate-100 pb-4">
+          Configuring AI for <span className="text-slate-900">{candidate.name}</span>
+        </p>
+        
+        <div className="space-y-6">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">AI Persona</label>
+            <select
+              value={config.persona}
+              onChange={(e) => setConfig({ ...config, persona: e.target.value })}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-red-500"
+            >
+              <option value="Strictly Technical (System Design)">Strictly Technical (System Design)</option>
+              <option value="Behavioral & Leadership">Behavioral & Leadership</option>
+              <option value="Consultative & Friendly">Consultative & Friendly</option>
+              <option value="HR Screening">HR Screening</option>
+              <option value="Executive Leadership">Executive Leadership</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Auto-Balancing Quotas</label>
+            <div className="grid grid-cols-2 gap-4">
+              {Object.keys(config.weights).map((k) => (
+                <div key={k} className="bg-slate-50 border border-slate-100 p-4 rounded-xl flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase text-slate-500">{k}</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={config.weights[k]}
+                      onChange={(e) => setConfig({
+                        ...config,
+                        weights: { ...config.weights, [k]: parseInt(e.target.value) || 0 }
+                      })}
+                      className="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-black text-center focus:outline-none focus:border-red-500"
+                    />
+                    <span className="text-xs font-bold text-slate-400">%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className={`mt-3 text-xs font-bold text-right ${Object.values(config.weights).reduce((a,b)=>a+b,0) === 100 ? 'text-green-600' : 'text-red-600'}`}>
+              Total: {Object.values(config.weights).reduce((a,b)=>a+b,0)}% (Must be 100%)
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-slate-100">
+          <button onClick={onClose} className="px-6 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={loading} className="bg-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md shadow-red-600/20 hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50">
+            {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Settings2 size={16} />} Save Config
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 export default function PipelineDashboard({ pipeline, setPipeline, showToast, handleViewDossier }) {
+  const [aiConfigCandidate, setAiConfigCandidate] = useState(null);
+
   const [search, setSearch] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -248,6 +371,13 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
       
       <AnimatePresence>
         {renderComparisonRadar()}
+        {aiConfigCandidate && (
+          <AiConfigModal 
+            candidate={aiConfigCandidate} 
+            onClose={() => setAiConfigCandidate(null)} 
+            showToast={showToast} 
+          />
+        )}
       </AnimatePresence>
 
       <div className="bg-white border border-slate-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
@@ -450,6 +580,14 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
                                 >
                                   <FileText size={14} /> Dossier
                                 </button>
+                                {!isCompleted && (
+                                  <button 
+                                    onClick={() => setAiConfigCandidate(c)}
+                                    className="px-4 py-2.5 flex items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider bg-slate-900 text-white hover:bg-slate-800"
+                                  >
+                                    <Settings2 size={14} /> AI Config
+                                  </button>
+                                )}
                                 <button 
                                   onClick={() => setExpandedRow(isExpanded ? null : c.id)}
                                   className="p-2.5 text-slate-400 hover:bg-slate-100 rounded-xl transition-colors"

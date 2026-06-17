@@ -341,7 +341,7 @@ export default function QuestionBank({
               <div className="w-10 h-10 bg-slate-50 text-slate-600 rounded-xl flex items-center justify-center border border-slate-200">
                 <Database size={20} />
               </div> 
-              Rubrics for {roleConfigs.job_role === 'ALL' ? 'All Roles' : (roleConfigs.job_role || 'Selected Role')}
+              Rubrics for {(!form.role || form.role === 'ALL') ? 'All Roles' : form.role}
             </h3>
           </div>
 
@@ -350,17 +350,17 @@ export default function QuestionBank({
                <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4" />
                <p className="font-bold text-sm uppercase tracking-widest">Loading Schemas...</p>
             </div>
-          ) : questions.filter(q => (roleConfigs.target_dept === 'ALL' || q.department === roleConfigs.target_dept) && (roleConfigs.job_role === 'ALL' || q.role === roleConfigs.job_role)).length === 0 ? (
+          ) : questions.filter(q => (!form.department || q.department === form.department) && (!form.role || q.role === form.role)).length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-slate-400 bg-slate-50 rounded-2xl border border-slate-100 border-dashed">
               <Database size={56} className="mb-4 opacity-50 text-slate-300" />
-              <p className="font-bold">No rubrics defined for {roleConfigs.job_role === 'ALL' ? 'these filters' : roleConfigs.job_role}.</p>
+              <p className="font-bold">No rubrics defined for {form.role || 'these filters'}.</p>
               <p className="text-sm mt-1">Add one above or seed defaults.</p>
             </div>
           ) : (
             <div className="space-y-4">
               <AnimatePresence>
                 {questions
-                  .filter(q => (roleConfigs.target_dept === 'ALL' || q.department === roleConfigs.target_dept) && (roleConfigs.job_role === 'ALL' || q.role === roleConfigs.job_role))
+                  .filter(q => (!form.department || q.department === form.department) && (!form.role || q.role === form.role))
                   .map((q) => (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} key={q.id} className="bg-white border border-slate-200 rounded-2xl p-6 hover:border-red-300 hover:shadow-md transition-all group relative overflow-hidden">
                     <div className="absolute left-0 top-0 w-1.5 h-full bg-slate-200 group-hover:bg-red-500 transition-colors" />

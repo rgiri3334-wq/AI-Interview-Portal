@@ -86,7 +86,7 @@ export default function AdminPanel() {
 
   const fetchPipeline = async () => {
     try {
-      const res = await customFetch(`${API_BASE}/dashboard`);
+      const res = await customFetch(`${API_BASE}/admin/pipeline`);
       const data = await res.json();
       setPipeline(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -254,18 +254,6 @@ export default function AdminPanel() {
     { id: 'architecture', label: 'Dept & Role Configuration', icon: <Layers size={18} /> },
     { id: 'questions', label: 'Rubric Engine', icon: <Database size={18} /> },
   ];
-
-  if (loading.config) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4 shadow-lg" />
-          <p className="font-black tracking-widest uppercase text-slate-500 text-xs">Initializing Admin Core...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans relative overflow-hidden text-slate-900">
       <Sidebar />
@@ -274,7 +262,16 @@ export default function AdminPanel() {
         <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-slate-100/80 to-transparent pointer-events-none" />
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-red-100 rounded-full blur-[100px] opacity-50 pointer-events-none" />
         
-        {/* Toast Notification */}
+        {loading.config ? (
+          <div className="min-h-screen flex items-center justify-center relative z-10">
+            <div className="flex flex-col items-center">
+              <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4 shadow-lg" />
+              <p className="font-black tracking-widest uppercase text-slate-500 text-xs">Initializing Admin Core...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Toast Notification */}
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ opacity: 0, y: -50, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -50, scale: 0.9 }} className="fixed top-6 left-1/2 -translate-x-1/2 z-50">
@@ -287,9 +284,9 @@ export default function AdminPanel() {
       </AnimatePresence>
 
       {/* Admin Header Navbar */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className="relative z-40 px-6 pt-6 mb-2">
+        <div className="max-w-[1600px] mx-auto bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-sm rounded-3xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-4 pl-2">
             <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/20 text-white">
               <Settings size={20} />
             </div>
@@ -299,7 +296,7 @@ export default function AdminPanel() {
             </div>
           </div>
           
-          <div className="hidden lg:flex items-center gap-2 bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
+          <div className="hidden lg:flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 shadow-inner">
             {TABS.map(t => (
               <button
                 key={t.id}
@@ -313,10 +310,6 @@ export default function AdminPanel() {
               </button>
             ))}
           </div>
-
-          <button onClick={() => navigate('/')} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-white border border-slate-200 hover:border-red-300 hover:text-red-600 transition-colors shadow-sm">
-            Exit Admin
-          </button>
         </div>
       </div>
 
@@ -383,10 +376,10 @@ export default function AdminPanel() {
           )}
 
         </AnimatePresence>
-        </div>
+      </div>
+      </>
+      )}
       </main>
     </div>
   );
 }
-
-

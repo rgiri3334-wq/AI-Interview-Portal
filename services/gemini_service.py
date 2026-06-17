@@ -56,7 +56,7 @@ async def _call_gemini(client, prompt: str) -> str:
 
 # ── Admin DB Helper ────────────────────────────────────────────────────────
 
-def _get_admin_question_data(job_role: str, asked_questions: list[str], current_question: Optional[str] = None):
+def _get_admin_question_data(job_role: str, asked_questions: list, current_question: str = None, candidate_id: str = None):
     """
     Fetch admin question bank data using SQLAlchemy (works on both SQLite and Supabase).
     Uses the same DB session engine as Main.py — fully production-safe.
@@ -85,6 +85,20 @@ def _get_admin_question_data(job_role: str, asked_questions: list[str], current_
                     "eq": getattr(role_row, "eq_weight", 20),
                     "conf": getattr(role_row, "conf_weight", 20),
                 }
+
+            # 1.5 Override with candidate-specific AI config if it exists
+            import json
+            if candidate_id:
+                cand_conf = db.query(GlobalConfig).filter(GlobalConfig.key == f"ai_config_{candidate_id}").first()
+                if cand_conf and cand_conf.value:
+                    try:
+                        c_data = json.loads(cand_conf.value)
+                        if "persona" in c_data:
+                            persona = c_data["persona"]
+                        if "weights" in c_data:
+                            weights = c_data["weights"]
+                    except:
+                        pass
 
             # 2. Get keywords for CURRENT question (if assessing)
             if current_question and role_id:
@@ -138,7 +152,7 @@ async def generate_smart_question(
     stage = min(session.question_index + 1, 5)
 
     # Fetch context and potential admin question
-    _, potential_admin_q, persona, company_context, weights = _get_admin_question_data(job_role, session.asked_questions)
+    _, potential_admin_q, persona, company_context, weights = _get_admin_question_data(job_role, session.asked_questions, candidate_id=candidate_id)
     
     # SPRINT 3: Hybrid Orchestration Logic
     # Questions 1-2 (index 0, 1): AI Warmup & Resume Deep Dive
@@ -212,7 +226,7 @@ async def assess_answer(
     """Evaluate candidate answer with full context awareness and multi-dimensional behavioral scoring."""
     session = get_or_create_session(candidate_id, job_role, experience, skills)
 
-    admin_keywords, admin_next_q, _, _, weights = _get_admin_question_data(job_role, session.asked_questions, current_question=question)
+    admin_keywords, admin_next_q, _, _, weights = _get_admin_question_data(job_role, session.asked_questions, current_question=question, candidate_id=candidate_id)
 
     prompt = build_assessment_prompt(
         job_role=job_role,
@@ -303,10 +317,10 @@ async def assess_answer(
     # but we'll return all dimensions for the frontend to render.
     result.update(metrics)
 
-    # Persist to memory — BUG-22 fix: pass actual wpm (was always defaulting to 130.0)
+    # Persist to memory
     session.add_exchange(
         question=question,
-        answer=answer,
+        answer=result.get("evaluated_answer", answer),
         score=result["technical_score"],
         answer_quality=result.get("answer_quality", "average"),
         weaknesses=result.get("weaknesses", []),
