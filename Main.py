@@ -2815,63 +2815,79 @@ async def update_hiring_decision(interview_id: str, req: DecisionUpdateRequest, 
     report.hiring_decision = new_decision
     db.commit()
 
-    # ── Email notification to candidate on decision change ───────────────────
-    try:
-        candidate = db.query(Candidate).filter_by(candidate_id=iv.candidate_id).first()
-        if candidate and candidate.email and new_decision != old_decision:
-            name = candidate.name or "Candidate"
-            portal_url = os.environ.get("FRONTEND_URL", "https://your-portal.onrender.com")
-
-            if new_decision == "HIRED":
-                subject = f"🎉 Congratulations {name} — You've been selected!"
-                html = f"""
-                <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
-                  <div style="background:#dc2626;padding:24px;border-radius:12px;text-align:center;margin-bottom:24px;">
-                    <h1 style="color:#fff;margin:0;font-size:28px;font-weight:900;">🎉 Congratulations!</h1>
-                  </div>
-                  <p style="font-size:16px;color:#1e293b;">Dear <strong>{name}</strong>,</p>
-                  <p style="font-size:16px;color:#475569;">We are absolutely delighted to inform you that you have been <strong style="color:#dc2626;">selected</strong> for the role you applied for.</p>
-                  <p style="font-size:15px;color:#475569;">Your performance in the interview was impressive, and the team is excited to have you on board. Our HR team will be in touch shortly with the next steps, offer letter, and onboarding details.</p>
-                  <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px;margin:20px 0;text-align:center;">
-                    <p style="font-size:14px;color:#dc2626;font-weight:700;margin:0;">🌟 Welcome to the team, {name.split()[0]}! We can't wait to see what you build.</p>
-                  </div>
-                  <p style="font-size:13px;color:#94a3b8;text-align:center;">Please log in to your candidate portal to view your full results.</p>
-                </div>
-                """
-            elif new_decision in ("REJECTED", "REJECT"):
-                subject = f"Your Spark-Hire Application — An Update"
-                html = f"""
-                <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
-                  <div style="background:#1e293b;padding:24px;border-radius:12px;text-align:center;margin-bottom:24px;">
-                    <h1 style="color:#fff;margin:0;font-size:24px;font-weight:900;">Application Update</h1>
-                  </div>
-                  <p style="font-size:16px;color:#1e293b;">Dear <strong>{name}</strong>,</p>
-                  <p style="font-size:16px;color:#475569;">Thank you for taking the time to interview with us. After careful consideration, we have decided to move forward with other candidates at this time.</p>
-                  <p style="font-size:15px;color:#475569;">This decision was not easy — you demonstrated genuine effort and preparation during your interview. We encourage you to continue applying and growing your skills.</p>
-                  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:20px 0;">
-                    <p style="font-size:14px;color:#475569;margin:0;">We wish you the very best in your career journey, {name.split()[0]}. Thank you for considering us.</p>
-                  </div>
-                  <p style="font-size:13px;color:#94a3b8;text-align:center;">You may log in to your portal to view your interview report and feedback.</p>
-                </div>
-                """
-            elif new_decision == "PENDING":
-                subject = f"Your Interview is Under Review — Spark-Hire"
-                html = f"""
-                <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
-                  <p style="font-size:16px;color:#1e293b;">Dear <strong>{name}</strong>,</p>
-                  <p style="font-size:16px;color:#475569;">Your interview has been received and is currently <strong>under review</strong> by our hiring team. We will update you as soon as a decision is made.</p>
-                  <p style="font-size:13px;color:#94a3b8;text-align:center;">Log in to your portal to track your application status.</p>
-                </div>
-                """
-            else:
-                subject = f"Spark-Hire — Application Status Update"
-                html = f"<p>Dear {name}, your application status has been updated to: <strong>{new_decision}</strong>.</p>"
-
-            send_notification_email(candidate.email, name, subject, html)
-    except Exception as email_err:
-        print(f"[Decision Email] Non-critical: Failed to send decision email: {email_err}")
+    # ── Email notification to candidate on decision change (REMOVED) ───────────
+    # Auto-email removed per user request. Email will be sent manually via new endpoint.
     
     return {"success": True, "decision": new_decision}
+
+@app.post("/api/candidates/{candidate_id}/send-decision-email", tags=["Admin"])
+async def send_decision_email_manual(candidate_id: str, db: Session = Depends(get_db)):
+    candidate = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+        
+    iv = db.query(InterviewSession).filter_by(candidate_id=candidate_id).order_by(InterviewSession.created_at.desc()).first()
+    if not iv:
+        raise HTTPException(status_code=404, detail="No interview session found")
+        
+    report = db.query(FinalReport).filter_by(interview_id=iv.interview_id).first()
+    decision = getattr(report, "hiring_decision", "PENDING") if report else "PENDING"
+    
+    name = candidate.name or "Candidate"
+    
+    if decision == "HIRED":
+        subject = f"🎉 Congratulations {name} — You've been selected!"
+        html = f"""
+        <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
+          <div style="background:#dc2626;padding:24px;border-radius:12px;text-align:center;margin-bottom:24px;">
+            <h1 style="color:#fff;margin:0;font-size:28px;font-weight:900;">🎉 Congratulations!</h1>
+          </div>
+          <p style="font-size:16px;color:#1e293b;">Dear <strong>{name}</strong>,</p>
+          <p style="font-size:16px;color:#475569;">We are absolutely delighted to inform you that you have been <strong style="color:#dc2626;">selected</strong> for the role you applied for.</p>
+          <p style="font-size:15px;color:#475569;">Your performance in the interview was impressive, and the team is excited to have you on board. Our HR team will be in touch shortly with the next steps, offer letter, and onboarding details.</p>
+          <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px;margin:20px 0;text-align:center;">
+            <p style="font-size:14px;color:#dc2626;font-weight:700;margin:0;">🌟 Welcome to the team, {name.split()[0]}! We can't wait to see what you build.</p>
+          </div>
+          <p style="font-size:13px;color:#94a3b8;text-align:center;">Please log in to your candidate portal to view your full results.</p>
+        </div>
+        """
+    elif decision in ("REJECTED", "REJECT", "NO_HIRE"):
+        subject = f"Your Spark-Hire Application — An Update"
+        html = f"""
+        <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
+          <div style="background:#1e293b;padding:24px;border-radius:12px;text-align:center;margin-bottom:24px;">
+            <h1 style="color:#fff;margin:0;font-size:24px;font-weight:900;">Application Update</h1>
+          </div>
+          <p style="font-size:16px;color:#1e293b;">Dear <strong>{name}</strong>,</p>
+          <p style="font-size:16px;color:#475569;">Thank you for taking the time to interview with us. After careful consideration, we have decided to move forward with other candidates at this time.</p>
+          <p style="font-size:15px;color:#475569;">This decision was not easy — you demonstrated genuine effort and preparation during your interview. We encourage you to continue applying and growing your skills.</p>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:20px 0;">
+            <p style="font-size:14px;color:#475569;margin:0;">We wish you the very best in your career journey, {name.split()[0]}. Thank you for considering us.</p>
+          </div>
+          <p style="font-size:13px;color:#94a3b8;text-align:center;">You may log in to your portal to view your interview report and feedback.</p>
+        </div>
+        """
+    elif decision == "PENDING":
+        subject = f"Your Interview is Under Review — Spark-Hire"
+        html = f"""
+        <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
+          <p style="font-size:16px;color:#1e293b;">Dear <strong>{name}</strong>,</p>
+          <p style="font-size:16px;color:#475569;">Your interview has been received and is currently <strong>under review</strong> by our hiring team. We will update you as soon as a decision is made.</p>
+          <p style="font-size:13px;color:#94a3b8;text-align:center;">Log in to your portal to track your application status.</p>
+        </div>
+        """
+    else:
+        subject = f"Spark-Hire — Application Status Update"
+        html = f"<p>Dear {name}, your application status has been updated to: <strong>{decision}</strong>.</p>"
+
+    try:
+        if candidate.email:
+            send_notification_email(candidate.email, name, subject, html)
+            return {"success": True, "message": "Email sent successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Candidate has no email address")
+    except Exception as email_err:
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {email_err}")
 
 
 # ── Data: Report ──────────────────────────────────────────────────────────

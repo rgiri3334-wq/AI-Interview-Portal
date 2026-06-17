@@ -122,6 +122,7 @@ export const apiClient = {
   sendCandidateOtp:   (data) => withRetry(() => api.post('/api/auth/candidate/send-otp', data)),
   verifyCandidateOtp: (data) => withRetry(() => api.post('/api/auth/candidate/verify-otp', data)),
   applyForRole: (candidateId, data) => withRetry(() => api.post(`/api/candidates/${candidateId}/apply`, data)),
+  sendDecisionEmail: (candidateId) => withRetry(() => api.post(`/api/candidates/${candidateId}/send-decision-email`)),
   getCandidate: (id) => api.get(`/api/candidates/${id}`),
   verifyKyc: (data) => withRetry(() => api.post('/api/kyc/verify', data)),
 

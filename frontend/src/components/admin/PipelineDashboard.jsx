@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   Users, Search, ShieldOff, FileText, Trash2, ChevronDown, 
   ChevronUp, Download, RefreshCw, BarChart2, Activity,
-  Filter, CheckSquare, Square, Settings2
+  Filter, CheckSquare, Square, Settings2, Mail
 } from 'lucide-react';
 import { 
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
@@ -177,9 +177,104 @@ const AiConfigModal = ({ candidate, onClose, showToast }) => {
     </div>
   );
 };
+const SendEmailModal = ({ candidate, onClose, showToast }) => {
+  const [loading, setLoading] = useState(false);
+
+  const getPreviewContent = () => {
+    const decision = candidate.hiring_decision || 'PENDING';
+    const name = candidate.name || 'Candidate';
+    if (decision === 'HIRED') {
+      return {
+        subject: `🎉 Congratulations ${name} — You've been selected!`,
+        body: `Dear ${name},\n\nWe are absolutely delighted to inform you that you have been selected for the role you applied for.\nYour performance in the interview was impressive, and the team is excited to have you on board. Our HR team will be in touch shortly with the next steps, offer letter, and onboarding details.\n\nPlease log in to your candidate portal to view your full results.`
+      };
+    } else if (decision === 'REJECTED' || decision === 'REJECT' || decision === 'NO_HIRE') {
+      return {
+        subject: `Your Spark-Hire Application — An Update`,
+        body: `Dear ${name},\n\nThank you for taking the time to interview with us. After careful consideration, we have decided to move forward with other candidates at this time.\nThis decision was not easy — you demonstrated genuine effort and preparation during your interview. We encourage you to continue applying and growing your skills.\n\nYou may log in to your portal to view your interview report and feedback.`
+      };
+    } else if (decision === 'PENDING') {
+      return {
+        subject: `Your Interview is Under Review — Spark-Hire`,
+        body: `Dear ${name},\n\nYour interview has been received and is currently under review by our hiring team. We will update you as soon as a decision is made.\n\nLog in to your portal to track your application status.`
+      };
+    } else {
+       return {
+        subject: `Spark-Hire — Application Status Update`,
+        body: `Dear ${name},\n\nYour application status has been updated to: ${decision}.`
+      };
+    }
+  };
+
+  const preview = getPreviewContent();
+
+  const handleSend = async () => {
+    setLoading(true);
+    try {
+      // apiClient.sendDecisionEmail
+      const res = await customFetch(`${API_BASE}/candidates/${candidate.candidate_id || candidate.id}/send-decision-email`, {
+        method: "POST"
+      });
+      if (res.ok) {
+        showToast("Decision email sent successfully to candidate!");
+        onClose();
+      } else {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.detail || "Failed to send email");
+      }
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-blue-600" />
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-extrabold flex items-center gap-3">
+             <Mail className="text-blue-500" /> Send Decision Email
+          </h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+        <p className="text-sm font-bold text-slate-500 mb-6 border-b border-slate-100 pb-4">
+          Drafting email for <span className="text-slate-900">{candidate.name}</span> <span className="px-2 py-0.5 ml-2 bg-slate-100 rounded text-xs font-black uppercase tracking-wider">{candidate.hiring_decision || 'PENDING'}</span>
+        </p>
+        
+        <div className="space-y-4 mb-8">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Subject</label>
+            <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900">
+              {preview.subject}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Preview Body</label>
+            <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+              {preview.body}
+            </div>
+          </div>
+          <div className="text-xs text-slate-400 italic">
+            * Note: The actual email will be styled with HTML/CSS. This is just a plain-text preview of the content.
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
+          <button onClick={onClose} className="px-6 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+          <button onClick={handleSend} disabled={loading} className="bg-blue-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50">
+            {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Mail size={16} />} Dispatch Email
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 export default function PipelineDashboard({ pipeline, setPipeline, showToast, handleViewDossier }) {
   const [aiConfigCandidate, setAiConfigCandidate] = useState(null);
+  const [emailCandidate, setEmailCandidate] = useState(null);
 
   const [search, setSearch] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
@@ -382,6 +477,13 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
             showToast={showToast} 
           />
         )}
+        {emailCandidate && (
+          <SendEmailModal
+            candidate={emailCandidate}
+            onClose={() => setEmailCandidate(null)}
+            showToast={showToast}
+          />
+        )}
       </AnimatePresence>
 
       <div className="bg-white border border-slate-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
@@ -582,6 +684,12 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
                                   }`}
                                 >
                                   <FileText size={14} /> Dossier
+                                </button>
+                                <button 
+                                  onClick={() => setEmailCandidate(c)}
+                                  className="px-4 py-2.5 flex items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider bg-blue-50 border border-blue-200 hover:border-blue-400 text-blue-700 hover:text-blue-800"
+                                >
+                                  <Mail size={14} /> Email
                                 </button>
                                 {!isCompleted && (
                                   <button 
