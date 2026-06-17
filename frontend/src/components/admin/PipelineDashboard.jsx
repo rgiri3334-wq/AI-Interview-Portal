@@ -559,16 +559,11 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
                           <div className="flex items-center justify-end gap-2">
                             {compareMode ? (
                               <button 
-                                onClick={() => {
-                                  if (!isCompleted) return showToast("Cannot compare candidate: Interview is incomplete", "error");
-                                  toggleCompare(c);
-                                }}
+                                onClick={() => toggleCompare(c)}
                                 className={`px-4 py-2.5 flex items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider ${
-                                  !isCompleted
-                                    ? 'bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed'
-                                    : isComparing 
-                                      ? 'bg-blue-600 text-white shadow-[0_4px_14px_0_rgb(59,130,246,0.39)]' 
-                                      : 'bg-white border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-600'
+                                  isComparing 
+                                    ? 'bg-blue-600 text-white shadow-[0_4px_14px_0_rgb(59,130,246,0.39)]' 
+                                    : 'bg-white border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-600'
                                 }`}
                               >
                                 {isComparing ? 'Comparing' : 'Select'}
