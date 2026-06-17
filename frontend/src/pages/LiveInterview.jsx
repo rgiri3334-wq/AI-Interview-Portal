@@ -607,7 +607,7 @@ export default function LiveInterview() {
         setPhase('goodbye'); // Lock the UI phase so mic is disabled but Avatar remains on screen
         // Natural human-like HR goodbye
         const finalGoodbye = res.eq_feedback + " That wraps up our interview for today. Thank you for your time. Our team will review your evaluation and follow up with you shortly. Have a great day!";
-        setQuestion("Interview Complete. You may close this window.");
+        setQuestion("Interview complete. Thank you for your time! Redirecting you now...");
         setLoading(false); // Fix: show question text instead of loading status
         try {
           // Wait for the TTS to completely finish speaking the goodbye while the avatar is still on screen
@@ -731,7 +731,9 @@ export default function LiveInterview() {
       } catch (e) {
         console.error('[Proctoring] Failed to save proctoring termination to backend:', e);
       }
-      navigate('/report');
+      // Proctoring termination — admin demo goes to report, candidate to goodbye
+      const role = sessionStorage.getItem('role');
+      navigate(role === 'candidate' ? '/interview-goodbye' : '/report');
       return;
     }
 
@@ -786,7 +788,9 @@ export default function LiveInterview() {
     } catch (e) {
       console.error('Failed to save final interview scores', e);
     }
-    navigate('/report');
+    // Route based on role: candidates see goodbye screen, admin sees report
+    const role = sessionStorage.getItem('role');
+    navigate(role === 'candidate' ? '/interview-goodbye' : '/report');
   };
 
   // ── Sprint 2: Pre-Flight Check Gate ────────────────────────────────────

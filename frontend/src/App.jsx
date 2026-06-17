@@ -16,27 +16,26 @@ import CandidateLanding from './pages/CandidateLanding';
 import EquipmentTest from './pages/EquipmentTest';
 import KycGuidelines from './pages/KycGuidelines';
 import KycCapture from './pages/KycCapture';
+// ── Phase 1: Candidate Portal Upgrade ────────────────────────────────────────
+import CandidateHome from './pages/CandidateHome';
+import ScheduleInterview from './pages/ScheduleInterview';
+import InterviewGoodbye from './pages/InterviewGoodbye';
+import VideoIntroPage from './pages/VideoIntroPage';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false };
   }
-  static getDerivedStateFromError(error) {
-    return { hasError: true };
-  }
-  componentDidCatch(error, info) {
-    console.error("[ErrorBoundary] Caught rendering error:", error, info);
-  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error, info) { console.error("[ErrorBoundary]", error, info); }
   render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 text-center">
           <h1 className="text-3xl font-black text-red-700 mb-4">A critical error occurred.</h1>
           <p className="text-slate-600 mb-8">The application encountered an unexpected state. Please return to the homepage.</p>
-          <a href="/" className="px-6 py-3 bg-red-600 text-white font-bold rounded-lg shadow hover:bg-red-700 transition">
-            Return Home
-          </a>
+          <a href="/" className="px-6 py-3 bg-red-600 text-white font-bold rounded-lg shadow hover:bg-red-700 transition">Return Home</a>
         </div>
       );
     }
@@ -51,7 +50,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (!isAuthenticated) return <Navigate to="/" replace />;
 
   if (allowedRoles && !allowedRoles.includes(role)) {
-    if (role === 'candidate') return <Navigate to="/candidate" replace />;
+    if (role === 'candidate') return <Navigate to="/candidate-home" replace />;
     return <Navigate to="/home" replace />;
   }
 
@@ -64,19 +63,30 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login />} />
-          {/* ── Candidate OTP Auth Routes (Sprint 1) ── */}
+
+          {/* ── Candidate OTP Auth Routes ── */}
           <Route path="/candidate-register" element={<CandidateRegister />} />
           <Route path="/candidate-login" element={<CandidateLogin />} />
+
+          {/* ── Candidate Portal (Phase 1 Upgrade) ── */}
+          <Route path="/candidate-home" element={<ProtectedRoute allowedRoles={['candidate']}><CandidateHome /></ProtectedRoute>} />
+          <Route path="/schedule-interview" element={<ProtectedRoute allowedRoles={['candidate']}><ScheduleInterview /></ProtectedRoute>} />
+          <Route path="/interview-goodbye" element={<ProtectedRoute allowedRoles={['candidate']}><InterviewGoodbye /></ProtectedRoute>} />
+          <Route path="/video-intro" element={<ProtectedRoute allowedRoles={['candidate']}><VideoIntroPage /></ProtectedRoute>} />
+
+          {/* ── Candidate marketing landing (public-facing, unchanged) ── */}
+          <Route path="/candidate-landing" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateLanding /></ProtectedRoute>} />
+
           {/* ── Existing Protected Routes (unchanged) ── */}
-          <Route path="/candidate-home" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateLanding /></ProtectedRoute>} />
           <Route path="/home" element={<ProtectedRoute allowedRoles={['admin']}><Landing /></ProtectedRoute>} />
           <Route path="/candidate" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateDetails /></ProtectedRoute>} />
-          
+
           {/* ── KYC Pre-Flight Pipeline ── */}
           <Route path="/equipment-test" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><EquipmentTest /></ProtectedRoute>} />
           <Route path="/kyc-guidelines" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><KycGuidelines /></ProtectedRoute>} />
           <Route path="/kyc-capture" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><KycCapture /></ProtectedRoute>} />
-          
+
+          {/* ── Admin Routes ── */}
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><Dashboard /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><LiveInterview /></ProtectedRoute>} />
           <Route path="/report" element={<ProtectedRoute allowedRoles={['admin']}><ReportList /></ProtectedRoute>} />

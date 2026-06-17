@@ -81,7 +81,7 @@ function CandidateHeroSection() {
             whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(220, 38, 38, 0.4)' }}
             whileTap={{ scale: 0.98 }}
             className="bg-red-600 text-white font-bold py-4 px-10 rounded-full text-base transition-all flex items-center justify-center uppercase tracking-wide min-w-[220px]"
-            onClick={() => navigate('/candidate')}
+            onClick={() => navigate('/candidate-home')}
           >
             Begin Interview
           </motion.button>
@@ -185,7 +185,7 @@ export default function CandidateLanding() {
         <div className="flex gap-4 items-center">
           <button
             className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-5 rounded-full text-sm transition-all shadow-[0_4px_14px_0_rgba(220,38,38,0.39)] hover:-translate-y-[1px]"
-            onClick={() => navigate('/candidate')}
+            onClick={() => navigate('/candidate-home')}
           >
             Begin Interview
           </button>

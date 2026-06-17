@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ShieldAlert, Settings, LayoutDashboard, Globe, Layers, 
-  Database, Activity, Radar
+  ShieldAlert, Settings, LayoutDashboard, Globe, Layers,
+  Database, Activity, Radar, CalendarDays
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE, customFetch } from '../config/api';
@@ -14,6 +14,7 @@ import RoleArchitecture from '../components/admin/RoleArchitecture';
 import QuestionBank from '../components/admin/QuestionBank';
 import AnalyticsEngine from '../components/admin/AnalyticsEngine';
 import LiveIntervention from '../components/admin/LiveIntervention';
+import SlotManager from '../components/admin/SlotManager';
 
 import Sidebar from '../components/Layout/Sidebar';
 
@@ -248,6 +249,7 @@ export default function AdminPanel() {
 
   const TABS = [
     { id: 'pipeline', label: 'Candidate Pipeline', icon: <LayoutDashboard size={18} /> },
+    { id: 'slots', label: 'Interview Scheduling', icon: <CalendarDays size={18} /> },
     { id: 'analytics', label: 'Global Analytics', icon: <Activity size={18} /> },
     { id: 'live', label: 'Live Interview Monitor', icon: <Radar size={18} /> },
     { id: 'context', label: 'Global Context', icon: <Globe size={18} /> },
@@ -326,6 +328,10 @@ export default function AdminPanel() {
                showToast={showToast} 
                handleViewDossier={handleViewDossier} 
             />
+          )}
+
+          {activeTab === 'slots' && (
+            <SlotManager key="slots" showToast={showToast} />
           )}
 
           {activeTab === 'analytics' && (

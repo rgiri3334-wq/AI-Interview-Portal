@@ -197,6 +197,17 @@ export const apiClient = {
 
   // ── All Reports for a Candidate ───────────────────────────────────────
   getAllCandidateReports: (candidateId) => api.get(`/api/reports/${candidateId}/all`),
+
+  // ── Candidate Portal (Phase 1) ────────────────────────────────────────
+  getCandidatePortal: (candidateId) => api.get(`/api/candidates/${candidateId}/portal`),
+  getAvailableSlots: () => api.get('/api/slots/available'),
+  bookSlot: (data) => withRetry(() => api.post('/api/slots/book', data)),
+  getCandidateBooking: (candidateId) => api.get(`/api/candidates/${candidateId}/booking`),
+  cancelBooking: (bookingId) => api.patch(`/api/bookings/${bookingId}/cancel`),
+  // Admin: slot management
+  createSlot: (data) => withRetry(() => api.post('/api/admin/slots', data)),
+  getAllSlots: () => api.get('/api/admin/slots'),
+  deleteSlot: (slotId) => api.delete(`/api/admin/slots/${slotId}`),
 };
 
 // ── WebSocket Factory ──────────────────────────────────────────────────────

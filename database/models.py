@@ -319,3 +319,34 @@ class SecurityEventLog(Base):
     event_type = Column(String, nullable=False) # e.g. FAILED_LOGIN, RATE_LIMIT_BLOCK
     ip_address = Column(String, nullable=True)
     target_email = Column(String, nullable=True)
+
+# ── Interview Scheduling (Phase 1) ────────────────────────────────────────────
+
+class InterviewSlot(Base):
+    """Admin-defined available interview time windows."""
+    __tablename__ = "interview_slots"
+    slot_id = Column(String, primary_key=True, index=True)
+    date = Column(String, nullable=False)           # "2026-06-20"
+    start_time = Column(String, nullable=False)     # "09:00"
+    end_time = Column(String, nullable=False)       # "09:45"
+    timezone = Column(String, default="Asia/Kolkata")
+    max_bookings = Column(Integer, default=1)        # 1 = exclusive, >1 = group
+    is_active = Column(Boolean, default=True)
+    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+
+    bookings = relationship("SlotBooking", back_populates="slot", cascade="all, delete-orphan")
+
+class SlotBooking(Base):
+    """A candidate's booking of an interview slot."""
+    __tablename__ = "slot_bookings"
+    booking_id = Column(String, primary_key=True, index=True)
+    slot_id = Column(String, ForeignKey("interview_slots.slot_id"), nullable=False)
+    candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
+    interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=True)
+    status = Column(String, default="BOOKED")       # BOOKED | COMPLETED | NO_SHOW | CANCELLED
+    booked_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    reminder_sent = Column(Boolean, default=False)
+    notes = Column(Text, nullable=True)
+
+    slot = relationship("InterviewSlot", back_populates="bookings")
+    candidate = relationship("Candidate")
