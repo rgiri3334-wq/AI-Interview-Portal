@@ -346,6 +346,7 @@ class SlotBooking(Base):
     status = Column(String, default="BOOKED")       # BOOKED | COMPLETED | NO_SHOW | CANCELLED
     booked_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
     reminder_sent = Column(Boolean, default=False)
+    reminder_stage = Column(Integer, server_default="0", default=0)
     notes = Column(Text, nullable=True)
 
     slot = relationship("InterviewSlot", back_populates="bookings")

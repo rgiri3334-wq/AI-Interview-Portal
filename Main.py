@@ -200,8 +200,8 @@ async def reminder_worker():
         try:
             db = SessionLocal()
             try:
-                # Find bookings that are in BOOKED state and reminder_sent is False
-                bookings = db.query(SlotBooking).filter_by(status="BOOKED", reminder_sent=False).all()
+                # Find bookings that are in BOOKED state and reminder_stage < 4
+                bookings = db.query(SlotBooking).filter(SlotBooking.status == "BOOKED", SlotBooking.reminder_stage < 4).all()
                 for b in bookings:
                     slot = b.slot
                     candidate = b.candidate
@@ -209,7 +209,7 @@ async def reminder_worker():
                         continue
                     
                     try:
-                        from datetime import datetime, timedelta
+                        from datetime import datetime, timedelta, timezone
                         dt_str = f"{slot.date} {slot.start_time}"
                         # Parse time with AM/PM or 24-hour format
                         if "AM" in slot.start_time or "PM" in slot.start_time:
@@ -219,19 +219,44 @@ async def reminder_worker():
                         
                         now = datetime.now()
                         time_diff = slot_dt - now
+                        time_diff_mins = time_diff.total_seconds() / 60
                         
                         try:
-                            from datetime import timezone
                             booked_at_dt = datetime.fromisoformat(b.booked_at.replace('Z', '+00:00'))
                             now_utc = datetime.now(timezone.utc)
-                            time_since_booking = now_utc - booked_at_dt
+                            time_since_booking_mins = (now_utc - booked_at_dt).total_seconds() / 60
                         except Exception:
-                            time_since_booking = timedelta(hours=2) # fallback
+                            time_since_booking_mins = 120 # fallback
+                            
+                        msg_time = None
+                        new_stage = b.reminder_stage
                         
-                        # If the interview is within the next 24 hours (and in the future),
-                        # AND the candidate booked the slot at least 60 minutes ago 
-                        # (prevents sending booking confirmation and reminder at the exact same time)
-                        if timedelta(0) < time_diff <= timedelta(hours=24) and time_since_booking > timedelta(minutes=60):
+                        # Stage 0: 12 Hours (between 12h and 1h)
+                        if b.reminder_stage < 1 and 60 < time_diff_mins <= 12 * 60:
+                            if time_since_booking_mins >= 30:
+                                msg_time = "12 Hours"
+                                new_stage = 1
+                        
+                        # Stage 1: 1 Hour (between 60m and 10m)
+                        elif b.reminder_stage < 2 and 10 < time_diff_mins <= 60:
+                            if time_since_booking_mins >= 15:
+                                msg_time = "1 Hour"
+                                new_stage = 2
+                        
+                        # Stage 2: 10 Minutes (between 10m and 5m)
+                        elif b.reminder_stage < 3 and 5 < time_diff_mins <= 10:
+                            if time_since_booking_mins >= 2:
+                                msg_time = "10 Minutes"
+                                new_stage = 3
+                        
+                        # Stage 3: 5 Minutes Fallback (between 5m and 1m)
+                        elif b.reminder_stage < 4 and 1 < time_diff_mins <= 5:
+                            # Strict condition: don't send 5-min if they booked at < 5 mins left
+                            if time_diff_mins >= 3 and time_since_booking_mins >= 2:
+                                msg_time = "5 Minutes"
+                                new_stage = 4
+                        
+                        if msg_time:
                             html = f"""
                             <html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:20px;color:#0f172a;">
                             <div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;border:1px solid #e2e8f0;border-top:4px solid #f59e0b;">
@@ -241,20 +266,34 @@ async def reminder_worker():
                               <h2 style="color:#f59e0b;font-weight:900;text-align:center;letter-spacing:1px;">STERLING E-MOBILITY</h2>
                               <p style="text-align:center;color:#64748b;font-size:12px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;">Interview Reminder</p>
                               <p>Hello <strong>{candidate.name}</strong>,</p>
-                              <p>This is a friendly reminder that your Sterling E-Mobility interview is coming up soon! ⏰</p>
+                              <p>This is a friendly reminder that your Sterling E-Mobility interview is starting in exactly <strong>{msg_time}</strong>! ⏰</p>
                               <div style="background:#fef3c7;padding:20px;border-radius:8px;margin:20px 0;text-align:center;">
                                 <p style="font-size:18px;font-weight:bold;color:#1e293b;margin:0;">📅 {slot.date}</p>
                                 <p style="font-size:24px;font-weight:900;color:#f59e0b;margin:8px 0;">{slot.start_time}</p>
                                 <p style="font-size:12px;color:#64748b;margin:0;">{slot.timezone}</p>
                               </div>
-                              <p style="color:#475569;">Please log in to your candidate portal 5-10 minutes before your scheduled time.</p>
+                              <p style="color:#475569;">Please log in to your candidate portal 5-10 minutes before your scheduled time to complete the pre-flight checks.</p>
                               <p style="font-size:12px;color:#94a3b8;text-align:center;margin-top:30px;">Thanks,<br/>Sterling HR Team</p>
                             </div></body></html>
                             """
-                            send_notification_email(str(candidate.email), str(candidate.name), f"⏰ Reminder: Interview at {slot.start_time}", html)
+                            send_notification_email(str(candidate.email), str(candidate.name), f"⏰ Reminder: Interview in {msg_time}", html)
                             
-                            b.reminder_sent = True  # type: ignore
+                            b.reminder_stage = new_stage
                             db.commit()
+                        else:
+                            # Expire missed stages so they don't block subsequent reminders
+                            if time_diff_mins <= 60 and b.reminder_stage < 1:
+                                b.reminder_stage = 1
+                                db.commit()
+                            elif time_diff_mins <= 10 and b.reminder_stage < 2:
+                                b.reminder_stage = 2
+                                db.commit()
+                            elif time_diff_mins <= 5 and b.reminder_stage < 3:
+                                b.reminder_stage = 3
+                                db.commit()
+                            elif time_diff_mins <= 1 and b.reminder_stage < 4:
+                                b.reminder_stage = 4
+                                db.commit()
                     except Exception as parse_err:
                         # Log and skip if parsing fails
                         logger.error(f"Error parsing date/time for slot {slot.slot_id}: {parse_err}")
