@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings2, UserCheck, Key, Shield, Layers, 
-  Target, Info, Eye, Briefcase
+  Target, Info, Eye, Briefcase, AlertTriangle
 } from 'lucide-react';
 import { API_BASE, customFetch } from '../../config/api';
 

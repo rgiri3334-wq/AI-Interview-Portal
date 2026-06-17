@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3, Users, CheckCircle, TrendingUp, Activity, Zap,
   ArrowRight, Clock, Star, Trophy, Brain, Target, RefreshCw,
-  ChevronUp, ChevronDown, Minus, FileText, Medal, Shield, AlertTriangle, XCircle, CheckCircle2
+  ChevronUp, ChevronDown, Minus, FileText, Medal, Shield, AlertTriangle, XCircle, CheckCircle2, ShieldAlert
 } from 'lucide-react';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
