@@ -6,6 +6,7 @@ import {
   Zap, Star, TrendingUp, Shield, Video, RotateCcw,
   LogOut, MapPin, Hash, Edit3
 } from 'lucide-react';
+import logoUrl from '../assets/sterling_logo.png';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -185,11 +186,9 @@ export default function CandidateHome() {
       {/* ── NAV ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-xl border-b border-white/20 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-red-600 rounded-xl flex items-center justify-center shadow-[0_4px_15px_rgba(220,38,38,0.3)]">
-            <Zap size={18} className="text-white" />
-          </div>
+          <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain" />
           <span className="font-extrabold text-slate-900 text-lg tracking-tight">
-            Spark-<span className="text-red-600">Hire</span>
+            Sterling<span className="text-red-600 font-light ml-1">E-Mobility</span>
           </span>
         </div>
         <div className="flex items-center gap-4">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import logoUrl from '../assets/sterling_logo.png';
 import { 
   Briefcase, Clock, Code, Upload, ArrowRight, CheckCircle, 
   AlertCircle, Github, Linkedin, DollarSign, MapPin, ArrowLeft, 
@@ -304,7 +305,10 @@ export default function CandidateDetails() {
                 className="flex items-center gap-2 text-white/90 hover:text-white font-bold text-sm transition-colors">
                 <ArrowLeft size={16} /> Dashboard
               </button>
-              <div className="font-bold text-white text-xl tracking-tight">Spark-Hire</div>
+              <div className="flex items-center gap-2">
+                <img src={logoUrl} alt="Sterling Logo" className="w-8 h-8 object-contain brightness-0 invert" />
+                <div className="font-bold text-white text-xl tracking-tight">Sterling<span className="font-light ml-1 text-red-200">E-Mobility</span></div>
+              </div>
               <button onClick={handleLogout}
                 className="px-4 py-2 bg-white/20 text-white font-bold rounded-xl hover:bg-white/30 transition-colors text-sm border border-white/10">
                 Sign Out
