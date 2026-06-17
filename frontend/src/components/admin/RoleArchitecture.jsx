@@ -102,7 +102,7 @@ export default function RoleArchitecture({
          <div className="absolute right-0 top-0 w-64 h-64 bg-red-600 rounded-full blur-[100px] opacity-30 pointer-events-none" />
          <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
            <Layers className="text-red-500" />
-           Role & Persona Architecture
+           Dept & Role Configuration
          </h2>
          <p className="text-slate-400 max-w-2xl text-sm font-medium leading-relaxed">
            Configure exactly how the AI will evaluate specific roles. Adjust internal persona traits, write secret system prompts, and define algorithmic evaluation weights.
@@ -235,10 +235,10 @@ export default function RoleArchitecture({
               
               <div className="space-y-8">
                 {[
-                  { label: 'Technical Rigor', key: 'tech_weight', color: 'accent-red-600', icon: '💻' },
-                  { label: 'Communication & Clarity', key: 'comm_weight', color: 'accent-blue-600', icon: '🗣️' },
-                  { label: 'Emotional Intelligence (EQ)', key: 'eq_weight', color: 'accent-emerald-600', icon: '🧠' },
-                  { label: 'Confidence & Assertiveness', key: 'conf_weight', color: 'accent-orange-600', icon: '⚡' }
+                  { label: 'Technical Skill', key: 'tech_weight', color: 'accent-red-600', icon: '💻' },
+                  { label: 'Communication', key: 'comm_weight', color: 'accent-blue-600', icon: '🗣️' },
+                  { label: 'Emotional Intel (EQ)', key: 'eq_weight', color: 'accent-emerald-600', icon: '🧠' },
+                  { label: 'Confidence', key: 'conf_weight', color: 'accent-orange-600', icon: '⚡' }
                 ].map(s => (
                   <div key={s.key} className="relative">
                     <div className="flex justify-between text-sm font-bold text-slate-800 mb-3">

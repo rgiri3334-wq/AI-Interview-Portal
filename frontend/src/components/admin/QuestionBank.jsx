@@ -260,7 +260,7 @@ export default function QuestionBank({
             <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mr-4 border border-red-100">
               <Plus size={20} />
             </div>
-            Add Interview Question
+            Append Evaluation Criteria
           </h3>
           
           <form onSubmit={handleSubmit} className="relative z-10 space-y-5">

@@ -247,12 +247,12 @@ export default function AdminPanel() {
   };
 
   const TABS = [
-    { id: 'pipeline', label: 'Candidates', icon: <LayoutDashboard size={18} /> },
-    { id: 'analytics', label: 'Analytics', icon: <Activity size={18} /> },
-    { id: 'live', label: 'Live Monitor', icon: <Radar size={18} /> },
-    { id: 'context', label: 'Company Context', icon: <Globe size={18} /> },
-    { id: 'architecture', label: 'AI Persona', icon: <Layers size={18} /> },
-    { id: 'questions', label: 'Question Bank', icon: <Database size={18} /> },
+    { id: 'pipeline', label: 'Candidate Pipeline', icon: <LayoutDashboard size={18} /> },
+    { id: 'analytics', label: 'Global Analytics', icon: <Activity size={18} /> },
+    { id: 'live', label: 'Live Interview Monitor', icon: <Radar size={18} /> },
+    { id: 'context', label: 'Global Context', icon: <Globe size={18} /> },
+    { id: 'architecture', label: 'Dept & Role Configuration', icon: <Layers size={18} /> },
+    { id: 'questions', label: 'Rubric Engine', icon: <Database size={18} /> },
   ];
 
   if (loading.config) {
