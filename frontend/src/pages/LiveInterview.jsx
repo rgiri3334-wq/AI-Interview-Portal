@@ -100,9 +100,41 @@ export default function LiveInterview() {
 
   const { editorRef, language, setLanguage, handleEditorMount, getCode, clearCode } = useCodeWorkspace({ defaultLanguage: 'javascript' });
   const { speak, stop: stopVoice, isSpeaking, getAudioFrequency, playActiveListeningCue } = useAudioStream();
+  const [nudgePill, setNudgePill] = useState(null);
+  const nudgeTimerRef = useRef(null);
   const isStartingRef = useRef(false);
   const isSubmittingRef = useRef(false);
   const isMounted = useRef(true);
+
+  // Nudge pill rotator — fires encouraging nudges at specific question intervals
+  useEffect(() => {
+    const NUDGES = [
+      '💬 Be specific — use real examples',
+      '🔢 Quantify your impact with numbers',
+      '⏱️ You\'re doing great — take your time',
+      '🎯 STAR format: Situation → Task → Action → Result',
+      '💡 Mention what you learned from the experience',
+      '🤝 Show how you collaborated with your team',
+    ];
+    if (phase === 'interviewing' && qIndex > 0 && qIndex % 2 === 0) {
+      const msg = NUDGES[Math.floor(qIndex / 2) % NUDGES.length];
+      setNudgePill(msg);
+      if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+      nudgeTimerRef.current = setTimeout(() => setNudgePill(null), 5000);
+    }
+    return () => { if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current); };
+  }, [qIndex, phase]);
+
+  // Waveform bars — reads mic frequency data
+  const [waveBars, setWaveBars] = useState([4, 4, 4, 4, 4, 4, 4]);
+  useEffect(() => {
+    if (phase !== 'interviewing') return;
+    const id = setInterval(() => {
+      const freq = typeof getAudioFrequency === 'function' ? getAudioFrequency() : 0;
+      setWaveBars(prev => prev.map(() => isListening ? 4 + Math.random() * freq * 28 : 4));
+    }, 80);
+    return () => clearInterval(id);
+  }, [phase, getAudioFrequency, isListening]);
 
 
 
@@ -1034,22 +1066,61 @@ export default function LiveInterview() {
           submitAnswer={handleSubmitAnswer}
         />
 
-        {/* Floating Utilities */}
+        {/* Floating Utilities — REC indicator + Waveform */}
         <div className="absolute top-5 left-5 z-20 flex gap-3 items-center pointer-events-none">
           {isRecording ? (
             <div className="bg-red-600/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg border border-red-500/50">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
               REC
             </div>
           ) : null}
+          {/* ── Audio Waveform (Phase 3) ── */}
+          {phase === 'interviewing' && isListening && (
+            <div className="flex items-center gap-[3px] px-3 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10">
+              {waveBars.map((h, i) => (
+                <div key={i} className="w-1 bg-red-400 rounded-full transition-all duration-75" style={{ height: `${Math.min(h, 32)}px` }} />
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Question Counter */}
-        <div className="absolute top-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-          <span className={`backdrop-blur-md text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full border shadow-lg ${theme === 'dark' ? 'bg-black/50 text-white/80 border-white/10' : 'bg-white/80 text-red-600 border-red-200'}`}>
-            Question {qIndex + 1} of {MAX_QUESTIONS}
-          </span>
+        {/* ── Progress Arc + Question Counter (Phase 3) ── */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex flex-col items-center gap-2">
+          <div className="relative w-16 h-16">
+            <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+              <circle cx="18" cy="18" r="15.9" fill="none"
+                stroke={theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(220,38,38,0.1)'}
+                strokeWidth="3"
+              />
+              <circle cx="18" cy="18" r="15.9" fill="none"
+                stroke={theme === 'dark' ? '#ef4444' : '#dc2626'}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={`${((qIndex) / MAX_QUESTIONS) * 100} 100`}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className={`text-[10px] font-black leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{qIndex + 1}/{MAX_QUESTIONS}</span>
+            </div>
+          </div>
         </div>
+
+        {/* ── Nudge Pills (Phase 3) ── */}
+        <AnimatePresence>
+          {nudgePill && (
+            <motion.div
+              key={nudgePill}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 pointer-events-none"
+            >
+              <div className="bg-black/70 backdrop-blur-xl text-white text-xs font-bold px-5 py-3 rounded-2xl border border-white/20 shadow-2xl whitespace-nowrap">
+                {nudgePill}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* PIP Webcam (Top Right) */}
         <motion.div 

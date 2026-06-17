@@ -381,7 +381,7 @@ export default function CandidateHome() {
           {[
             { icon: Calendar, label: 'Schedule', action: () => navigate('/schedule-interview'), color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' },
             { icon: FileText, label: 'Apply / Update', action: () => navigate('/candidate'), color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-            { icon: Video, label: 'Equipment Test', action: () => navigate('/equipment-test'), color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+            { icon: Video, label: 'Prep Kit', action: () => navigate('/prep-kit'), color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
             { icon: Shield, label: 'KYC', action: () => navigate('/kyc-guidelines'), color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
           ].map(({ icon: Icon, label, action, color, bg, border }) => (
             <motion.button key={label} onClick={action} whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }}

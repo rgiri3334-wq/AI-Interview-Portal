@@ -95,12 +95,12 @@ export default function VideoIntroPage() {
 
   const proceed = () => {
     stopRecording();
-    navigate('/equipment-test');
+    navigate('/prep-kit');
   };
 
   const skip = () => {
     stopRecording();
-    navigate('/equipment-test');
+    navigate('/prep-kit');
   };
 
   useEffect(() => {

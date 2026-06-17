@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Briefcase, Clock, Code, Upload, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
+import { Briefcase, Clock, Code, Upload, ArrowRight, CheckCircle, AlertCircle, Github, Linkedin, DollarSign, MapPin, ArrowLeft } from 'lucide-react';
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
 
@@ -28,7 +28,11 @@ const Field = ({ label, icon: Icon, value, alwaysFloat, children }) => (
 
 export default function CandidateDetails() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ department: '', job_role: '', experience: '', skills: '' });
+  const [form, setForm] = useState({
+    department: '', job_role: '', experience: '', skills: '',
+    github_url: '', linkedin_url: '', portfolio_url: '',
+    expected_salary: '', work_mode: ''
+  });
   const [resumeFile, setResumeFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [resumeLoading, setResumeLoading] = useState(false);
@@ -89,7 +93,12 @@ export default function CandidateDetails() {
       const appResult = await apiClient.applyForRole(cid, {
         job_role: form.job_role,
         experience: form.experience || 'Fresher (0 years)',
-        skills: form.skills || ''
+        skills: form.skills || '',
+        github_url: form.github_url || '',
+        linkedin_url: form.linkedin_url || '',
+        portfolio_url: form.portfolio_url || '',
+        expected_salary: form.expected_salary || '',
+        work_mode: form.work_mode || '',
       });
       
       sessionStorage.setItem('job_role', form.job_role);
@@ -113,7 +122,7 @@ export default function CandidateDetails() {
 
       setSuccess(true);
       if (!resumeFile) {
-        setTimeout(() => navigate('/video-intro'), 1200);
+        setTimeout(() => navigate('/prep-kit'), 1200);
       }
     } catch (err) {
       setError(err.message || 'Failed to submit application.');
@@ -134,8 +143,12 @@ export default function CandidateDetails() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           {role === 'candidate' && (
             <div className="flex justify-between items-center mb-8 bg-white px-6 py-4 rounded-xl shadow-sm border border-slate-200">
+              <button onClick={() => navigate('/candidate-home')}
+                className="flex items-center gap-2 text-slate-600 hover:text-red-600 font-bold text-sm transition-colors">
+                <ArrowLeft size={16} /> My Portal
+              </button>
               <div className="font-bold text-slate-800 text-xl tracking-tight">Spark-<span className="text-red-600">Hire</span></div>
-              <button 
+              <button
                 onClick={handleLogout}
                 className="px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200 hover:text-slate-800 transition-colors text-sm"
               >
@@ -201,6 +214,47 @@ export default function CandidateDetails() {
                     <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
                       placeholder="e.g. React, Python, AWS"
                       value={form.skills} onChange={set('skills')} />
+                  </Field>
+                </div>
+
+                {/* Work Mode + Salary */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 mb-6">
+                  <Field label="Work Mode Preference" icon={MapPin} value={form.work_mode} alwaysFloat={true}>
+                    <select className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all cursor-pointer font-medium"
+                      value={form.work_mode} onChange={set('work_mode')}>
+                      <option value="">Select preference (optional)</option>
+                      <option value="Remote">Remote</option>
+                      <option value="Hybrid">Hybrid</option>
+                      <option value="On-site">On-site (Office)</option>
+                      <option value="Flexible">Flexible / Open to any</option>
+                    </select>
+                  </Field>
+                  <Field label="Expected Salary (Annual)" icon={DollarSign} value={form.expected_salary} alwaysFloat={true}>
+                    <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
+                      placeholder="e.g. ₹8–12 LPA (optional)"
+                      value={form.expected_salary} onChange={set('expected_salary')} />
+                  </Field>
+                </div>
+
+                {/* Portfolio Links */}
+                <h3 className="text-lg font-bold mb-6 pb-4 border-b border-slate-200 text-slate-900 mt-8">
+                  Portfolio & Links <span className="text-slate-400 text-sm font-normal">(optional)</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-6">
+                  <Field label="GitHub" icon={Github} value={form.github_url} alwaysFloat={true}>
+                    <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
+                      placeholder="github.com/username"
+                      value={form.github_url} onChange={set('github_url')} />
+                  </Field>
+                  <Field label="LinkedIn" icon={Linkedin} value={form.linkedin_url} alwaysFloat={true}>
+                    <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
+                      placeholder="linkedin.com/in/username"
+                      value={form.linkedin_url} onChange={set('linkedin_url')} />
+                  </Field>
+                  <Field label="Portfolio / Website" icon={Briefcase} value={form.portfolio_url} alwaysFloat={true}>
+                    <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
+                      placeholder="yourportfolio.com"
+                      value={form.portfolio_url} onChange={set('portfolio_url')} />
                   </Field>
                 </div>
 

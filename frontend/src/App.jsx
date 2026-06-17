@@ -16,11 +16,12 @@ import CandidateLanding from './pages/CandidateLanding';
 import EquipmentTest from './pages/EquipmentTest';
 import KycGuidelines from './pages/KycGuidelines';
 import KycCapture from './pages/KycCapture';
-// ── Phase 1: Candidate Portal Upgrade ────────────────────────────────────────
+// ── Phase 1+2: Candidate Portal Upgrade ─────────────────────────────────────
 import CandidateHome from './pages/CandidateHome';
 import ScheduleInterview from './pages/ScheduleInterview';
 import InterviewGoodbye from './pages/InterviewGoodbye';
 import VideoIntroPage from './pages/VideoIntroPage';
+import InterviewPrepKit from './pages/InterviewPrepKit';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="/schedule-interview" element={<ProtectedRoute allowedRoles={['candidate']}><ScheduleInterview /></ProtectedRoute>} />
           <Route path="/interview-goodbye" element={<ProtectedRoute allowedRoles={['candidate']}><InterviewGoodbye /></ProtectedRoute>} />
           <Route path="/video-intro" element={<ProtectedRoute allowedRoles={['candidate']}><VideoIntroPage /></ProtectedRoute>} />
+          <Route path="/prep-kit" element={<ProtectedRoute allowedRoles={['candidate']}><InterviewPrepKit /></ProtectedRoute>} />
 
           {/* ── Candidate marketing landing (public-facing, unchanged) ── */}
           <Route path="/candidate-landing" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateLanding /></ProtectedRoute>} />
