@@ -212,7 +212,7 @@ async def assess_answer(
     """Evaluate candidate answer with full context awareness and multi-dimensional behavioral scoring."""
     session = get_or_create_session(candidate_id, job_role, experience, skills)
 
-    admin_keywords, admin_next_q, _, _ = _get_admin_question_data(job_role, session.asked_questions, current_question=question)
+    admin_keywords, admin_next_q, _, _, weights = _get_admin_question_data(job_role, session.asked_questions, current_question=question)
 
     prompt = build_assessment_prompt(
         job_role=job_role,
@@ -226,6 +226,7 @@ async def assess_answer(
         next_admin_question=str(admin_next_q) if admin_next_q else "",
         consecutive_failures=session.consecutive_failures,
         key_insights=session.key_insights,
+        weights=weights,
     )
 
     try:

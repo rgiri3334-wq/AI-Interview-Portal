@@ -171,10 +171,10 @@ export default function QuestionBank({
             <div className="w-10 h-10 bg-slate-50 text-slate-600 rounded-xl flex items-center justify-center mr-4 border border-slate-200">
               <Database size={20} />
             </div>
-            Department & Role Manager
+            Manage Departments & Roles
           </h3>
           <p className="text-xs font-medium text-slate-500 mb-5 leading-relaxed">
-            Manage your organization's taxonomic structure here. You must create a Department and a Role before adding questions.
+            Manage your departments and job roles here. You must create a Department and a Role before adding questions.
           </p>
           
           <div className="space-y-6">
@@ -253,21 +253,20 @@ export default function QuestionBank({
       {/* Right Column: Question List & Add Form */}
       <div className="xl:col-span-2 space-y-8">
         
-        {/* Add Form Horizontal */}
-        <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-32 bg-red-50 rounded-full blur-[80px] pointer-events-none opacity-60" />
+        <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-full flex flex-col relative overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-red-50 rounded-full blur-[100px] opacity-60 pointer-events-none" />
           
-          <h3 className="relative z-10 text-xl font-extrabold text-slate-900 mb-6 flex items-center tracking-tight">
-            <div className="w-10 h-10 bg-red-600 text-white rounded-xl flex items-center justify-center mr-4 shadow-sm">
+          <h3 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center tracking-tight relative z-10">
+            <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mr-4 border border-red-100">
               <Plus size={20} />
             </div>
-            Append Evaluation Criteria
+            Add Interview Question
           </h3>
           
           <form onSubmit={handleSubmit} className="relative z-10 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Target Department</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Department</label>
                 <select 
                   value={form.department}
                   onChange={e => {
@@ -281,7 +280,7 @@ export default function QuestionBank({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Target Role</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Job Role</label>
                 <select 
                   value={form.role}
                   onChange={e => setForm({...form, role: e.target.value})}

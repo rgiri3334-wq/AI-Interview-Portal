@@ -17,6 +17,34 @@ import LiveIntervention from '../components/admin/LiveIntervention';
 
 import Sidebar from '../components/Layout/Sidebar';
 
+const DEFAULT_STRUCTURE = {
+  "Customer Support": ["Customer Success Manager"],
+  "Engineering": [
+    "Embedded Systems Engineer",
+    "BMS Engineer",
+    "Motor Control Engineer",
+    "Power Electronics Engineer",
+    "Software Engineer",
+    "Frontend Developer",
+    "Backend Developer",
+    "DevOps Engineer",
+    "Data Scientist",
+    "AI/ML Engineer"
+  ],
+  "Finance": ["Financial Analyst", "Accounts Manager"],
+  "Human Resources": [
+    "HR Specialist",
+    "Talent Acquisition Specialist",
+    "HR Manager",
+    "Learning and Development Specialist",
+    "Payroll Specialist"
+  ],
+  "IT": ["Cybersecurity Analyst", "System Administrator"],
+  "Marketing": ["Marketing Specialist", "Brand Manager"],
+  "Operations": ["Operations Manager", "Supply Chain Analyst"],
+  "Sales": ["Sales Executive", "Sales Manager"]
+};
+
 export default function AdminPanel() {
   const navigate = useNavigate();
 
@@ -82,15 +110,31 @@ export default function AdminPanel() {
 
   const fetchConfig = async () => {
     try {
-      const res = await customFetch(`${API_BASE}/admin/config`);
-      const data = await res.json();
-      setCompanyStructure(data.company_structure || {});
-      setPersonas(data.personas || []);
-      if(data.role_configs && data.role_configs['ALL']) {
-        setRoleConfigs(data.role_configs['ALL']);
+      const gRes = await customFetch(`${API_BASE}/admin/config/global/company_context`);
+      let contextVal = '';
+      if (gRes.ok) {
+        const gData = await gRes.json();
+        contextVal = gData.value || '';
+      }
+
+      const sRes = await customFetch(`${API_BASE}/admin/config/global/company_structure`);
+      let structure = DEFAULT_STRUCTURE;
+      if (sRes.ok) {
+        const sData = await sRes.json();
+        if (sData.value) structure = JSON.parse(sData.value);
+      }
+      setCompanyStructure(structure);
+
+      const rRes = await customFetch(`${API_BASE}/admin/config/role/ALL`);
+      if (rRes.ok) {
+        const rData = await rRes.json();
+        if (rData.value) {
+          const parsed = JSON.parse(rData.value);
+          setRoleConfigs(parsed);
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("Config fetch error:", err);
     } finally {
       setLoading(p => ({...p, config: false}));
     }
@@ -193,20 +237,22 @@ export default function AdminPanel() {
   };
   
   const syncConfig = async (partialConfig) => {
-    await customFetch(`${API_BASE}/admin/config`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(partialConfig)
-    });
+    if (partialConfig.company_structure) {
+      await customFetch(`${API_BASE}/admin/config/global`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'company_structure', value: JSON.stringify(partialConfig.company_structure) })
+      });
+    }
   };
 
   const TABS = [
-    { id: 'pipeline', label: 'Pipeline', icon: <LayoutDashboard size={18} /> },
+    { id: 'pipeline', label: 'Candidates', icon: <LayoutDashboard size={18} /> },
     { id: 'analytics', label: 'Analytics', icon: <Activity size={18} /> },
-    { id: 'live', label: 'Live Control', icon: <Radar size={18} /> },
-    { id: 'context', label: 'Context Feed', icon: <Globe size={18} /> },
-    { id: 'architecture', label: 'Architecture', icon: <Layers size={18} /> },
-    { id: 'questions', label: 'Criteria', icon: <Database size={18} /> },
+    { id: 'live', label: 'Live Monitor', icon: <Radar size={18} /> },
+    { id: 'context', label: 'Company Context', icon: <Globe size={18} /> },
+    { id: 'architecture', label: 'AI Persona', icon: <Layers size={18} /> },
+    { id: 'questions', label: 'Question Bank', icon: <Database size={18} /> },
   ];
 
   if (loading.config) {
@@ -248,7 +294,7 @@ export default function AdminPanel() {
               <Settings size={20} />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tight text-slate-900 leading-none">Command Center</h1>
+              <h1 className="text-xl font-black tracking-tight text-slate-900 leading-none">Admin Dashboard</h1>
               <span className="text-[10px] font-black uppercase tracking-widest text-red-600">Enterprise Edition</span>
             </div>
           </div>

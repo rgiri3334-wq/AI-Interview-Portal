@@ -329,6 +329,7 @@ def build_assessment_prompt(
     next_admin_question: str = "",
     consecutive_failures: int = 0,
     key_insights: list[str] | None = None,
+    weights: dict | None = None,
 ) -> str:
     tier_info = get_experience_tier(experience)
     tier_name = tier_info["tier_name"]
@@ -337,8 +338,27 @@ def build_assessment_prompt(
     # BUG-23 fix: session.conversation_history uses 'question' key (set by add_exchange), not 'q'
     history_str = "\n".join([f"Q{i+1}: {h.get('question', h.get('q', 'Unknown Question'))}" for i, h in enumerate(conversation_history[-3:])]) if conversation_history else "First question."
 
+    if weights is None:
+        weights = {"tech": 40, "comm": 20, "eq": 20, "conf": 20}
+    tech_w = weights.get("tech", 40)
+    comm_w = weights.get("comm", 20)
+    eq_w = weights.get("eq", 20)
+    conf_w = weights.get("conf", 20)
+
+    weights_instruction = f"""
+**AUTO-BALANCING WEIGHTS (CRITICAL DIRECTIVE):**
+The admin has configured the following strict interview weighting for this role:
+- Technical Skills: {tech_w}%
+- Communication: {comm_w}%
+- Emotional Intelligence (EQ) & Behavioral: {eq_w}%
+- Confidence & Leadership: {conf_w}%
+
+Based on these weights, you MUST adapt the category of your `next_technical_question`. If the EQ or Communication weights are high (e.g. >= 30%), or if you have already asked several technical questions, you MUST ask a scenario-based, behavioral, or communication-focused question right now. DO NOT default to purely technical questions if the technical weight is low.
+"""
+
     return f"""
 You are a senior AI evaluator assessing a {experience} candidate for **{job_role}**.
+{weights_instruction}
 
 **Interview Question Asked:**
 "{question}"
