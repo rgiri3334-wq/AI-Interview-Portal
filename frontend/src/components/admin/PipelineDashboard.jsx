@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Search, ShieldOff, FileText, Trash2, ChevronDown, 
   ChevronUp, Download, RefreshCw, BarChart2, Activity,
-  Filter, CheckSquare, Square
+  Filter, CheckSquare, Square, Settings2
 } from 'lucide-react';
 import { 
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
