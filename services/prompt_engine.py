@@ -178,6 +178,7 @@ def build_question_prompt(
     candidate_name: str = "Candidate",
     company_context: str = "",
     key_insights: list[str] | None = None,
+    weights: dict | None = None,
 ) -> str:
     domains = get_role_domains(job_role)
     tier_info = get_experience_tier(experience)
@@ -196,6 +197,25 @@ def build_question_prompt(
     history_str = "\n".join(history_lines) if history_lines else "No prior context."
     weak_str = ", ".join(weak_areas) if weak_areas else "None identified yet."
     exclude_str = "\n- ".join(previous_questions[-5:]) if previous_questions else "None"
+
+    if weights is None:
+        weights = {"tech": 40, "comm": 20, "eq": 20, "conf": 20}
+        
+    tech_w = weights.get("tech", 40)
+    comm_w = weights.get("comm", 20)
+    eq_w = weights.get("eq", 20)
+    conf_w = weights.get("conf", 20)
+
+    weights_instruction = f"""
+**AUTO-BALANCING WEIGHTS (CRITICAL DIRECTIVE):**
+The admin has configured the following strict interview weighting for this role:
+- Technical Skills: {tech_w}%
+- Communication: {comm_w}%
+- Emotional Intelligence (EQ) & Behavioral: {eq_w}%
+- Confidence & Leadership: {conf_w}%
+
+Based on these weights, you MUST adapt the category of your next question. If the EQ or Communication weights are high (e.g. >= 30%), or if you have already asked several technical questions, you MUST ask a scenario-based, behavioral, or communication-focused question right now. DO NOT default to purely technical questions if the technical weight is low.
+"""
 
     if resume_context:
         projects = resume_context.get("extracted_projects", [])
@@ -259,6 +279,8 @@ Identified Tier: **{tier_name}**
 Interview Focus Distribution: {tier_focus}
 Strict Rules for this Tier: {tier_rules}
 Current Question Difficulty: **{difficulty_label} (Level {difficulty_index}/5)** 
+
+{weights_instruction}
 
 Core technical domains for this role: {domain_str}
 

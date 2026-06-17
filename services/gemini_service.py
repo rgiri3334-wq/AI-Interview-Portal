@@ -65,6 +65,7 @@ def _get_admin_question_data(job_role: str, asked_questions: list[str], current_
     next_q = ""
     persona = "Strictly Technical (System Design)"
     company_context = ""
+    weights = {"tech": 40, "comm": 20, "eq": 20, "conf": 20}
 
     try:
         from database.database import SessionLocal
@@ -75,8 +76,15 @@ def _get_admin_question_data(job_role: str, asked_questions: list[str], current_
             # 1. Resolve role for this job_role name
             role_row = db.query(JobRole).filter(JobRole.role_name == job_role).first()
             role_id = role_row.role_id if role_row else None
-            if role_row and getattr(role_row, "persona", None):
-                persona = role_row.persona
+            if role_row:
+                if getattr(role_row, "persona", None):
+                    persona = role_row.persona
+                weights = {
+                    "tech": getattr(role_row, "tech_weight", 40),
+                    "comm": getattr(role_row, "comm_weight", 20),
+                    "eq": getattr(role_row, "eq_weight", 20),
+                    "conf": getattr(role_row, "conf_weight", 20),
+                }
 
             # 2. Get keywords for CURRENT question (if assessing)
             if current_question and role_id:
@@ -110,7 +118,7 @@ def _get_admin_question_data(job_role: str, asked_questions: list[str], current_
     except Exception as e:
         logger.error(f"Admin DB lookup failed (SQLAlchemy): {e}")
 
-    return keywords, next_q, persona, company_context
+    return keywords, next_q, persona, company_context, weights
 
 
 # ── Public API ────────────────────────────────────────────────────────────
@@ -130,7 +138,7 @@ async def generate_smart_question(
     stage = min(session.question_index + 1, 5)
 
     # Fetch context and potential admin question
-    _, potential_admin_q, persona, company_context = _get_admin_question_data(job_role, session.asked_questions)
+    _, potential_admin_q, persona, company_context, weights = _get_admin_question_data(job_role, session.asked_questions)
     
     # SPRINT 3: Hybrid Orchestration Logic
     # Questions 1-2 (index 0, 1): AI Warmup & Resume Deep Dive
@@ -163,6 +171,7 @@ async def generate_smart_question(
             resume_context=session.resume_context or {},
             candidate_name=candidate_name,
             key_insights=session.key_insights,
+            weights=weights,
         )
 
         fallback_q = get_fallback_question(job_role, session.asked_questions)

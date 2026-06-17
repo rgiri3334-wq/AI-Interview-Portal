@@ -64,6 +64,22 @@ async def generate_smart_question(
     session = get_or_create_session(candidate_id, job_role, experience, skills)
     stage = min(session.question_index + 1, 5)
 
+    from services.gemini_service import _get_admin_question_data
+    _, potential_admin_q, persona, company_context, weights = _get_admin_question_data(job_role, session.asked_questions)
+
+    admin_next_q = potential_admin_q if potential_admin_q else None
+
+    if admin_next_q:
+        result = {
+            "question": admin_next_q,
+            "topic": "Enterprise Evaluation",
+            "difficulty": "Hard",
+            "category": "Technical",
+            "follow_up_hint": "Listen for exact keyword matches.",
+        }
+        session.asked_questions.append(result["question"])
+        return result
+
     prompt = build_question_prompt(
         job_role=job_role,
         skills=skills,
@@ -75,9 +91,11 @@ async def generate_smart_question(
         interview_stage=session.current_stage,
         difficulty_index=session.difficulty_index,
         assertive_mode=session.assertive_mode,
-        personality=personality,
+        personality=str(persona),
+        company_context=str(company_context),
         resume_context=session.resume_context or {},
         candidate_name=candidate_name,
+        weights=weights,
     )
 
     fallback_q = get_fallback_question(job_role, session.asked_questions)
