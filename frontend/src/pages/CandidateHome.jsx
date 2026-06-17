@@ -25,7 +25,18 @@ function CountdownTimer({ targetDate, targetTime, timezone, onExpire }) {
 
   useEffect(() => {
     const calc = () => {
-      const target = new Date(`${targetDate}T${targetTime}:00`);
+      // Safely parse targetTime which might be "15:30" or "3:30 PM"
+      let parsedTime = targetTime;
+      const ampmMatch = targetTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (ampmMatch) {
+        let [_, h, m, ampm] = ampmMatch;
+        h = parseInt(h, 10);
+        if (ampm.toUpperCase() === 'PM' && h < 12) h += 12;
+        if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
+        parsedTime = `${String(h).padStart(2, '0')}:${m}`;
+      }
+
+      const target = new Date(`${targetDate}T${parsedTime}:00`);
       const now = new Date();
       const diff = target - now;
       if (diff <= 0) { 

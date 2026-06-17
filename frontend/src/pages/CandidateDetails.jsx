@@ -46,7 +46,18 @@ function CountdownTimer({ targetDate, targetTime, timezone, onExpire }) {
 
   useEffect(() => {
     const calc = () => {
-      const target = new Date(`${targetDate}T${targetTime}:00`);
+      // Safely parse targetTime which might be "15:30" or "3:30 PM"
+      let parsedTime = targetTime;
+      const ampmMatch = targetTime?.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (ampmMatch) {
+        let [_, h, m, ampm] = ampmMatch;
+        h = parseInt(h, 10);
+        if (ampm.toUpperCase() === 'PM' && h < 12) h += 12;
+        if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
+        parsedTime = `${String(h).padStart(2, '0')}:${m}`;
+      }
+
+      const target = new Date(`${targetDate}T${parsedTime}:00`);
       const now = new Date();
       const diff = target - now;
       if (diff <= 0) { 
@@ -340,7 +351,7 @@ export default function CandidateDetails() {
                       <h3 className="text-xl font-black text-slate-900 flex items-center gap-2 mb-2">
                         <Clock className="text-red-600" /> Interview Scheduled
                       </h3>
-                      <p className="text-sm font-bold text-slate-500 mb-1">{booking.date} at {booking.start_time}</p>
+                      <p className="text-sm font-bold text-slate-500 mb-1">{new Date(booking.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at {booking.start_time}</p>
                       
                       <CountdownTimer 
                         targetDate={booking.date} 
