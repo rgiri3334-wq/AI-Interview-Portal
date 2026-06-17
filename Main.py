@@ -220,8 +220,18 @@ async def reminder_worker():
                         now = datetime.now()
                         time_diff = slot_dt - now
                         
-                        # If the interview is within the next 24 hours (and in the future), send reminder
-                        if timedelta(0) < time_diff <= timedelta(hours=24):
+                        try:
+                            from datetime import timezone
+                            booked_at_dt = datetime.fromisoformat(b.booked_at.replace('Z', '+00:00'))
+                            now_utc = datetime.now(timezone.utc)
+                            time_since_booking = now_utc - booked_at_dt
+                        except Exception:
+                            time_since_booking = timedelta(hours=2) # fallback
+                        
+                        # If the interview is within the next 24 hours (and in the future),
+                        # AND the candidate booked the slot at least 60 minutes ago 
+                        # (prevents sending booking confirmation and reminder at the exact same time)
+                        if timedelta(0) < time_diff <= timedelta(hours=24) and time_since_booking > timedelta(minutes=60):
                             html = f"""
                             <html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:20px;color:#0f172a;">
                             <div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;border:1px solid #e2e8f0;border-top:4px solid #f59e0b;">
