@@ -20,7 +20,7 @@ const STAGES = [
 ];
 
 // ── Countdown Timer ───────────────────────────────────────────────────────────
-function CountdownTimer({ targetDate, targetTime, timezone }) {
+function CountdownTimer({ targetDate, targetTime, timezone, onExpire }) {
   const [timeLeft, setTimeLeft] = useState(null);
 
   useEffect(() => {
@@ -28,7 +28,16 @@ function CountdownTimer({ targetDate, targetTime, timezone }) {
       const target = new Date(`${targetDate}T${targetTime}:00`);
       const now = new Date();
       const diff = target - now;
-      if (diff <= 0) { setTimeLeft({ expired: true }); return; }
+      if (diff <= 0) { 
+        setTimeLeft(prev => {
+          if (!prev || !prev.expired) {
+            if (onExpire) onExpire();
+            return { expired: true };
+          }
+          return prev;
+        });
+        return; 
+      }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
@@ -37,7 +46,7 @@ function CountdownTimer({ targetDate, targetTime, timezone }) {
     calc();
     const iv = setInterval(calc, 1000);
     return () => clearInterval(iv);
-  }, [targetDate, targetTime]);
+  }, [targetDate, targetTime, onExpire]);
 
   if (!timeLeft) return null;
   if (timeLeft.expired) return (
@@ -94,6 +103,7 @@ export default function CandidateHome() {
   const candidateId = sessionStorage.getItem('candidateId');
   const [portal, setPortal] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isInterviewReady, setIsInterviewReady] = useState(false);
 
   const load = useCallback(async () => {
     if (!candidateId) { navigate('/candidate-login'); return; }
@@ -136,8 +146,8 @@ export default function CandidateHome() {
       // Applied but no slot booked — go schedule
       navigate('/schedule-interview');
     } else if (app.stage === 'INTERVIEW_SCHEDULED') {
-      // Slot booked — proceed to equipment test
-      navigate('/equipment-test');
+      // Slot booked — proceed to KYC guidelines to start interview
+      navigate('/kyc-guidelines');
     } else {
       navigate('/candidate');
     }
@@ -146,7 +156,7 @@ export default function CandidateHome() {
   const getCTALabel = () => {
     if (!app.job_role) return 'Apply for a Role →';
     if (app.stage === 'APPLIED' || app.stage === 'INTERVIEW_PENDING') return 'Schedule Your Interview →';
-    if (app.stage === 'INTERVIEW_SCHEDULED') return 'Start Pre-Flight Check →';
+    if (app.stage === 'INTERVIEW_SCHEDULED') return 'Start Interview →';
     if (app.stage === 'UNDER_REVIEW') return 'Interview Submitted ✓';
     return 'View Portal';
   };
@@ -249,11 +259,11 @@ export default function CandidateHome() {
                 </div>
                 <div className="mb-5">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Starts in</p>
-                  <CountdownTimer targetDate={booking.date} targetTime={booking.start_time} timezone={booking.timezone} />
+                  <CountdownTimer targetDate={booking.date} targetTime={booking.start_time} timezone={booking.timezone} onExpire={() => setIsInterviewReady(true)} />
                 </div>
-                <button onClick={handleCTAAction}
-                  className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl flex items-center justify-center gap-2 text-sm transition-all shadow-[0_4px_20px_rgba(220,38,38,0.3)] hover:-translate-y-0.5">
-                  Begin Pre-Flight Check <ArrowRight size={16} />
+                <button onClick={handleCTAAction} disabled={!isInterviewReady}
+                  className="w-full py-3.5 bg-red-600 hover:bg-red-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black rounded-2xl flex items-center justify-center gap-2 text-sm transition-all shadow-[0_4px_20px_rgba(220,38,38,0.3)] hover:-translate-y-0.5 disabled:shadow-none disabled:transform-none">
+                  {isInterviewReady ? "START INTERVIEW" : "WAITING FOR SCHEDULED TIME"} <ArrowRight size={16} />
                 </button>
               </>
             ) : app.is_completed ? (
@@ -381,8 +391,7 @@ export default function CandidateHome() {
           {[
             { icon: Calendar, label: 'Schedule', action: () => navigate('/schedule-interview'), color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' },
             { icon: FileText, label: 'Apply / Update', action: () => navigate('/candidate'), color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-            { icon: Video, label: 'Prep Kit', action: () => navigate('/prep-kit'), color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
-            { icon: Shield, label: 'KYC', action: () => navigate('/kyc-guidelines'), color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+            { icon: Video, label: 'Prep Kit', action: () => navigate('/prep-kit'), color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' }
           ].map(({ icon: Icon, label, action, color, bg, border }) => (
             <motion.button key={label} onClick={action} whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }}
               className={`flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border ${bg} ${border} transition-all hover:shadow-md`}>

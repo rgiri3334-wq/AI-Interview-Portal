@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Briefcase, Clock, Code, Upload, ArrowRight, CheckCircle, AlertCircle, Github, Linkedin, DollarSign, MapPin, ArrowLeft } from 'lucide-react';
+import { 
+  Briefcase, Clock, Code, Upload, ArrowRight, CheckCircle, 
+  AlertCircle, Github, Linkedin, DollarSign, MapPin, ArrowLeft, 
+  Lock, Globe, Phone, User
+} from 'lucide-react';
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
 
@@ -17,23 +21,43 @@ const DEFAULT_STRUCTURE = {
 };
 const EXPERIENCE_LEVELS = ['Fresher (0 years)', '1-2 years', '3-5 years', '5-8 years', '8+ years'];
 
-const Field = ({ label, icon: Icon, value, alwaysFloat, children }) => (
-  <div className="relative mt-5">
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
+
+const Field = ({ label, icon: Icon, value, disabled, alwaysFloat, children }) => (
+  <div className="relative mt-2">
     {children}
-    <label className={`absolute left-3 top-3.5 transition-all pointer-events-none flex items-center gap-2 text-xs font-bold uppercase tracking-wider transform origin-left ${(value || alwaysFloat) ? '-translate-y-6 scale-75 text-red-600 bg-white px-1' : 'text-slate-500 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-red-600 peer-focus:bg-white peer-focus:px-1'}`}>
-      <Icon size={14} className={(value || alwaysFloat) ? 'text-red-600' : 'text-slate-400'} /> {label}
+    <label className={`absolute left-4 top-4 transition-all pointer-events-none flex items-center gap-2 text-xs font-bold uppercase tracking-wider transform origin-left ${(value || alwaysFloat) ? '-translate-y-7 scale-85 text-red-600 bg-white px-2 rounded' : 'text-slate-400 peer-focus:-translate-y-7 peer-focus:scale-85 peer-focus:text-red-600 peer-focus:bg-white peer-focus:px-2 peer-focus:rounded'} ${disabled ? 'text-slate-300' : ''}`}>
+      <Icon size={14} className={(value || alwaysFloat) ? (disabled ? 'text-slate-400' : 'text-red-600') : 'text-slate-300'} /> {label}
     </label>
   </div>
 );
 
 export default function CandidateDetails() {
   const navigate = useNavigate();
+  const candidateId = sessionStorage.getItem('candidateId');
+  const role = sessionStorage.getItem('role') || 'candidate';
+
   const [form, setForm] = useState({
     department: '', job_role: '', experience: '', skills: '',
     github_url: '', linkedin_url: '', portfolio_url: '',
-    expected_salary: '', work_mode: ''
+    expected_salary: '', work_mode: '', phone_number: ''
   });
+  
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [hasAppliedRole, setHasAppliedRole] = useState(false);
+  const [candidateName, setCandidateName] = useState(sessionStorage.getItem('candidateName') || 'Candidate');
+  
   const [resumeFile, setResumeFile] = useState(null);
+  const [resumeUrl, setResumeUrl] = useState(null);
+  
   const [loading, setLoading] = useState(false);
   const [resumeLoading, setResumeLoading] = useState(false);
   const [error, setError] = useState('');
@@ -41,9 +65,6 @@ export default function CandidateDetails() {
   const [resumeResult, setResumeResult] = useState(null);
   const [companyStructure, setCompanyStructure] = useState(DEFAULT_STRUCTURE);
   const [fieldErrors, setFieldErrors] = useState({});
-
-  const candidateName = sessionStorage.getItem('candidateName') || 'Candidate';
-  const role = sessionStorage.getItem('role') || 'candidate'; // default to candidate if unsure
 
   useEffect(() => {
     let retries = 5;
@@ -62,14 +83,66 @@ export default function CandidateDetails() {
       }
     };
     fetchStructure();
-  }, []);
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+    const fetchProfile = async () => {
+      if (!candidateId) return;
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/candidates/${candidateId}/portal`);
+        if (res.ok) {
+          const data = await res.json();
+          const app = data.application || {};
+          const c = data.candidate || {};
+          const r = data.resume || {};
+          
+          if (c.name) setCandidateName(c.name);
+          
+          // Pre-populate fields
+          setForm(prev => ({
+            ...prev,
+            job_role: app.job_role || '',
+            experience: c.experience_level || '',
+            skills: c.key_skills || '',
+            github_url: c.github_url || '',
+            linkedin_url: c.linkedin_url || '',
+            portfolio_url: c.portfolio_url || '',
+            expected_salary: c.expected_salary || '',
+            work_mode: c.work_mode || '',
+            phone_number: c.phone_number || ''
+          }));
+          
+          if (app.job_role) {
+            setHasAppliedRole(true);
+            // Reverse lookup department
+            for (const [dept, roles] of Object.entries(DEFAULT_STRUCTURE)) {
+              if (roles.includes(app.job_role)) {
+                setForm(prev => ({ ...prev, department: dept }));
+                break;
+              }
+            }
+          }
+          
+          if (r.uploaded) {
+            setResumeUrl(r.file_url);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load profile", err);
+      } finally {
+        setInitialLoad(false);
+      }
+    };
+    
+    fetchProfile();
+  }, [candidateId]);
+
+  const setField = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const validate = () => {
     const errs = {};
-    if (!form.department) errs.department = 'Please select a department.';
-    if (!form.job_role) errs.job_role = 'Please select a job role.';
+    if (!hasAppliedRole) {
+      if (!form.department) errs.department = 'Please select a department.';
+      if (!form.job_role) errs.job_role = 'Please select a job role.';
+    }
     return errs;
   };
 
@@ -85,12 +158,10 @@ export default function CandidateDetails() {
     setError('');
     
     try {
-      const cid = sessionStorage.getItem('candidateId');
-      if (!cid) {
-        throw new Error('Authentication lost. Please login again.');
-      }
+      if (!candidateId) throw new Error('Authentication lost. Please login again.');
 
-      const appResult = await apiClient.applyForRole(cid, {
+      // We are "Applying" only if they haven't applied yet, otherwise we just update.
+      const appResult = await apiClient.applyForRole(candidateId, {
         job_role: form.job_role,
         experience: form.experience || 'Fresher (0 years)',
         skills: form.skills || '',
@@ -99,12 +170,10 @@ export default function CandidateDetails() {
         portfolio_url: form.portfolio_url || '',
         expected_salary: form.expected_salary || '',
         work_mode: form.work_mode || '',
+        phone_number: form.phone_number || ''
       });
       
       sessionStorage.setItem('job_role', form.job_role);
-      sessionStorage.setItem('experience', form.experience || 'Fresher (0 years)');
-      sessionStorage.setItem('skills', form.skills || '');
-      sessionStorage.setItem('interview_id', appResult.interview_id);
 
       if (resumeFile) {
         setResumeLoading(true);
@@ -122,10 +191,12 @@ export default function CandidateDetails() {
 
       setSuccess(true);
       if (!resumeFile) {
-        setTimeout(() => navigate('/prep-kit'), 1200);
+        setTimeout(() => navigate('/candidate-home'), 1200);
+      } else {
+        setTimeout(() => navigate('/candidate-home'), 4000);
       }
     } catch (err) {
-      setError(err.message || 'Failed to submit application.');
+      setError(err.message || 'Failed to submit profile.');
     } finally {
       setLoading(false);
     }
@@ -136,92 +207,133 @@ export default function CandidateDetails() {
     navigate('/');
   };
 
+  if (initialLoad) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
+    <div className="flex min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
       {role === 'admin' && <Sidebar />}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+      
+      <main className="flex-1 overflow-y-auto relative pb-20">
+        {/* Background Gradients */}
+        <div className="absolute top-0 left-0 right-0 h-[400px] bg-gradient-to-br from-red-600 via-red-700 to-slate-900 overflow-hidden z-0">
+          <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+          <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-red-500 rounded-full blur-[100px] opacity-40" />
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500 rounded-full blur-[120px] opacity-20" />
+        </div>
+
+        <div className="relative z-10 px-4 sm:px-8 pt-8 max-w-5xl mx-auto">
+          {/* Header */}
           {role === 'candidate' && (
-            <div className="flex justify-between items-center mb-8 bg-white px-6 py-4 rounded-xl shadow-sm border border-slate-200">
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} 
+              className="flex justify-between items-center mb-12 bg-white/10 backdrop-blur-md border border-white/20 px-6 py-4 rounded-2xl shadow-lg">
               <button onClick={() => navigate('/candidate-home')}
-                className="flex items-center gap-2 text-slate-600 hover:text-red-600 font-bold text-sm transition-colors">
+                className="flex items-center gap-2 text-white/90 hover:text-white font-bold text-sm transition-colors">
                 <ArrowLeft size={16} /> My Portal
               </button>
-              <div className="font-bold text-slate-800 text-xl tracking-tight">Spark-<span className="text-red-600">Hire</span></div>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200 hover:text-slate-800 transition-colors text-sm"
-              >
+              <div className="font-bold text-white text-xl tracking-tight">Spark-Hire</div>
+              <button onClick={handleLogout}
+                className="px-4 py-2 bg-white/20 text-white font-bold rounded-xl hover:bg-white/30 transition-colors text-sm border border-white/10">
                 Sign Out
               </button>
-            </div>
+            </motion.div>
           )}
-          <div className="mb-10">
-            <h1 className="text-4xl font-extrabold mb-2 tracking-tight text-slate-900">
-              Complete <span className="text-red-700">Application</span>
-            </h1>
-            <p className="text-slate-500 font-medium">
-              Welcome {candidateName}! Select your role and upload your resume to start.
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
-            <form onSubmit={handleSubmit}>
-              <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-                
-                <h3 className="text-lg font-bold mb-6 pb-4 border-b border-slate-200 text-slate-900">
-                  Role Selection
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 mb-6">
-                  <div>
-                    <Field label="Department" icon={Briefcase} value={form.department} alwaysFloat={true}>
-                      <select className={`peer w-full bg-white border rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:ring-1 transition-all cursor-pointer font-medium ${fieldErrors.department ? 'border-red-500 focus:border-red-600 focus:ring-red-600' : 'border-slate-300 focus:border-red-600 focus:ring-red-600'}`}
-                        value={form.department}
-                        onChange={e => {
-                          setForm({...form, department: e.target.value, job_role: ''});
-                          if (fieldErrors.department) setFieldErrors(prev => ({...prev, department: ''}));
-                        }}>
-                        <option value="" disabled className="text-slate-500">Select Department</option>
-                        {Object.keys(companyStructure).map((d) => <option key={d} value={d} className="bg-white text-slate-900">{d}</option>)}
-                      </select>
-                    </Field>
-                    {fieldErrors.department && <p className="text-red-500 text-xs mt-1 font-semibold">⚠ {fieldErrors.department}</p>}
-                  </div>
-                  <div>
-                    <Field label="Job Role" icon={Briefcase} value={form.job_role} alwaysFloat={true}>
-                      <select className={`peer w-full bg-white border rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:ring-1 transition-all cursor-pointer font-medium disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors.job_role ? 'border-red-500 focus:border-red-600 focus:ring-red-600' : 'border-slate-300 focus:border-red-600 focus:ring-red-600'}`}
-                        value={form.job_role} onChange={set('job_role')} disabled={!form.department}>
-                        <option value="" disabled className="text-slate-500">{form.department ? "Select Job Role" : "Select Department First"}</option>
-                        {(companyStructure[form.department] || []).map((r) => <option key={r} value={r} className="bg-white text-slate-900">{r}</option>)}
-                      </select>
-                    </Field>
-                    {fieldErrors.job_role && <p className="text-red-500 text-xs mt-1 font-semibold">⚠ {fieldErrors.job_role}</p>}
-                  </div>
+          {/* Hero Banner */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10 text-white">
+            <h1 className="text-4xl md:text-5xl font-black mb-3 tracking-tight">
+              {hasAppliedRole ? 'Update Profile' : 'Complete Application'}
+            </h1>
+            <p className="text-red-100 font-medium text-lg max-w-2xl">
+              {hasAppliedRole 
+                ? `Update your background and portfolio details, ${candidateName.split(' ')[0]}. Your role is locked.`
+                : `Welcome ${candidateName.split(' ')[0]}! Select your desired role and complete your profile to proceed.`}
+            </p>
+          </motion.div>
+
+          {/* Form Content */}
+          <motion.form variants={containerVariants} initial="hidden" animate="show" onSubmit={handleSubmit}
+            className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
+            
+            <div className="space-y-6">
+              {/* Role Section */}
+              <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <Briefcase className="text-red-600" /> Target Role
+                  </h3>
+                  {hasAppliedRole && (
+                    <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-500 text-xs font-black uppercase tracking-wider rounded-lg border border-slate-200">
+                      <Lock size={12} /> Locked
+                    </span>
+                  )}
                 </div>
 
-                <h3 className="text-lg font-bold mb-6 pb-4 border-b border-slate-200 text-slate-900 mt-8">
-                  Professional Background
+                {hasAppliedRole ? (
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-slate-300" />
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Applied For</p>
+                    <p className="text-xl font-black text-slate-800">{form.job_role}</p>
+                    <p className="text-sm font-medium text-slate-500 mt-1">{form.department} Department</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Field label="Department" icon={Briefcase} value={form.department} alwaysFloat={true}>
+                        <select className={`peer w-full bg-white border-2 rounded-2xl px-4 pt-6 pb-2 text-slate-900 outline-none focus:ring-4 transition-all cursor-pointer font-bold ${fieldErrors.department ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-red-500 focus:ring-red-100'}`}
+                          value={form.department}
+                          onChange={e => {
+                            setForm({...form, department: e.target.value, job_role: ''});
+                            if (fieldErrors.department) setFieldErrors(prev => ({...prev, department: ''}));
+                          }}>
+                          <option value="" disabled className="text-slate-500">Select Department</option>
+                          {Object.keys(companyStructure).map((d) => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                      </Field>
+                      {fieldErrors.department && <p className="text-red-500 text-xs mt-2 font-bold px-2">⚠ {fieldErrors.department}</p>}
+                    </div>
+                    <div>
+                      <Field label="Job Role" icon={Briefcase} value={form.job_role} alwaysFloat={true}>
+                        <select className={`peer w-full bg-white border-2 rounded-2xl px-4 pt-6 pb-2 text-slate-900 outline-none focus:ring-4 transition-all cursor-pointer font-bold disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors.job_role ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-red-500 focus:ring-red-100'}`}
+                          value={form.job_role} onChange={setField('job_role')} disabled={!form.department}>
+                          <option value="" disabled className="text-slate-500">{form.department ? "Select Job Role" : "Select Department First"}</option>
+                          {(companyStructure[form.department] || []).map((r) => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                      </Field>
+                      {fieldErrors.job_role && <p className="text-red-500 text-xs mt-2 font-bold px-2">⚠ {fieldErrors.job_role}</p>}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+
+              {/* Background Section */}
+              <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
+                  <User className="text-red-600" /> Professional Background
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 mb-6">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <Field label="Experience Level" icon={Clock} value={form.experience} alwaysFloat={true}>
-                    <select className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all cursor-pointer font-medium"
-                      value={form.experience} onChange={set('experience')}>
+                    <select className="peer w-full bg-white border-2 border-slate-200 rounded-2xl px-4 pt-6 pb-2 text-slate-900 outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 transition-all cursor-pointer font-bold"
+                      value={form.experience} onChange={setField('experience')}>
                       <option value="" disabled className="text-slate-500">Select Experience</option>
-                      {EXPERIENCE_LEVELS.map((l) => <option key={l} value={l} className="bg-white text-slate-900">{l}</option>)}
+                      {EXPERIENCE_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
                     </select>
                   </Field>
                   <Field label="Key Skills" icon={Code} value={form.skills} alwaysFloat={true}>
-                    <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
+                    <input className="peer w-full bg-white border-2 border-slate-200 rounded-2xl px-4 pt-6 pb-2 text-slate-900 outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 transition-all font-bold placeholder:text-slate-300 placeholder:font-normal"
                       placeholder="e.g. React, Python, AWS"
-                      value={form.skills} onChange={set('skills')} />
+                      value={form.skills} onChange={setField('skills')} />
                   </Field>
                 </div>
 
-                {/* Work Mode + Salary */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 mb-6">
-                  <Field label="Work Mode Preference" icon={MapPin} value={form.work_mode} alwaysFloat={true}>
-                    <select className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all cursor-pointer font-medium"
-                      value={form.work_mode} onChange={set('work_mode')}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Field label="Work Mode" icon={MapPin} value={form.work_mode} alwaysFloat={true}>
+                    <select className="peer w-full bg-white border-2 border-slate-200 rounded-2xl px-4 pt-6 pb-2 text-slate-900 outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 transition-all cursor-pointer font-bold"
+                      value={form.work_mode} onChange={setField('work_mode')}>
                       <option value="">Select preference (optional)</option>
                       <option value="Remote">Remote</option>
                       <option value="Hybrid">Hybrid</option>
@@ -229,39 +341,57 @@ export default function CandidateDetails() {
                       <option value="Flexible">Flexible / Open to any</option>
                     </select>
                   </Field>
-                  <Field label="Expected Salary (Annual)" icon={DollarSign} value={form.expected_salary} alwaysFloat={true}>
-                    <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
-                      placeholder="e.g. ₹8–12 LPA (optional)"
-                      value={form.expected_salary} onChange={set('expected_salary')} />
+                  <Field label="Expected Salary" icon={DollarSign} value={form.expected_salary} alwaysFloat={true}>
+                    <input className="peer w-full bg-white border-2 border-slate-200 rounded-2xl px-4 pt-6 pb-2 text-slate-900 outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 transition-all font-bold placeholder:text-slate-300 placeholder:font-normal"
+                      placeholder="e.g. ₹8–12 LPA"
+                      value={form.expected_salary} onChange={setField('expected_salary')} />
                   </Field>
                 </div>
+              </motion.div>
 
-                {/* Portfolio Links */}
-                <h3 className="text-lg font-bold mb-6 pb-4 border-b border-slate-200 text-slate-900 mt-8">
-                  Portfolio & Links <span className="text-slate-400 text-sm font-normal">(optional)</span>
+              {/* Links Section */}
+              <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
+                  <Globe className="text-red-600" /> Digital Footprint & Contact
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-6">
-                  <Field label="GitHub" icon={Github} value={form.github_url} alwaysFloat={true}>
-                    <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
-                      placeholder="github.com/username"
-                      value={form.github_url} onChange={set('github_url')} />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <Field label="Phone Number" icon={Phone} value={form.phone_number} alwaysFloat={true}>
+                    <input className="peer w-full bg-white border-2 border-slate-200 rounded-2xl px-4 pt-6 pb-2 text-slate-900 outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 transition-all font-bold placeholder:text-slate-300 placeholder:font-normal"
+                      placeholder="+1 234 567 8900"
+                      value={form.phone_number} onChange={setField('phone_number')} />
                   </Field>
                   <Field label="LinkedIn" icon={Linkedin} value={form.linkedin_url} alwaysFloat={true}>
-                    <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
+                    <input className="peer w-full bg-white border-2 border-slate-200 rounded-2xl px-4 pt-6 pb-2 text-slate-900 outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 transition-all font-bold placeholder:text-slate-300 placeholder:font-normal"
                       placeholder="linkedin.com/in/username"
-                      value={form.linkedin_url} onChange={set('linkedin_url')} />
-                  </Field>
-                  <Field label="Portfolio / Website" icon={Briefcase} value={form.portfolio_url} alwaysFloat={true}>
-                    <input className="peer w-full bg-white border border-slate-300 rounded-lg px-3 pt-4 pb-2 text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
-                      placeholder="yourportfolio.com"
-                      value={form.portfolio_url} onChange={set('portfolio_url')} />
+                      value={form.linkedin_url} onChange={setField('linkedin_url')} />
                   </Field>
                 </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Field label="GitHub" icon={Github} value={form.github_url} alwaysFloat={true}>
+                    <input className="peer w-full bg-white border-2 border-slate-200 rounded-2xl px-4 pt-6 pb-2 text-slate-900 outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 transition-all font-bold placeholder:text-slate-300 placeholder:font-normal"
+                      placeholder="github.com/username"
+                      value={form.github_url} onChange={setField('github_url')} />
+                  </Field>
+                  <Field label="Portfolio" icon={Briefcase} value={form.portfolio_url} alwaysFloat={true}>
+                    <input className="peer w-full bg-white border-2 border-slate-200 rounded-2xl px-4 pt-6 pb-2 text-slate-900 outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 transition-all font-bold placeholder:text-slate-300 placeholder:font-normal"
+                      placeholder="yourportfolio.com"
+                      value={form.portfolio_url} onChange={setField('portfolio_url')} />
+                  </Field>
+                </div>
+              </motion.div>
+            </div>
 
-                <h3 className="text-lg font-bold mb-6 pb-4 border-b border-slate-200 text-slate-900 mt-8">
-                  Resume (Optional)
+            {/* Sidebar Column */}
+            <div className="space-y-6">
+              {/* Resume Upload */}
+              <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sticky top-28">
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-4">
+                  <Upload className="text-red-600" /> Resume
                 </h3>
-                <label className={`flex flex-col items-center p-8 border-2 border-dashed rounded-xl cursor-pointer transition-all ${resumeFile ? 'border-red-500 bg-red-50' : 'border-slate-300 hover:bg-slate-50'}`}
+                
+                <label className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${resumeFile ? 'border-red-400 bg-red-50' : 'border-slate-300 hover:border-red-300 hover:bg-slate-50'}`}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
@@ -269,88 +399,64 @@ export default function CandidateDetails() {
                   }}>
                   <input type="file" accept=".pdf,.docx,.txt" className="hidden" onChange={(e) => setResumeFile(e.target.files[0])} />
                   {resumeFile ? (
-                    <>
-                      <CheckCircle size={32} className="text-red-600 mb-3" />
-                      <p className="text-red-700 font-bold">{resumeFile.name}</p>
-                      <p className="text-slate-500 text-xs mt-1">Click to replace</p>
-                    </>
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center">
+                      <CheckCircle size={36} className="text-red-600 mb-3 mx-auto" />
+                      <p className="text-red-700 font-bold text-sm truncate max-w-[200px]">{resumeFile.name}</p>
+                      <p className="text-red-400 text-xs mt-1 font-semibold">Click to replace</p>
+                    </motion.div>
                   ) : (
-                    <>
-                      <Upload size={32} className="text-red-500 mb-3" />
-                      <p className="text-slate-900 font-bold">Drop or click to upload</p>
-                      <p className="text-slate-500 text-xs mt-1">PDF, DOCX, TXT — max 5MB</p>
-                    </>
+                    <div className="text-center">
+                      <div className="w-14 h-14 bg-white shadow-sm border border-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Upload size={24} className="text-slate-400" />
+                      </div>
+                      <p className="text-slate-700 font-bold text-sm">Upload Resume</p>
+                      <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold mt-2">PDF, DOCX — Max 5MB</p>
+                      {resumeUrl && <p className="text-emerald-600 text-xs font-bold mt-3 flex items-center justify-center gap-1"><CheckCircle size={12}/> Already Uploaded</p>}
+                    </div>
                   )}
                 </label>
 
                 {resumeLoading && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-4">
-                    <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                    <div>
-                      <p className="font-bold text-sm text-slate-900">Intelligent Assessment Engine is screening your resume…</p>
-                    </div>
-                  </motion.div>
+                  <div className="mt-4 p-4 bg-slate-50 rounded-xl flex items-center gap-3 border border-slate-100">
+                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                    <p className="font-bold text-xs text-slate-600">AI Screening Resume...</p>
+                  </div>
                 )}
 
                 {resumeResult && !resumeLoading && (
-                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    className={`mt-6 p-5 rounded-xl border ${resumeResult.resume_score >= 70 ? 'bg-green-50 border-green-200' : resumeResult.resume_score >= 50 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-                    <div className="flex justify-between items-center mb-3">
-                      <p className="font-bold text-sm text-slate-900">AI Resume Screening Complete</p>
-                      <CheckCircle size={20} className={resumeResult.resume_score >= 70 ? 'text-green-600' : resumeResult.resume_score >= 50 ? 'text-amber-500' : 'text-red-500'} />
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                    className={`mt-4 p-4 rounded-xl border ${resumeResult.resume_score >= 70 ? 'bg-green-50 border-green-200' : resumeResult.resume_score >= 50 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="font-black text-xs text-slate-800 uppercase tracking-wider">AI Screen Score</p>
+                      <span className="font-black text-sm">{resumeResult.resume_score}/100</span>
                     </div>
-                    <div className="flex gap-2 flex-wrap mb-3">
-                      {(resumeResult.extracted_skills || []).slice(0, 6).map(s => (
-                        <span key={s} className="px-2 py-1 bg-white rounded border border-slate-200 text-xs font-bold text-slate-700">{s}</span>
-                      ))}
-                    </div>
-                    <p className="text-sm text-slate-600 font-medium leading-relaxed">{resumeResult.shortlist_reason}</p>
-                    <motion.button type="button" onClick={() => navigate('/video-intro')}
-                      className="mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-md">
-                      Proceed to Video Intro <ArrowRight size={16} />
-                    </motion.button>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed">{resumeResult.shortlist_reason}</p>
                   </motion.div>
                 )}
 
-                {!resumeResult && (
-                  <motion.button type="submit" disabled={loading || resumeLoading || (success && !resumeFile)}
-                    className="mt-8 w-full font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all uppercase tracking-wider text-sm bg-red-600 hover:bg-red-700 text-white shadow-md disabled:opacity-50">
-                    {loading ? "Processing..." : (success && !resumeFile) ? "Launching Interview..." : "Start Interview"}
-                  </motion.button>
+                {/* Submit Button */}
+                <motion.button type="submit" disabled={loading || resumeLoading} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
+                  className="mt-6 w-full font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all uppercase tracking-widest text-sm bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-[0_8px_20px_rgba(220,38,38,0.3)] disabled:opacity-50 disabled:cursor-not-allowed">
+                  {loading ? "Saving..." : success ? "Saved Successfully ✓" : hasAppliedRole ? "Save Profile" : "Apply & Save"}
+                </motion.button>
+                
+                {success && (
+                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center text-xs font-bold text-emerald-600 mt-4">
+                    Profile updated! Redirecting...
+                  </motion.p>
                 )}
-              </div>
-            </form>
-
-            <div className="flex flex-col gap-6">
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h4 className="text-sm font-bold mb-4 text-red-700 tracking-widest uppercase">Interview Session</h4>
-                <div className="space-y-1">
-                  {[{ label: 'Duration', value: '30–45 min' }, { label: 'Questions', value: '5–8 Dynamic' }, { label: 'Format', value: 'Video + Voice' }, { label: 'Scoring', value: 'Real-time AI' }].map(({ label, value }) => (
-                    <div key={label} className="flex justify-between py-2 border-b border-slate-100 last:border-0 text-sm">
-                      <span className="text-slate-500 font-medium">{label}</span><span className="font-bold text-slate-900">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h4 className="text-sm font-bold mb-4 text-red-700 tracking-widest uppercase">What to Expect</h4>
-                <div className="space-y-3">
-                  {['Camera & mic access required', 'Speak clearly — AI transcribes live', 'Emotion tracked via webcam', 'Questions adapt to your answers'].map((tip) => (
-                    <div key={tip} className="flex items-center gap-3 text-sm">
-                      <CheckCircle size={14} className="text-red-500 shrink-0" /><span className="text-slate-700 font-medium">{tip}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              </motion.div>
             </div>
-          </div>
-        </motion.div>
+            
+          </motion.form>
+        </div>
       </main>
+      
       <AnimatePresence>
         {error && (
           <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 right-6 bg-white border border-red-200 rounded-xl p-4 text-red-600 text-sm font-bold flex items-center gap-3 z-50 shadow-xl">
-            <AlertCircle size={18} /> {error}
+            className="fixed bottom-6 right-6 bg-slate-900 border border-slate-800 rounded-2xl p-5 text-red-400 text-sm font-bold flex items-center gap-3 z-50 shadow-2xl">
+            <AlertCircle size={20} className="text-red-500" /> {error}
           </motion.div>
         )}
       </AnimatePresence>
