@@ -26,7 +26,7 @@ const DecisionDropdown = ({ candidate, onUpdate }) => {
   const handleChange = async (e) => {
     const newVal = e.target.value;
     setLoading(true);
-    await onUpdate(candidate.id, newVal);
+    await onUpdate(candidate.id, candidate.interview_id, newVal);
     setLoading(false);
   };
 
@@ -222,15 +222,19 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
     });
   }, [pipeline, search, filterRole, filterGrade]);
 
-  const handleDecisionChange = async (id, decision) => {
+  const handleDecisionChange = async (candidate_id, interview_id, decision) => {
+    if (!interview_id) {
+       showToast("Cannot update decision: No interview session found for this candidate.", "error");
+       return;
+    }
     try {
-      const res = await customFetch(`${API_BASE}/candidates/${id}`, {
-        method: 'PUT',
+      const res = await customFetch(`${API_BASE}/interviews/${interview_id}/decision`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hiring_decision: decision })
+        body: JSON.stringify({ decision })
       });
       if (!res.ok) throw new Error("Failed to update decision");
-      setPipeline(prev => prev.map(p => p.id === id ? { ...p, hiring_decision: decision } : p));
+      setPipeline(prev => prev.map(p => p.id === candidate_id ? { ...p, hiring_decision: decision } : p));
       showToast("Decision updated");
     } catch (err) {
       showToast(err.message, 'error');
@@ -555,12 +559,16 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
                           <div className="flex items-center justify-end gap-2">
                             {compareMode ? (
                               <button 
-                                onClick={() => toggleCompare(c)}
-                                disabled={!isCompleted}
+                                onClick={() => {
+                                  if (!isCompleted) return showToast("Cannot compare candidate: Interview is incomplete", "error");
+                                  toggleCompare(c);
+                                }}
                                 className={`px-4 py-2.5 flex items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider ${
-                                  isComparing 
-                                    ? 'bg-blue-600 text-white shadow-[0_4px_14px_0_rgb(59,130,246,0.39)]' 
-                                    : 'bg-white border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-600'
+                                  !isCompleted
+                                    ? 'bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed'
+                                    : isComparing 
+                                      ? 'bg-blue-600 text-white shadow-[0_4px_14px_0_rgb(59,130,246,0.39)]' 
+                                      : 'bg-white border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-600'
                                 }`}
                               >
                                 {isComparing ? 'Comparing' : 'Select'}
