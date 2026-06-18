@@ -47,6 +47,8 @@ class Candidate(Base):
     invitation_status = Column(String, default="Pending") # Pending, Confirmed, Canceled, Auto-Canceled
     invitation_token = Column(String, nullable=True, unique=True, index=True)
     invitation_expires_at = Column(Float, nullable=True)
+    cancellation_reason = Column(String, nullable=True)
+    status_updated_at = Column(String, default=ist_isoformat)
     
     # Profile Fields
     experience_level = Column(String, nullable=True)
