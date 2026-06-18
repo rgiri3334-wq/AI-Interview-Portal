@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserPlus, Clock, XCircle, CheckCircle, Search, Mail, Filter } from 'lucide-react';
+import { UserPlus, Users, XCircle, CheckCircle, Search, Mail, Filter } from 'lucide-react';
 import Sidebar from '../components/Layout/Sidebar';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -168,7 +168,7 @@ export default function AdminCandidateRegistration() {
                     : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-md border border-white/10'
                 }`}
               >
-                <Clock size={18} /> Candidate List
+                <Users size={18} /> Candidate List
                 {pendingCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-black px-2 py-0.5 rounded-full shadow-md ring-2 ring-white">
                     {pendingCount}
