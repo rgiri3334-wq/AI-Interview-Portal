@@ -20,6 +20,7 @@ from thefuzz import fuzz
 from collections import Counter
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
+import pytz
 from utils.ist_time import ist_now, ist_isoformat, IST
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form, BackgroundTasks, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -210,7 +211,6 @@ async def reminder_worker():
                         continue
                     
                     try:
-                        import pytz
                         from datetime import datetime, timedelta, timezone
                         dt_str = f"{slot.date} {slot.start_time}"
                         # Parse time with AM/PM or 24-hour format
