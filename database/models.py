@@ -1,13 +1,13 @@
 from sqlalchemy import Column, String, Integer, Float, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
-from datetime import datetime, timezone
 from database.database import Base
+from utils.ist_time import ist_isoformat
 
 class Department(Base):
     __tablename__ = "departments"
     department_id = Column(String, primary_key=True, index=True) # e.g. DEPT1
     department_name = Column(String, nullable=False)
-    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(String, default=ist_isoformat)
 
     roles = relationship("JobRole", back_populates="department", cascade="all, delete-orphan")
     questions = relationship("QuestionBank", back_populates="department", cascade="all, delete-orphan")
@@ -29,7 +29,7 @@ class JobRole(Base):
     comm_weight = Column(Integer, default=20)
     eq_weight = Column(Integer, default=20)
     conf_weight = Column(Integer, default=20)
-    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(String, default=ist_isoformat)
 
     department = relationship("Department", back_populates="roles")
     questions = relationship("QuestionBank", back_populates="role", cascade="all, delete-orphan")
@@ -51,7 +51,7 @@ class Candidate(Base):
     aadhar_number_masked = Column(String, nullable=True)
     selfie_url = Column(String, nullable=True)
     aadhar_image_url = Column(String, nullable=True)
-    registration_date = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    registration_date = Column(String, default=ist_isoformat)
 
     resumes = relationship("Resume", back_populates="candidate", cascade="all, delete-orphan")
     interviews = relationship("InterviewSession", back_populates="candidate", cascade="all, delete-orphan")
@@ -74,7 +74,7 @@ class Resume(Base):
     projects_summary = Column(Text, default="[]")
     certifications = Column(Text, nullable=True)
     resume_score = Column(Float, default=0.0)  # BUG-04/05 fix: store AI resume score; was missing (code referenced nonexistent ats_score)
-    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(String, default=ist_isoformat)
 
     candidate = relationship("Candidate", back_populates="resumes")
 
@@ -85,7 +85,7 @@ class InterviewSession(Base):
     candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
     role_id = Column(String, ForeignKey("job_roles.role_id"), nullable=False)
     status_id = Column(Integer, ForeignKey("status_lookup.status_id"), default=200)
-    started_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    started_at = Column(String, default=ist_isoformat)
     completed_at = Column(String, nullable=True)
     duration_seconds = Column(Integer, default=0)
     recording_url = Column(String, nullable=True)
@@ -124,7 +124,7 @@ class QuestionBank(Base):
     difficulty = Column(String, default="Medium")
     keywords = Column(Text, nullable=False) 
     created_by_admin = Column(String, nullable=True)
-    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(String, default=ist_isoformat)
 
     department = relationship("Department", back_populates="questions")
     role = relationship("JobRole", back_populates="questions")
@@ -142,7 +142,7 @@ class InterviewQuestionsLog(Base):
     question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=False)
     question_text = Column(Text, nullable=False)
     sequence_number = Column(Integer, nullable=False)
-    asked_timestamp = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    asked_timestamp = Column(String, default=ist_isoformat)
 
     interview = relationship("InterviewSession", back_populates="questions_log")
     question = relationship("QuestionBank", back_populates="asked_logs")
@@ -155,7 +155,7 @@ class CandidateAnswer(Base):
     interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
     question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=True)
     candidate_answer = Column(Text, nullable=False)
-    answer_timestamp = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    answer_timestamp = Column(String, default=ist_isoformat)
     response_duration_seconds = Column(Float, default=0.0)
 
     candidate = relationship("Candidate", back_populates="answers")
@@ -190,7 +190,7 @@ class QuestionEvaluation(Base):
     behavior_score = Column(Float, default=0.0)
     confidence_score = Column(Float, default=0.0)
     feedback = Column(Text, nullable=True)
-    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(String, default=ist_isoformat)
 
     candidate = relationship("Candidate", back_populates="question_evals")
     interview = relationship("InterviewSession", back_populates="question_evals")
@@ -209,7 +209,7 @@ class UnifiedInterviewData(Base):
     missing_keywords = Column(Text, default="[]")
     answer_score = Column(Float, default=0.0)
     answer_feedback = Column(Text, nullable=True)
-    timestamp = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp = Column(String, default=ist_isoformat)
 
     candidate = relationship("Candidate", back_populates="unified_answers")
     interview = relationship("InterviewSession", back_populates="unified_answers")
@@ -222,7 +222,7 @@ class ConversationHistory(Base):
     interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
     speaker = Column(String, nullable=False) # e.g., "AI", "Candidate"
     message = Column(Text, nullable=False)
-    timestamp = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp = Column(String, default=ist_isoformat)
 
     interview = relationship("InterviewSession", back_populates="conversation")
 
@@ -238,7 +238,7 @@ class FinalReport(Base):
     strengths = Column(Text, default="[]")
     weaknesses = Column(Text, default="[]")
     hiring_decision = Column(String, default="PENDING")
-    report_generated_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    report_generated_at = Column(String, default=ist_isoformat)
     # Sprint 4: Integrity Engine fields (server_default ensures backward compat with existing rows)
     integrity_score = Column(Integer, server_default="100", default=100)          # 0-100; 100 = clean
     integrity_verdict = Column(String, server_default="CLEAN", default="CLEAN")  # CLEAN|BORDERLINE|FLAGGED|HIGH_RISK
@@ -269,7 +269,7 @@ class GlobalConfig(Base):
     id = Column(String, primary_key=True)
     key = Column(String, unique=True, nullable=False)
     value = Column(Text, nullable=False)
-    updated_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at = Column(String, default=ist_isoformat)
 
 
 class OTPStore(Base):
@@ -286,19 +286,19 @@ class OTPStore(Base):
     expires_at = Column(String, nullable=False)                # UTC ISO timestamp
     is_used = Column(Boolean, default=False)                   # True once verified or invalidated
     attempts = Column(Integer, default=0)                      # Brute-force guard: max 5
-    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(String, default=ist_isoformat)
 class AdminUser(Base):
     __tablename__ = "admin_users"
     admin_id = Column(String, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
     role = Column(String, server_default="sub_admin", default="sub_admin")
-    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(String, default=ist_isoformat)
 
 class SystemTelemetryLog(Base):
     __tablename__ = "system_telemetry_logs"
     telemetry_id = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp = Column(String, default=ist_isoformat)
     api_requests_count = Column(Integer, default=0)
     db_latency_ms = Column(Integer, default=0)
     active_sessions = Column(Integer, default=0)
@@ -307,7 +307,7 @@ class SystemTelemetryLog(Base):
 class AdminActivityLog(Base):
     __tablename__ = "admin_activity_logs"
     log_id = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp = Column(String, default=ist_isoformat)
     admin_email = Column(String, nullable=False)
     action_type = Column(String, nullable=False) # e.g. VIEW_TELEMETRY, GRANT_ACCESS
     target = Column(String, nullable=True) # e.g. "new.hr@example.com"
@@ -315,7 +315,7 @@ class AdminActivityLog(Base):
 class SecurityEventLog(Base):
     __tablename__ = "security_event_logs"
     event_id = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp = Column(String, default=ist_isoformat)
     event_type = Column(String, nullable=False) # e.g. FAILED_LOGIN, RATE_LIMIT_BLOCK
     ip_address = Column(String, nullable=True)
     target_email = Column(String, nullable=True)
@@ -332,7 +332,7 @@ class InterviewSlot(Base):
     timezone = Column(String, default="Asia/Kolkata")
     max_bookings = Column(Integer, default=1)        # 1 = exclusive, >1 = group
     is_active = Column(Boolean, default=True)
-    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(String, default=ist_isoformat)
 
     bookings = relationship("SlotBooking", back_populates="slot", cascade="all, delete-orphan")
 
@@ -344,7 +344,7 @@ class SlotBooking(Base):
     candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
     interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=True)
     status = Column(String, default="BOOKED")       # BOOKED | COMPLETED | NO_SHOW | CANCELLED
-    booked_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    booked_at = Column(String, default=ist_isoformat)
     reminder_sent = Column(Boolean, default=False)
     reminder_stage = Column(Integer, server_default="0", default=0)
     notes = Column(Text, nullable=True)

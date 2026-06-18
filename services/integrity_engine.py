@@ -22,6 +22,7 @@ Score Bands:
 import re
 import logging
 from datetime import datetime, timezone
+from utils.ist_time import ist_isoformat
 from typing import Optional
 
 logger = logging.getLogger("IntegrityEngine")
@@ -190,7 +191,7 @@ class IntegrityEngine:
         Returns {"deducted": int, "new_score": int, "note": str}
         """
         metadata = metadata or {}
-        ts = datetime.now(timezone.utc).isoformat()
+        ts = ist_isoformat()
 
         # ── Special logic for tab switches ───────────────────────────────────
         if signal_key == "tab_switch":
@@ -383,7 +384,7 @@ class IntegrityEngine:
             "significant_signals": significant_signals,
             "total_tab_switches": self._tab_switch_count,
             "gpt_suspected_count": self._gpt_suspected_count,
-            "computed_at": datetime.now(timezone.utc).isoformat(),
+            "computed_at": ist_isoformat(),
             # Human override fields (set by recruiter, not algorithm)
             "human_override": None,       # "APPROVED" | "REJECTED" | None
             "human_override_by": None,

@@ -7,6 +7,7 @@ import {
   LogOut, MapPin, Hash, Edit3
 } from 'lucide-react';
 import logoUrl from '../assets/sterling_logo.png';
+import { formatISTDayDate } from '../utils/istTime';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -295,7 +296,7 @@ export default function CandidateHome() {
                       <Calendar size={12} /> Scheduled Slot
                     </p>
                     <p className="text-2xl font-black text-slate-800 tracking-tight mb-1">
-                      {new Date(booking.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                      {formatISTDayDate(booking.date)}
                     </p>
                     <p className="text-red-600 font-extrabold text-lg">{booking.start_time} – {booking.end_time}</p>
                     <p className="text-xs text-slate-500 font-bold mt-2 flex items-center gap-1"><MapPin size={12} />{booking.timezone}</p>

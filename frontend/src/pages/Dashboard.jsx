@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
+import { formatISTDate } from '../utils/istTime';
 
 // ── Animated Counter ─────────────────────────────────────────────────────
 function Counter({ target, suffix = '', decimals = 0 }) {
@@ -699,7 +700,7 @@ export default function Dashboard() {
                             </td>
                             <td className="py-5 px-4 text-sm text-slate-500 font-medium">{c.email}</td>
                             <td className="py-5 px-4 text-xs text-slate-400 font-bold uppercase tracking-wider">
-                              {c.created_at && !isNaN(new Date(c.created_at).getTime()) ? new Date(c.created_at).toLocaleDateString() : 'N/A'}
+                              {c.created_at && !isNaN(new Date(c.created_at).getTime()) ? formatISTDate(c.created_at) : 'N/A'}
                             </td>
                             <td className="py-5 px-4">
                               <button className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors shadow-sm"

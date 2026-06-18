@@ -15,6 +15,7 @@ import { apiClient } from '../api/apiClient';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import sterlingLogo from '../assets/sterling_logo.png';
+import { formatIST } from '../utils/istTime';
 
 // ── Sterling Premium Score Ring ──────────────────────────────────────────
 function ScoreRing({ score, max = 100, color = '#DC2626', label, size = 120 }) {
@@ -654,7 +655,7 @@ export default function Report() {
                           <div className={`absolute -left-[31px] top-1 w-4 h-4 rounded-full border-4 border-white shadow-sm ${color}`}></div>
                           <div>
                             <span className="text-xs font-bold text-slate-400 block mb-1">
-                              {new Date(log.timestamp).toLocaleString()} • {log.type}
+                             {formatIST(log.timestamp)} • {log.type}
                             </span>
                             <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">{log.action}</h4>
                             <p className="text-sm text-slate-600 mt-1">{log.details}</p>

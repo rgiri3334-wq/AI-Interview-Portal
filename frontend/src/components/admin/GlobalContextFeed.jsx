@@ -4,6 +4,7 @@ import {
   FileText, Plus, Trash2, Clock, AlertTriangle, Info,
   CheckCircle2, PackagePlus, Tag, Calendar
 } from 'lucide-react';
+import { formatIST, formatISTDate } from '../../utils/istTime';
 
 // Removed Bundles
 // Fallback icons if Activity/ShieldOff fail to import properly
@@ -132,7 +133,7 @@ export default function GlobalContextFeed({ companyContext, handleSaveCompanyCon
                            )}
                            {ctx.expiresAt && !expired && (
                              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center gap-1">
-                               <Clock size={10} /> Expires: {new Date(ctx.expiresAt).toLocaleDateString()}
+                               <Clock size={10} /> Expires: {formatISTDate(ctx.expiresAt)}
                              </span>
                            )}
                          </div>
@@ -140,7 +141,7 @@ export default function GlobalContextFeed({ companyContext, handleSaveCompanyCon
                          <div className="mt-3 text-[10px] uppercase font-black tracking-widest text-slate-400 flex items-center gap-3">
                            <span>By {ctx.author}</span>
                            <span>•</span>
-                           <span>{new Date(ctx.date).toLocaleString()}</span>
+                           <span>{formatIST(ctx.date)}</span>
                          </div>
                        </div>
                        <div className="flex flex-col sm:flex-row items-center gap-2">

@@ -5,6 +5,7 @@ import {
   Calendar, Clock, ChevronLeft, ChevronRight, MapPin,
   CheckCircle, ArrowLeft, Zap, AlertCircle, X
 } from 'lucide-react';
+import { todayIST, formatISTDayDate } from '../utils/istTime';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -57,7 +58,7 @@ export default function ScheduleInterview() {
   const month = viewDate.getMonth();
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIST(); // IST-aware today's date
 
   const prevMonth = () => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   const nextMonth = () => setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
@@ -271,7 +272,7 @@ export default function ScheduleInterview() {
                     <CheckCircle size={14} /> Confirm Slot
                   </h3>
                   <div className="bg-red-50 border border-red-100 rounded-2xl p-4 mb-4">
-                    <p className="font-black text-red-800 text-base">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    <p className="font-black text-red-800 text-base">{formatISTDayDate(selectedDate)}</p>
                     <p className="text-red-600 font-extrabold text-lg mt-1">
                       {(() => {
                         let [h, m] = selectedTime.split(':');

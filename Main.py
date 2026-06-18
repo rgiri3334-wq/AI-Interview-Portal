@@ -19,7 +19,8 @@ import random
 from thefuzz import fuzz
 from collections import Counter
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from utils.ist_time import ist_now, ist_isoformat, IST
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form, BackgroundTasks, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
@@ -630,7 +631,7 @@ async def favicon():
 def health_check():
     return {
         "status": "online",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": ist_isoformat(),
         "ai_status": get_orchestrator_stats(),
         "architect": "Aditya Singh",
         "ai_models": ["Sterling Assessment Engine", "Intelligent Analysis Engine", "Candidate Analysis Engine"],
@@ -684,7 +685,7 @@ def system_status():
         "circuit_breakers": all_breaker_status(),
         "orchestrator_stats": get_orchestrator_stats(),
         "whisper": get_whisper_status(),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": ist_isoformat(),
     }
 
 # ── Candidates ────────────────────────────────────────────────────────────
@@ -857,7 +858,7 @@ def _mask_identifier(identifier: str) -> str:
 def _invalidate_existing_otps(db: Session, identifier: str, purpose: str):
     """Mark all existing unexpired OTPs for this identifier+purpose as used.
     Ensures only one active OTP exists at any time."""
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = ist_isoformat()
     existing = db.query(OTPStore).filter(
         OTPStore.identifier == identifier,
         OTPStore.purpose == purpose,
@@ -973,7 +974,7 @@ def verify_candidate_otp(
     """
     identifier = data.identifier.strip().lower()
     purpose = data.purpose.strip()
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = ist_isoformat()
 
     # ── Find the most recent, active OTP for this identifier ─────────────
     otp_record = db.query(OTPStore).filter(
@@ -1349,7 +1350,7 @@ async def add_admin_questions_bulk(file: UploadFile = File(...), db: Session = D
     failed_reasons = []
     
     new_structure_map = {}
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = ist_isoformat()
     
     for idx, row in enumerate(reader, start=1):
         try:
@@ -1510,7 +1511,7 @@ async def seed_admin_questions(db: Session = Depends(get_db)):
     
     seeded_count = 0
     new_structure_map = {}
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = ist_isoformat()
     
     try:
         for dept_str, role_str, q, keys, diff in seed_data:
@@ -1589,7 +1590,7 @@ async def get_global_config(key: str, db: Session = Depends(get_db)):
 
 @app.post("/api/admin/config/global", tags=["Admin"])
 async def set_global_config(req: GlobalConfigSet, db: Session = Depends(get_db)):
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = ist_isoformat()
     row = db.query(GlobalConfig).filter_by(key=req.key).first()
     if row:
         row.value = req.value  # type: ignore
@@ -2117,7 +2118,7 @@ async def terminate_proctoring(req: ProctoringTerminationRequest, db: Session = 
     Creates a FinalReport with grade=F, score=0, hiring_decision=PROCTORING_ACT.
     This ensures the terminated session always appears in admin views.
     """
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = ist_isoformat()
 
     c = db.query(Candidate).filter_by(candidate_id=req.candidate_id).first()
     if not c:
@@ -2821,7 +2822,7 @@ async def upload_recording(interview_id: str, bg: BackgroundTasks, file: UploadF
 
 @app.post("/api/interviews/save", tags=["Data"])
 async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Session = Depends(get_db)):
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = ist_isoformat()
 
     c = db.query(Candidate).filter_by(candidate_id=req.candidate_id).first()
     if not c:

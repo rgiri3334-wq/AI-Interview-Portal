@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, RefreshCw, Users, Mail, User } from 'lucide-react';
+import { formatISTDayDate } from '../../utils/istTime';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -83,7 +84,7 @@ export default function SlotManager({ showToast }) {
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                           <Calendar size={12} className="text-red-500" />
-                          {new Date(booking.slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                          {formatISTDayDate(booking.slot.date)}
                         </span>
                         <span className="text-xs text-slate-500 font-medium flex items-center gap-1.5 mt-1">
                           <Clock size={12} className="text-slate-400" />

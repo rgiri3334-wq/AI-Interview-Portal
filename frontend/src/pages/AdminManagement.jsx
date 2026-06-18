@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Layout/Sidebar';
 import { Users, UserPlus, Lock, Mail, Activity, Trash2, Shield, Clock, CheckCircle, XCircle, Key, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatIST, formatISTDate } from '../utils/istTime';
 
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api`;
 
@@ -270,7 +271,7 @@ export default function AdminManagement() {
                 <div className="relative z-10 mt-4">
                   <p className="text-sm font-bold text-slate-900 truncate" title={admin.email}>{admin.email}</p>
                   <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mt-1">
-                    Added • {new Date(admin.created_at).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})}
+                    Added • {formatISTDate(admin.created_at)}
                   </p>
                 </div>
               </div>
@@ -405,7 +406,7 @@ export default function AdminManagement() {
                         </span>
                       </div>
                       <span className="text-xs font-bold text-slate-400 bg-white px-2 py-1 rounded-md border border-slate-100">
-                        {log.timestamp}
+                        {formatIST(log.timestamp)}
                       </span>
                     </div>
                     {log.target && (

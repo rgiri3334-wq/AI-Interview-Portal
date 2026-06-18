@@ -10,6 +10,7 @@ import {
   ResponsiveContainer, Tooltip, Legend
 } from 'recharts';
 import { API_BASE, customFetch } from '../../config/api';
+import { formatIST } from '../../utils/istTime';
 
 const getGrade = (score, isProctoringAct) => {
   if (isProctoringAct) return { letter: 'F', color: 'bg-red-100 text-red-700 border-red-300' };
@@ -740,7 +741,7 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
                                   <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Interview Meta</h4>
                                   <div className="text-xs text-slate-600 font-medium space-y-2">
                                     <p><strong>Session ID:</strong> <span className="font-mono bg-white px-1.5 py-0.5 border rounded">{c.interview_id?.slice(0,8)}...</span></p>
-                                    <p><strong>Date:</strong> {c.session_timestamp ? new Date(c.session_timestamp).toLocaleString() : 'N/A'}</p>
+                                    <p><strong>Date:</strong> {c.session_timestamp ? formatIST(c.session_timestamp) : 'N/A'}</p>
                                     <p><strong>Status:</strong> <span className="uppercase tracking-widest font-black text-[9px] bg-slate-200 px-1.5 py-0.5 rounded">{c.interview_status}</span></p>
                                   </div>
                                 </div>

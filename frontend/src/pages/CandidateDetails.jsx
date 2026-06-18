@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import logoUrl from '../assets/sterling_logo.png';
+import { formatISTDayDate } from '../utils/istTime';
 import { 
   Briefcase, Clock, Code, Upload, ArrowRight, CheckCircle, 
   AlertCircle, Github, Linkedin, DollarSign, MapPin, ArrowLeft, 
@@ -355,7 +356,7 @@ export default function CandidateDetails() {
                       <h3 className="text-xl font-black text-slate-900 flex items-center gap-2 mb-2">
                         <Clock className="text-red-600" /> Interview Scheduled
                       </h3>
-                      <p className="text-sm font-bold text-slate-500 mb-1">{new Date(booking.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at {booking.start_time}</p>
+                      <p className="text-sm font-bold text-slate-500 mb-1">{formatISTDayDate(booking.date)} at {booking.start_time}</p>
                       
                       <CountdownTimer 
                         targetDate={booking.date} 

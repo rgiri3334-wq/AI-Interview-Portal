@@ -11,6 +11,7 @@ const Editor = React.lazy(() =>
 
 import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png';
+import { formatISTTime } from '../utils/istTime';
 // Lazy-load Avatar3D so @react-three/* is in its own async chunk (prevents circular init with Monaco)
 const Avatar3D = React.lazy(() => import('../components/Avatar3D'));
 import PreFlightCheck from '../components/PreFlightCheck';
@@ -77,7 +78,7 @@ export default function LiveInterview() {
   const addProctoringLog = useCallback((eventDescription) => {
     const logEntry = {
       event: eventDescription,
-      timestamp: new Date().toLocaleTimeString(),
+      timestamp: formatISTTime(new Date().toISOString()),
     };
     proctoringLogsRef.current.push(logEntry);
     console.warn(`[Proctoring] ${eventDescription}`);
