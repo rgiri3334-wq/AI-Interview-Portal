@@ -52,7 +52,7 @@ export default function Sidebar() {
           Navigation
         </div>
         {navItems.map((item) => {
-          const isActive = pathname === item.path || (item.path === '/candidate-register' && (pathname === '/candidate' || pathname === '/candidate-login' || pathname === '/candidate-register'));
+          const isActive = pathname === item.path || (item.path === '/admin-candidate-registration' && (pathname === '/admin-candidate-registration'));
           const Icon = item.icon;
           return (
             <button

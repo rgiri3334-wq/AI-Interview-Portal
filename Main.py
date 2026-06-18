@@ -1167,13 +1167,18 @@ def admin_invite_candidate(data: InviteCandidateRequest, db: Session = Depends(g
     # In a real app, we'd add background_tasks to function signature and use it,
     # but we can also just spawn a new thread or use asyncio.create_task for now
     import threading
+    # Capture variables before thread to prevent DetachedInstanceError
+    c_email = str(cand.email)
+    c_name = str(cand.name)
+    c_role = str(cand.role_id)
+    
     def email_task():
         try:
             send_invitation_email(
-                to_email=str(cand.email),
-                candidate_name=str(cand.name),
+                to_email=c_email,
+                candidate_name=c_name,
                 token=token,
-                role_name=str(cand.role_id) # Ideally resolve to string name
+                role_name=c_role
             )
         except Exception as e:
             logger.error(f"Failed to send invite email: {e}")

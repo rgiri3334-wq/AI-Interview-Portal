@@ -65,19 +65,6 @@ export default function CandidateOptions({ navigate }) {
                 </svg>
               </span>
             </motion.button>
-
-            <motion.button
-              type="button"
-              onClick={() => navigate('/candidate-register')}
-              className="relative w-full group overflow-hidden py-4 px-6 rounded-xl font-bold text-lg text-white border-2 border-white/50 hover:bg-white hover:text-red-600 transition-all duration-300"
-              variants={itemVariants}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                Register Here
-              </span>
-            </motion.button>
           </div>
         </div>
       </div>
