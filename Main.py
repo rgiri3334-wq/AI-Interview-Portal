@@ -20,7 +20,7 @@ from thefuzz import fuzz
 from collections import Counter
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
-import pytz
+import pytz # type: ignore
 from utils.ist_time import ist_now, ist_isoformat, IST
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form, BackgroundTasks, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
