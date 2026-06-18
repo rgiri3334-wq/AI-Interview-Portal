@@ -233,26 +233,27 @@ async def reminder_worker():
                         
                         # Stage 0: 12 Hours (between 12h and 1h)
                         if b.reminder_stage < 1 and 60 < time_diff_mins <= 12 * 60:
-                            if time_since_booking_mins >= 30:
+                            if time_since_booking_mins >= 5: # 5 min cooldown
                                 msg_time = "12 Hours"
                                 new_stage = 1
                         
                         # Stage 1: 1 Hour (between 60m and 10m)
                         elif b.reminder_stage < 2 and 10 < time_diff_mins <= 60:
-                            if time_since_booking_mins >= 15:
+                            if time_since_booking_mins >= 3: # 3 min cooldown
                                 msg_time = "1 Hour"
                                 new_stage = 2
                         
                         # Stage 2: 10 Minutes (between 10m and 5m)
                         elif b.reminder_stage < 3 and 5 < time_diff_mins <= 10:
-                            if time_since_booking_mins >= 2:
+                            if time_since_booking_mins >= 1: # 1 min cooldown
                                 msg_time = "10 Minutes"
                                 new_stage = 3
                         
                         # Stage 3: 5 Minutes Fallback (between 5m and 1m)
                         elif b.reminder_stage < 4 and 1 < time_diff_mins <= 5:
                             # Strict condition: don't send 5-min if they booked at < 5 mins left
-                            if time_diff_mins >= 3 and time_since_booking_mins >= 2:
+                            # Require at least 2 minutes remaining, and 1 min since booking
+                            if time_diff_mins >= 2 and time_since_booking_mins >= 1:
                                 msg_time = "5 Minutes"
                                 new_stage = 4
                         
@@ -281,18 +282,19 @@ async def reminder_worker():
                             b.reminder_stage = new_stage  # type: ignore
                             db.commit()
                         else:
-                            # Expire missed stages so they don't block subsequent reminders
-                            if time_diff_mins <= 60 and b.reminder_stage < 1:
-                                b.reminder_stage = 1  # type: ignore
-                                db.commit()
-                            elif time_diff_mins <= 10 and b.reminder_stage < 2:
-                                b.reminder_stage = 2  # type: ignore
-                                db.commit()
-                            elif time_diff_mins <= 5 and b.reminder_stage < 3:
-                                b.reminder_stage = 3  # type: ignore
-                                db.commit()
-                            elif time_diff_mins <= 1 and b.reminder_stage < 4:
-                                b.reminder_stage = 4  # type: ignore
+                            # Fast-forward expired stages instantly so they don't block subsequent reminders
+                            target_stage = b.reminder_stage
+                            if time_diff_mins <= 1:
+                                target_stage = max(target_stage, 4)
+                            elif time_diff_mins <= 5:
+                                target_stage = max(target_stage, 3)
+                            elif time_diff_mins <= 10:
+                                target_stage = max(target_stage, 2)
+                            elif time_diff_mins <= 60:
+                                target_stage = max(target_stage, 1)
+                                
+                            if target_stage != b.reminder_stage:
+                                b.reminder_stage = target_stage  # type: ignore
                                 db.commit()
                     except Exception as parse_err:
                         # Log and skip if parsing fails
