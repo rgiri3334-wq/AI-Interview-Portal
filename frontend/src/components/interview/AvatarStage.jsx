@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { motion } from 'framer-motion';
-import Avatar3D from '../Avatar3D';
+// Lazy-load Avatar3D so @react-three/* stays in its own async chunk
+const Avatar3D = React.lazy(() => import('../Avatar3D'));
 import Background from './Background';
 import CaptionsOverlay from './CaptionsOverlay';
 
@@ -48,14 +49,16 @@ export default function AvatarStage({
         }}
         transition={{ type: 'spring', damping: 30, stiffness: 200 }}
       >
-        <Avatar3D 
-          isSpeaking={isSpeaking} 
-          isListening={isListening} 
-          isLoading={loading} 
-          phase={phase} 
-          qIndex={qIndex} 
-          warnings={warnings} 
-        />
+        <Suspense fallback={<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'#94a3b8',fontSize:'12px',background:'#000'}}>Booting 3D Engine...</div>}>
+          <Avatar3D 
+            isSpeaking={isSpeaking} 
+            isListening={isListening} 
+            isLoading={loading} 
+            phase={phase} 
+            qIndex={qIndex} 
+            warnings={warnings} 
+          />
+        </Suspense>
       </motion.div>
 
       {/* Dual-panel captions overlay the entire screen at the bottom */}

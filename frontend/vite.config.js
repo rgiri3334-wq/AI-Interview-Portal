@@ -20,7 +20,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           // Isolate Three.js / @react-three/* into their own chunk.
-          // Root-cause fix for "Cannot access 'Mn' before initialization":
+          // Root-cause fix for "Cannot access 'Tn' before initialization":
           // prevents Rollup creating a circular init order between the
           // Three.js module graph and @monaco-editor/react.
           if (
@@ -35,6 +35,14 @@ export default defineConfig({
             id.includes('node_modules/monaco-editor/')
           ) {
             return 'vendor-monaco';
+          }
+          // Avatar3D + AvatarRig (which import @react-three/*) get their own chunk
+          // so they never co-initialize with Monaco in the main bundle.
+          if (
+            id.includes('src/components/Avatar3D') ||
+            id.includes('src/components/AvatarRig')
+          ) {
+            return 'chunk-avatar';
           }
           // NOTE: Do NOT catch-all other node_modules — Rollup will
           // create a vendor chunk that cross-references vendor-three,

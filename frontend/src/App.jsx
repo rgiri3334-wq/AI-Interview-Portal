@@ -4,7 +4,7 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import CandidateDetails from './pages/CandidateDetails';
 import Dashboard from './pages/Dashboard';
-import LiveInterview from './pages/LiveInterview';
+const LiveInterview = React.lazy(() => import('./pages/LiveInterview'));
 import Report from './pages/Report';
 import ReportList from './pages/ReportList';
 import AdminPanel from './pages/AdminPanel';
@@ -90,7 +90,7 @@ export default function App() {
 
           {/* ── Admin Routes ── */}
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><Dashboard /></ProtectedRoute>} />
-          <Route path="/interview" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><LiveInterview /></ProtectedRoute>} />
+          <Route path="/interview" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><React.Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-white font-bold text-lg">⚡ Loading Interview Engine...</div>}><LiveInterview /></React.Suspense></ProtectedRoute>} />
           <Route path="/report" element={<ProtectedRoute allowedRoles={['admin']}><ReportList /></ProtectedRoute>} />
           <Route path="/report/:id" element={<ProtectedRoute allowedRoles={['admin']}><Report /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminPanel /></ProtectedRoute>} />

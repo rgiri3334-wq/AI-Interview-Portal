@@ -11,7 +11,8 @@ const Editor = React.lazy(() =>
 
 import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png';
-import Avatar3D from '../components/Avatar3D';
+// Lazy-load Avatar3D so @react-three/* is in its own async chunk (prevents circular init with Monaco)
+const Avatar3D = React.lazy(() => import('../components/Avatar3D'));
 import PreFlightCheck from '../components/PreFlightCheck';
 
 import AvatarStage from '../components/interview/AvatarStage';
@@ -853,14 +854,16 @@ export default function LiveInterview() {
           <div className="flex flex-col items-center gap-4">
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200"
               style={{ width: '280px', height: '340px', background: 'linear-gradient(160deg, #f8f9fa 0%, #e8edf2 60%, #dce3eb 100%)' }}>
-              <Avatar3D
-                isSpeaking={false}
-                isListening={false}
-                isLoading={phase === 'initializing'}
-                phase={phase}
-                qIndex={0}
-                warnings={0}
-              />
+              <React.Suspense fallback={<div style={{width:'280px',height:'340px',display:'flex',alignItems:'center',justifyContent:'center',color:'#94a3b8',fontSize:'12px'}}>Loading Avatar...</div>}>
+                <Avatar3D
+                  isSpeaking={false}
+                  isListening={false}
+                  isLoading={phase === 'initializing'}
+                  phase={phase}
+                  qIndex={0}
+                  warnings={0}
+                />
+              </React.Suspense>
             </div>
             <div className="text-center">
               <p className="text-sm font-bold text-slate-700">Your AI Interviewer</p>
