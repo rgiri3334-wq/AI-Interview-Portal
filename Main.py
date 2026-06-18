@@ -1197,8 +1197,8 @@ def admin_resend_candidate_invite(data: InviteCandidateRequest, db: Session = De
 
     # Generate new token
     token = secrets.token_urlsafe(32)
-    cand.invitation_token = token
-    cand.invitation_expires_at = time.time() + (3 * 3600)
+    cand.invitation_token = token  # type: ignore
+    cand.invitation_expires_at = time.time() + (3 * 3600)  # type: ignore
     db.commit()
 
     import threading
