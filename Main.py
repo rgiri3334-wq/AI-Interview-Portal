@@ -209,16 +209,22 @@ async def reminder_worker():
                         continue
                     
                     try:
+                        import pytz
                         from datetime import datetime, timedelta, timezone
                         dt_str = f"{slot.date} {slot.start_time}"
                         # Parse time with AM/PM or 24-hour format
                         if "AM" in slot.start_time or "PM" in slot.start_time:
-                            slot_dt = datetime.strptime(dt_str, "%Y-%m-%d %I:%M %p")
+                            slot_dt_naive = datetime.strptime(dt_str, "%Y-%m-%d %I:%M %p")
                         else:
-                            slot_dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+                            slot_dt_naive = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
                         
-                        now = datetime.now()
-                        time_diff = slot_dt - now
+                        # Localize to slot's timezone (default to IST if missing)
+                        tz = pytz.timezone(slot.timezone or "Asia/Kolkata")
+                        slot_dt_aware = tz.localize(slot_dt_naive)
+                        
+                        # Calculate absolute time diff using UTC
+                        now_utc = datetime.now(timezone.utc)
+                        time_diff = slot_dt_aware - now_utc
                         time_diff_mins = time_diff.total_seconds() / 60
                         
                         try:
