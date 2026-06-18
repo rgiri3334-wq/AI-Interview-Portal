@@ -188,12 +188,8 @@ export default function CandidateLogin() {
                   className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-md shadow-red-500/20 text-sm font-bold text-white bg-[#EF4444] hover:bg-red-600 focus:outline-none transition-all disabled:opacity-50">
                   {loading ? 'Sending Code...' : 'Send Verification Code →'}
                 </button>
-                <p className="text-center text-sm text-slate-500">
-                  New candidate?{' '}
-                  <button type="button" onClick={() => navigate('/candidate-register')}
-                    className="text-[#EF4444] font-semibold hover:underline">
-                    Register here
-                  </button>
+                <p className="text-center text-sm text-slate-500 mt-4">
+                  Trouble logging in? <span className="text-[#EF4444] font-semibold">Contact Admin</span>
                 </p>
               </motion.form>
             )}

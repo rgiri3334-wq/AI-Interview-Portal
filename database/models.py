@@ -42,6 +42,21 @@ class Candidate(Base):
     name = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True, index=True)
     phone = Column(String, nullable=True)
+    department_id = Column(String, ForeignKey("departments.department_id"), nullable=True)
+    role_id = Column(String, ForeignKey("job_roles.role_id"), nullable=True)
+    invitation_status = Column(String, default="Pending") # Pending, Confirmed, Canceled, Auto-Canceled
+    invitation_token = Column(String, nullable=True, unique=True, index=True)
+    invitation_expires_at = Column(Float, nullable=True)
+    
+    # Profile Fields
+    experience_level = Column(String, nullable=True)
+    key_skills = Column(String, nullable=True)
+    work_mode = Column(String, nullable=True)
+    expected_salary = Column(String, nullable=True)
+    linkedin = Column(String, nullable=True)
+    github = Column(String, nullable=True)
+    portfolio = Column(String, nullable=True)
+
     # password_hash is kept nullable for backward compatibility with existing records.
     # New OTP-authenticated candidates will have this as None.
     password_hash = Column(String, nullable=True)

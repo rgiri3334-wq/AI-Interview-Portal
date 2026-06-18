@@ -8,7 +8,7 @@ const LiveInterview = React.lazy(() => import('./pages/LiveInterview'));
 import Report from './pages/Report';
 import ReportList from './pages/ReportList';
 import AdminPanel from './pages/AdminPanel';
-import CandidateRegister from './pages/CandidateRegister';
+import AdminCandidateRegistration from './pages/AdminCandidateRegistration';
 import CandidateLogin from './pages/CandidateLogin';
 import SystemHealth from './pages/SystemHealth';
 import AdminManagement from './pages/AdminManagement';
@@ -22,6 +22,8 @@ import ScheduleInterview from './pages/ScheduleInterview';
 import InterviewGoodbye from './pages/InterviewGoodbye';
 import VideoIntroPage from './pages/VideoIntroPage';
 import InterviewPrepKit from './pages/InterviewPrepKit';
+import CandidateOnboarding from './pages/CandidateOnboarding';
+import VerifyInvitation from './pages/VerifyInvitation';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -66,8 +68,9 @@ export default function App() {
           <Route path="/" element={<Login />} />
 
           {/* ── Candidate OTP Auth Routes ── */}
-          <Route path="/candidate-register" element={<CandidateRegister />} />
           <Route path="/candidate-login" element={<CandidateLogin />} />
+          <Route path="/verify-invitation" element={<VerifyInvitation />} />
+          <Route path="/candidate-onboarding" element={<ProtectedRoute allowedRoles={['candidate']}><CandidateOnboarding /></ProtectedRoute>} />
 
           {/* ── Candidate Portal (Phase 1 Upgrade) ── */}
           <Route path="/candidate-home" element={<ProtectedRoute allowedRoles={['candidate']}><CandidateHome /></ProtectedRoute>} />
@@ -90,6 +93,7 @@ export default function App() {
 
           {/* ── Admin Routes ── */}
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><Dashboard /></ProtectedRoute>} />
+          <Route path="/admin-candidate-registration" element={<ProtectedRoute allowedRoles={['admin']}><AdminCandidateRegistration /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><React.Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-white font-bold text-lg">⚡ Loading Interview Engine...</div>}><LiveInterview /></React.Suspense></ProtectedRoute>} />
           <Route path="/report" element={<ProtectedRoute allowedRoles={['admin']}><ReportList /></ProtectedRoute>} />
           <Route path="/report/:id" element={<ProtectedRoute allowedRoles={['admin']}><Report /></ProtectedRoute>} />

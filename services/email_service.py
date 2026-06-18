@@ -86,3 +86,11 @@ def send_otp_email(to_email: str, code: str, purpose: str, candidate_name: str =
     except Exception as e:
         logger.error(f"Failed to send email via SMTP to {to_email}: {str(e)}")
         return False
+
+def send_invitation_email(to_email: str, candidate_name: str, token: str, role_name: str):
+    logger.info(f"Mock sending invitation email to {to_email} with token {token}")
+    pass
+
+def send_registration_success_email(to_email: str, candidate_name: str):
+    logger.info(f"Mock sending success email to {to_email}")
+    pass

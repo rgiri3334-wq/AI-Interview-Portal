@@ -2,13 +2,14 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, User, Mic, FileText,
-  ChevronRight, Activity, Database, Users
+  ChevronRight, Activity, Database, Users, UserPlus
 } from 'lucide-react';
 import logoUrl from '../../assets/sterling_logo.png';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin', label: 'Admin Panel', icon: Database },
+  { path: '/admin-candidate-registration', label: 'Candidate Registrations', icon: UserPlus },
   { path: '/system-health', label: 'System Health', icon: Activity },
   { path: '/admin-management', label: 'Admin Management', icon: Users },
   { path: '/report', label: 'Report', icon: FileText },

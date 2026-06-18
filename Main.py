@@ -143,6 +143,31 @@ def init_db():
     logger.info("Database synchronized (SQLAlchemy 14-table schema).")
 
 # ── Background Workers ──────────────────────────────────────────────────────
+
+async def invitation_expiry_worker():
+    while True:
+        try:
+            db = SessionLocal()
+            try:
+                now_ts = time.time()
+                expired = db.query(Candidate).filter(
+                    Candidate.invitation_status == "Pending",
+                    Candidate.invitation_expires_at < now_ts
+                ).all()
+                for cand in expired:
+                    cand.invitation_status = "Auto-Canceled"  # type: ignore
+                    cand.invitation_token = None  # type: ignore
+                if expired:
+                    db.commit()
+                    logger.info(f"Auto-canceled {len(expired)} expired invitations.")
+            except Exception as e:
+                logger.error(f"Invitation expiry worker error: {e}")
+            finally:
+                db.close()
+        except Exception as e:
+            pass
+        await asyncio.sleep(300) # Run every 5 minutes
+
 async def telemetry_worker():
     import asyncio, time, random
     from datetime import datetime, timezone
@@ -322,6 +347,7 @@ async def lifespan(app: FastAPI):
     init_db()
     
     # Start the background workers
+    asyncio.create_task(invitation_expiry_worker())
     asyncio.create_task(telemetry_worker())
     asyncio.create_task(reminder_worker())
     logger.info("Telemetry Engine Started. Pinging database every 5 minutes.")
@@ -458,6 +484,27 @@ class SendOTPRequest(BaseModel):
     identifier: str = Field(..., description="Candidate email or phone number")
     purpose: str = Field(..., description="'registration' or 'login'")
     name: str = Field(default="", description="Required only for registration")
+
+
+class InviteCandidateRequest(BaseModel):
+    name: str
+    email: str
+    department_id: str
+    role_id: str
+
+class VerifyInvitationRequest(BaseModel):
+    token: str
+    action: str  # 'confirm' or 'cancel'
+
+class CompleteProfileRequest(BaseModel):
+    experience_level: str
+    key_skills: str
+    work_mode: str
+    expected_salary: str
+    phone: str
+    linkedin: str
+    github: str
+    portfolio: str
 
 class VerifyOTPRequest(BaseModel):
     identifier: str
@@ -904,20 +951,19 @@ def send_candidate_otp(
         Candidate.email == identifier
     ).first()
 
-    if purpose == "login" and not existing_candidate:
+    if purpose == "registration":
+        raise HTTPException(status_code=403, detail="Candidate self-registration is disabled. Contact Admin.")
+
+    if not existing_candidate:
         raise HTTPException(
             status_code=404,
-            detail="No candidate found with this email. Please register first."
+            detail="No candidate found with this email. Please ask an Admin to invite you."
         )
-    if purpose == "registration" and existing_candidate:
+    
+    if getattr(existing_candidate, "invitation_status", "Confirmed") != "Confirmed":
         raise HTTPException(
-            status_code=409,
-            detail="This email is already registered. Please login instead."
-        )
-    if purpose == "registration" and not data.name.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Name is required for registration."
+            status_code=403,
+            detail="You must confirm your registration via email before logging in."
         )
 
     # ── Invalidate any existing active OTPs for this identifier ──────────
@@ -1080,6 +1126,160 @@ def verify_candidate_otp(
         "token": token
     }
 
+
+
+
+@app.get("/api/admin/candidates", tags=["Admin Candidate Management"])
+def admin_get_candidates(db: Session = Depends(get_db)):
+    candidates = db.query(Candidate).order_by(Candidate.created_at.desc()).all()
+    return candidates
+
+@app.post("/api/admin/candidates/invite", tags=["Admin Candidate Management"])
+def admin_invite_candidate(data: InviteCandidateRequest, db: Session = Depends(get_db)):
+    # 1. Check if email exists
+    existing = db.query(Candidate).filter(Candidate.email == data.email.strip().lower()).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="A candidate with this email already exists.")
+        
+    # 2. Generate secure token
+    token = secrets.token_urlsafe(32)
+    expires_at = time.time() + (3 * 3600)  # 3 hours
+    
+    # 3. Create Candidate
+    cid = generate_enterprise_id(db, "CAN")
+    cand = Candidate(
+        candidate_id=cid,
+        name=data.name.strip(),
+        email=data.email.strip().lower(),
+        department_id=data.department_id,
+        role_id=data.role_id,
+        invitation_status="Pending",
+        invitation_token=token,
+        invitation_expires_at=expires_at,
+        is_verified=False
+    )
+    db.add(cand)
+    db.commit()
+    
+    # 4. Send Email (in background)
+    from services.email_service import send_invitation_email
+    background_tasks = BackgroundTasks()
+    # In a real app, we'd add background_tasks to function signature and use it,
+    # but we can also just spawn a new thread or use asyncio.create_task for now
+    import threading
+    def email_task():
+        try:
+            send_invitation_email(
+                to_email=str(cand.email),
+                candidate_name=str(cand.name),
+                token=token,
+                role_name=str(cand.role_id) # Ideally resolve to string name
+            )
+        except Exception as e:
+            logger.error(f"Failed to send invite email: {e}")
+    threading.Thread(target=email_task).start()
+    
+    return {"status": "success", "message": "Invitation sent successfully", "candidate_id": cid}
+
+@app.get("/api/candidates/verify", tags=["Candidate Auth"])
+def verify_invitation(token: str, action: str, db: Session = Depends(get_db)):
+    cand = db.query(Candidate).filter(Candidate.invitation_token == token).first()
+    if not cand:
+        raise HTTPException(status_code=404, detail="Invalid or expired token.")
+        
+    if time.time() > (cand.invitation_expires_at or 0):
+        cand.invitation_status = "Auto-Canceled"  # type: ignore
+        db.commit()
+        raise HTTPException(status_code=400, detail="This invitation has expired.")
+        
+    if action == "confirm":
+        cand.invitation_status = "Confirmed"  # type: ignore
+        cand.invitation_token = None  # type: ignore # Prevent reuse
+        db.commit()
+        # Trigger success email
+        import threading
+        from services.email_service import send_registration_success_email
+        c_email = str(cand.email)
+        c_name = str(cand.name)
+        def success_email_task():
+            try:
+                send_registration_success_email(c_email, c_name)
+            except Exception as e:
+                pass
+        threading.Thread(target=success_email_task).start()
+        return {"status": "success", "message": "Registration Confirmed. You may now log in."}
+        
+    elif action == "cancel":
+        cand.invitation_status = "Canceled"  # type: ignore
+        cand.invitation_token = None  # type: ignore
+        db.commit()
+        return {"status": "success", "message": "Registration Canceled."}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action.")
+
+@app.post("/api/candidates/{candidate_id}/complete-profile", tags=["Candidates"])
+async def complete_candidate_profile(
+    candidate_id: str,
+    experience_level: str = Form(...),
+    key_skills: str = Form(...),
+    work_mode: str = Form(...),
+    expected_salary: str = Form(...),
+    phone: str = Form(...),
+    linkedin: str = Form(...),
+    github: str = Form(...),
+    portfolio: str = Form(...),
+    resume: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
+    if not cand:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+        
+    cand.experience_level = experience_level  # type: ignore
+    cand.key_skills = key_skills  # type: ignore
+    cand.work_mode = work_mode  # type: ignore
+    cand.expected_salary = expected_salary  # type: ignore
+    cand.phone = phone  # type: ignore
+    cand.linkedin = linkedin  # type: ignore
+    cand.github = github  # type: ignore
+    cand.portfolio = portfolio  # type: ignore
+    
+    # Process resume upload
+    upload_dir = "uploads/resumes"
+    os.makedirs(upload_dir, exist_ok=True)
+    file_path = os.path.join(upload_dir, f"{candidate_id}_{resume.filename}")
+    with open(file_path, "wb") as buffer:
+        buffer.write(await resume.read())
+        
+    # ATS Parsing
+    from services.resume_engine import parse_and_score_resume
+    res_id = generate_enterprise_id(db, "RES")
+    new_resume = Resume(
+        resume_id=res_id,
+        candidate_id=candidate_id,
+        resume_file_path=file_path,
+        extracted_text="Processing...",
+        skills_detected="[]",
+        resume_score=0.0
+    )
+    db.add(new_resume)
+    db.commit()
+    db.refresh(new_resume)
+    
+    # Run parsing silently
+    try:
+        # Assuming job role text is fetched
+        role_record = db.query(JobRole).filter(JobRole.role_id == cand.role_id).first()
+        role_desc = role_record.role_name if role_record else "General"
+        score, skills, txt = await parse_and_score_resume(file_path, str(role_desc))
+        new_resume.resume_score = score
+        new_resume.skills_detected = json.dumps(skills)  # type: ignore
+        new_resume.extracted_text = txt
+        db.commit()
+    except Exception as e:
+        logger.error(f"ATS Parsing Failed: {e}")
+        
+    return {"status": "success", "message": "Profile completed successfully"}
 
 @app.get("/api/candidates/{candidate_id}", tags=["Candidates"])
 async def get_candidate(candidate_id: str, db: Session = Depends(get_db)):

@@ -135,7 +135,14 @@ export default function CandidateHome() {
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/candidates/${candidateId}/portal`);
-      if (res.ok) setPortal(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        if (!data.candidate.experience_level) {
+          navigate('/candidate-onboarding');
+          return;
+        }
+        setPortal(data);
+      }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [candidateId, navigate]);
