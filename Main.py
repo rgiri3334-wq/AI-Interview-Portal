@@ -1199,6 +1199,7 @@ def verify_invitation(token: str, action: str, db: Session = Depends(get_db)):
         # Trigger success email
         import threading
         from services.email_service import send_registration_success_email
+        assert cand is not None
         c_email = str(cand.email)
         c_name = str(cand.name)
         def success_email_task():
