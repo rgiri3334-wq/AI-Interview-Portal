@@ -1186,6 +1186,41 @@ def admin_invite_candidate(data: InviteCandidateRequest, db: Session = Depends(g
     
     return {"status": "success", "message": "Invitation sent successfully", "candidate_id": cid}
 
+@app.post("/api/admin/candidates/invite/resend", tags=["Admin Candidate Management"])
+def admin_resend_candidate_invite(data: InviteCandidateRequest, db: Session = Depends(get_db)):
+    cand = db.query(Candidate).filter(Candidate.email == data.email.strip().lower()).first()
+    if not cand:
+        raise HTTPException(status_code=404, detail="Candidate not found.")
+        
+    if cand.invitation_status != "Pending":
+        raise HTTPException(status_code=400, detail=f"Cannot resend. Status is currently {cand.invitation_status}")
+
+    # Generate new token
+    token = secrets.token_urlsafe(32)
+    cand.invitation_token = token
+    cand.invitation_expires_at = time.time() + (3 * 3600)
+    db.commit()
+
+    import threading
+    from services.email_service import send_invitation_email
+    c_email = str(cand.email)
+    c_name = str(cand.name)
+    c_role = str(cand.role_id)
+    
+    def email_task():
+        try:
+            send_invitation_email(
+                to_email=c_email,
+                candidate_name=c_name,
+                token=token,
+                role_name=c_role
+            )
+        except Exception as e:
+            logger.error(f"Failed to resend invite email: {e}")
+    threading.Thread(target=email_task).start()
+    
+    return {"status": "success", "message": "Invitation resent successfully"}
+
 @app.get("/api/candidates/verify", tags=["Candidate Auth"])
 def verify_invitation(token: str, action: str, db: Session = Depends(get_db)):
     cand = db.query(Candidate).filter(Candidate.invitation_token == token).first()

@@ -86,6 +86,30 @@ export default function AdminCandidateRegistration() {
     }
   };
 
+  const handleResend = async (candidate_email, candidate_name, department_id, role_id) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/candidates/invite/resend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({ email: candidate_email, name: candidate_name, department_id, role_id })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setToast({ type: 'success', message: 'Invitation resent successfully!' });
+      } else {
+        setToast({ type: 'error', message: data.detail || 'Failed to resend invite.' });
+      }
+    } catch (e) {
+      setToast({ type: 'error', message: 'An error occurred.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const pendingCount = candidates.filter(c => c.invitation_status === 'Pending').length;
 
   return (
@@ -239,7 +263,7 @@ export default function AdminCandidateRegistration() {
                               </td>
                               <td className="py-4 pl-4 text-right">
                                 {cand.invitation_status === 'Pending' && (
-                                  <button className="text-sm font-semibold text-red-600 hover:underline">Resend</button>
+                                  <button onClick={() => handleResend(cand.email, cand.name, cand.department_id, cand.role_id)} disabled={loading} className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-50">Resend</button>
                                 )}
                               </td>
                             </tr>
