@@ -128,7 +128,7 @@ export default function AdminCandidateRegistration() {
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans">
       <Sidebar />
-      <div className="flex-1 ml-64 relative flex flex-col min-h-screen">
+      <div className="flex-1 relative flex flex-col min-h-screen">
         {/* Red Gradient Banner - Fixed height & positioning to not cut off awkwardly */}
         <div className="absolute top-0 left-0 w-full h-[320px] bg-gradient-to-br from-red-600 via-red-800 to-black z-0"></div>
         <div className="absolute top-0 left-0 w-full h-[320px] bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 z-0 mix-blend-overlay"></div>
