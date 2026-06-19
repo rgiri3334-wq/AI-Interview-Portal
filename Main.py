@@ -947,8 +947,9 @@ def send_candidate_otp(
         raise HTTPException(status_code=400, detail="purpose must be 'registration' or 'login'")
 
     # ── Guard: check candidate existence matches purpose ─────────────────
+    from sqlalchemy import or_
     existing_candidate = db.query(Candidate).filter(
-        Candidate.email == identifier
+        or_(Candidate.email == identifier, Candidate.candidate_id == identifier.upper())
     ).first()
 
     if purpose == "registration":
@@ -993,7 +994,7 @@ def send_candidate_otp(
 
     # Send via email service in the background to prevent API timeouts
     from services.email_service import send_otp_email
-    candidate_name = str(existing_candidate.name) if existing_candidate else data.name.strip() or "Candidate"
+    candidate_name = str(existing_candidate.name) or data.name.strip() or "Candidate"
     background_tasks.add_task(
         send_otp_email,
         to_email=identifier,
@@ -1131,7 +1132,7 @@ def verify_candidate_otp(
 
 @app.get("/api/admin/candidates", tags=["Admin Candidate Management"])
 def admin_get_candidates(db: Session = Depends(get_db)):
-    candidates = db.query(Candidate).order_by(Candidate.created_at.desc()).all()
+    candidates = db.query(Candidate).order_by(Candidate.registration_date.desc()).all()
     return candidates
 
 @app.post("/api/admin/candidates/invite", tags=["Admin Candidate Management"])
@@ -1153,10 +1154,10 @@ def admin_invite_candidate(data: InviteCandidateRequest, db: Session = Depends(g
         email=data.email.strip().lower(),
         department_id=data.department_id,
         role_id=data.role_id,
-        invitation_status="Pending",
+        invitation_status="Confirmed",
         invitation_token=token,
         invitation_expires_at=expires_at,
-        is_verified=False
+        is_verified=True
     )
     db.add(cand)
     db.commit()
@@ -1968,13 +1969,11 @@ async def upload_resume(
     parsed_skills = json.dumps(parsed.get("extracted_skills", []))
     parsed_projects = json.dumps(parsed.get("extracted_projects", []))
     education_text = parsed.get("education", "")
-    
-    if resume:
-        resume.extracted_text = resume_text  # type: ignore
-        resume.skills_detected = parsed_skills  # type: ignore
-        resume.projects_summary = parsed_projects  # type: ignore
-        resume.education_summary = education_text  # type: ignore
-        resume.resume_score = float(resume_score)  # type: ignore
+    resume.extracted_text = resume_text  # type: ignore
+    resume.skills_detected = parsed_skills  # type: ignore
+    resume.projects_summary = parsed_projects  # type: ignore
+    resume.education_summary = education_text  # type: ignore
+    resume.resume_score = float(resume_score)  # type: ignore
     
     # Candidate status changes to ready (200) after parsing
     if interview:

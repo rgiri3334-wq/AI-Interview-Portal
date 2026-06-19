@@ -77,6 +77,7 @@ class Candidate(Base):
     keyword_evals = relationship("KeywordEvaluation", back_populates="candidate", cascade="all, delete-orphan")
     question_evals = relationship("QuestionEvaluation", back_populates="candidate", cascade="all, delete-orphan")
     reports = relationship("FinalReport", back_populates="candidate", cascade="all, delete-orphan")
+    bookings = relationship("SlotBooking", back_populates="candidate", cascade="all, delete-orphan")
 
 
 class Resume(Base):
@@ -367,4 +368,4 @@ class SlotBooking(Base):
     notes = Column(Text, nullable=True)
 
     slot = relationship("InterviewSlot", back_populates="bookings")
-    candidate = relationship("Candidate")
+    candidate = relationship("Candidate", back_populates="bookings")

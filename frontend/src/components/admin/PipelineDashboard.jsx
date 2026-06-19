@@ -362,16 +362,28 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
     if (!window.confirm(`Delete ${selectedIds.size} candidates?`)) return;
     
     let successCount = 0;
+    const successfulIds = new Set();
+    
     for (let id of Array.from(selectedIds)) {
       try {
-         await customFetch(`${API_BASE}/candidates/${id}`, { method: 'DELETE' });
-         successCount++;
-      } catch(e) {}
+         const res = await customFetch(`${API_BASE}/candidates/${id}`, { method: 'DELETE' });
+         if (res.ok) {
+           successCount++;
+           successfulIds.add(id);
+         } else {
+           const err = await res.json().catch(() => ({}));
+           showToast(`Failed to delete ${id}: ${err.detail || 'Server error'}`, 'error');
+         }
+      } catch(e) {
+         showToast(`Network error while deleting ${id}`, 'error');
+      }
     }
     
-    setPipeline(pipeline.filter(p => !selectedIds.has(p.id)));
-    setSelectedIds(new Set());
-    showToast(`Deleted ${successCount} candidates`);
+    if (successfulIds.size > 0) {
+      setPipeline(pipeline.filter(p => !successfulIds.has(p.id)));
+      setSelectedIds(new Set(Array.from(selectedIds).filter(id => !successfulIds.has(id))));
+      showToast(`Deleted ${successCount} candidates`);
+    }
   };
 
   const exportCSV = () => {
