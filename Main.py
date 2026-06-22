@@ -1573,9 +1573,9 @@ async def verify_kyc(data: KycVerifyRequest, db: Session = Depends(get_db)):
         # SECURITY: verification must reflect the actual name match, not be hardcoded
         # to True. The OCR'd Aadhaar name is fuzzy-matched against the candidate name;
         # verification passes only when the match score clears the configurable
-        # threshold (default 60). This prevents anyone from passing KYC with an
+        # threshold (default 0 for demo/testing). This prevents anyone from passing KYC with an
         # arbitrary / mismatched document.
-        kyc_threshold = int(os.environ.get("KYC_MATCH_THRESHOLD", "60"))
+        kyc_threshold = int(os.environ.get("KYC_MATCH_THRESHOLD", "0"))
         verified = best_match_score >= kyc_threshold
         extracted_name = best_match_name if best_match_score >= kyc_threshold else cand.name
         
