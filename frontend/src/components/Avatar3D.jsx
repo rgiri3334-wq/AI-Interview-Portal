@@ -44,6 +44,40 @@ function ThinkingDots() {
   );
 }
 
+// ── WebGL capability check (GPU-less laptops) ──────────────────────────────
+// On machines without a GPU, WebGL either fails outright or falls back to slow
+// software rendering that can crash on a skinned 3D scene. We detect support and
+// render a lightweight 2D avatar instead of risking a crash / frozen tab.
+function supportsWebGL() {
+  // ALWAYS prefer 3D. We render 3D whenever WebGL exists at all — including
+  // software WebGL (SwiftShader/llvmpipe) on GPU-less machines. The scene is kept
+  // deliberately light (dpr 1, no antialias, no shadows, low-power) so software
+  // rendering stays smooth. The only time we drop to 2D is if WebGL is completely
+  // unavailable, or the GPU context is actually lost mid-session (a real crash-saver).
+  try {
+    const c = document.createElement('canvas');
+    return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl')));
+  } catch (e) {
+    return false;
+  }
+}
+
+// Lightweight 2D avatar — no WebGL, no GPU. Still reflects the live state badge.
+function Avatar2DFallback({ config }) {
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-gradient-to-b from-slate-50 to-slate-200">
+      <div className="w-32 h-32 rounded-full bg-white shadow-lg border-4 flex items-center justify-center"
+        style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+        <span className="text-5xl" role="img" aria-label="interviewer">🧑‍💼</span>
+      </div>
+      <div className={`text-[10px] font-bold uppercase tracking-[0.15em] px-3 py-1 rounded-full ${config?.badgeClass || 'bg-white/90 text-slate-500'}`}>
+        {config?.badgeText || '● Ready'}
+      </div>
+      <p className="text-[10px] text-slate-400">Lite mode</p>
+    </div>
+  );
+}
+
 // ── Main Avatar Component ──────────────────────────────────────────────────
 export default function Avatar3D({
   getAudioFrequency,
@@ -60,6 +94,10 @@ export default function Avatar3D({
   
   const [audioLevel, setAudioLevel] = useState(0);
   const animFrameRef = useRef(null);
+
+  // GPU/WebGL availability — falls back to the 2D avatar if unsupported or lost.
+  const [gpuOk, setGpuOk] = useState(true);
+  useEffect(() => { setGpuOk(supportsWebGL()); }, []);
 
   // ── Poll audio frequency for lip-sync & UI ────────────────────────
   useEffect(() => {
@@ -140,20 +178,32 @@ export default function Avatar3D({
       )}
 
       <div className="absolute inset-0 z-10">
-        <Canvas camera={{ position: [0, 0, 3], fov: 30 }} dpr={[1, 1.5]}>
-          <ambientLight intensity={0.8} />
-          <directionalLight position={[0, 2, 5]} intensity={1.5} />
-          <Suspense fallback={
-            <Html center>
-              <div className="text-sm font-bold text-slate-500 animate-pulse whitespace-nowrap bg-white/80 px-4 py-2 rounded-full shadow">
-                Booting 3D Engine...
-              </div>
-            </Html>
-          }>
-            <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
-          </Suspense>
-          <ContactShadows opacity={0.4} scale={5} blur={2} far={4} resolution={256} color="#000000" position={[0, -1.5, 0]} />
-        </Canvas>
+        {gpuOk ? (
+          <Canvas
+            camera={{ position: [0, 0, 3], fov: 30 }}
+            dpr={1}                                                   /* no 2x retina — critical for GPU-less laptops */
+            gl={{ antialias: false, powerPreference: 'low-power', failIfMajorPerformanceCaveat: false }}
+            onCreated={({ gl }) => {
+              // If the GPU context is lost (common on software rendering), drop to 2D instead of crashing.
+              gl.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); setGpuOk(false); }, false);
+            }}
+          >
+            <ambientLight intensity={0.9} />
+            <directionalLight position={[0, 2, 5]} intensity={1.3} />
+            <Suspense fallback={
+              <Html center>
+                <div className="text-sm font-bold text-slate-500 animate-pulse whitespace-nowrap bg-white/80 px-4 py-2 rounded-full shadow">
+                  Booting 3D Engine...
+                </div>
+              </Html>
+            }>
+              <AvatarRig avatarState={avatarState} mouthOpenRef={mouthOpenRef} />
+            </Suspense>
+            {/* ContactShadows removed — the extra shadow render pass is too heavy for software/no-GPU rendering. */}
+          </Canvas>
+        ) : (
+          <Avatar2DFallback config={avatarConfig} />
+        )}
       </div>
 
       {/* ── State indicator badge (top-right) ─────────────────────── */}

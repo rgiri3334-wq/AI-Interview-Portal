@@ -17,6 +17,15 @@ const damp = (current, target, factor, dt) => {
 // to light up the existing morph-based lip-sync automatically.
 const AVATAR_MODEL_PATH = '/model.glb';
 
+// ── Framing ────────────────────────────────────────────────────────────────
+// How the model sits in the camera (camera is at z=3, fov=30). With this model
+// (~1.9 units tall, feet at y≈0) these values frame roughly head→upper-torso.
+// If the avatar sits too high/low or too big/small in the preview, adjust:
+//   AVATAR_POSITION = [x, y, z]  (lower y = move avatar DOWN, shows more head)
+//   AVATAR_SCALE     = number    (smaller = avatar appears further/smaller)
+const AVATAR_POSITION = [0, -1.5, 0];
+const AVATAR_SCALE = 1;
+
 // Resolve a bone by trying several common naming conventions (plain, RPM,
 // Mixamo with/without the "mixamorig:" colon prefix). Returns the first match.
 function resolveBone(nodes, scene, ...candidates) {
@@ -58,8 +67,9 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
     saccadeTimer: 0, eyeTargetX: 0, eyeTargetY: 0,
     gestureTimer: 0, activeGesture: 0,
 
-    // Greeting wave envelope
+    // Greeting wave + goodbye (namaste) envelopes
     waveT: 0, wasGreeting: false,
+    goodbyeT: 0, wasGoodbye: false,
 
     // Perlin noise offsets
     noiseX: Math.random() * 100,
@@ -143,6 +153,18 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
       else waveAmt = 1;
     }
 
+    // ── Goodbye (namaste) envelope ───────────────────────────────────────
+    // While closing, both hands fold together at the chest. Eases in over ~1s
+    // then HOLDS for the whole goodbye (no ease-out — released when state changes).
+    const isGoodbye = cur === AVATAR_STATES.GOODBYE;
+    if (isGoodbye && !a.wasGoodbye) a.goodbyeT = 0;
+    a.wasGoodbye = isGoodbye;
+    let goodbyeAmt = 0;
+    if (isGoodbye) {
+      a.goodbyeT += dt;
+      goodbyeAmt = Math.min(a.goodbyeT / 1.0, 1);
+    }
+
     // Behavior Matrix based on State (greeting talks like speaking, plus wave)
     if (cur === AVATAR_STATES.SPEAKING || cur === AVATAR_STATES.GREETING) {
       // Dynamic Speaking Head Movement
@@ -171,6 +193,11 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
         targetLeftArmRoll = 1.0; targetLeftForeArmPitch = -0.2;
       }
       
+    } else if (cur === AVATAR_STATES.GOODBYE) {
+      // Warm closing — gentle bow + subtle talking head. Arms fold (namaste) below.
+      targetHeadPitch = 0.12 + Math.sin(a.t * 2.5) * 0.02;
+      targetHeadYaw = Math.sin(a.t * 1.2) * 0.03;
+      targetSpinePitch = 0.05 + breath;
     } else if (cur === AVATAR_STATES.LISTENING) {
       // Active Listening
       targetHeadPitch = 0.08 + Math.sin(a.t * 2) * 0.02; // Nodding occasionally
@@ -256,6 +283,25 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
       if (rightHand) rightHand.rotation.z = osc * 0.8;
     }
 
+    // ── Goodbye namaste override (blended by goodbyeAmt) ──────────────────
+    // Folds BOTH hands together at the chest (palms toward center). Like the
+    // wave, the NAM_* angles are sensible defaults — tweak if the pose looks off.
+    if (goodbyeAmt > 0) {
+      const NAM_ARM_Z = 0.55;       // bring upper arms inward
+      const NAM_FOREARM_X = -1.65;  // forearms bent up toward chest
+      const NAM_FOREARM_Y = 0.5;    // rotate hands toward the center line
+      if (rightArm) rightArm.rotation.z = THREE.MathUtils.lerp(rightArm.rotation.z, NAM_ARM_Z, goodbyeAmt);
+      if (leftArm)  leftArm.rotation.z  = THREE.MathUtils.lerp(leftArm.rotation.z, -NAM_ARM_Z, goodbyeAmt);
+      if (rightForeArm) {
+        rightForeArm.rotation.x = THREE.MathUtils.lerp(rightForeArm.rotation.x, NAM_FOREARM_X, goodbyeAmt);
+        rightForeArm.rotation.y = THREE.MathUtils.lerp(rightForeArm.rotation.y || 0, NAM_FOREARM_Y, goodbyeAmt);
+      }
+      if (leftForeArm) {
+        leftForeArm.rotation.x = THREE.MathUtils.lerp(leftForeArm.rotation.x, NAM_FOREARM_X, goodbyeAmt);
+        leftForeArm.rotation.y = THREE.MathUtils.lerp(leftForeArm.rotation.y || 0, -NAM_FOREARM_Y, goodbyeAmt);
+      }
+    }
+
     // Apply to Eyes if available (this model has no eye bones — resolves to null, no-op)
     const rightEye = resolveBone(nodes, scene, 'RightEye');
     const leftEye = resolveBone(nodes, scene, 'LeftEye');
@@ -303,7 +349,7 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
   });
 
   return (
-    <group ref={groupRef} dispose={null} position={[0, -1.5, 0]} scale={1}>
+    <group ref={groupRef} dispose={null} position={AVATAR_POSITION} scale={AVATAR_SCALE}>
       <primitive object={scene} />
     </group>
   );
