@@ -3989,20 +3989,37 @@ async def custom_book_slot(data: CustomBookSlotRequest, background_tasks: Backgr
     candidate = db.query(Candidate).filter_by(candidate_id=data.candidate_id).first()
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
-        
-    # Generate a slot automatically
-    slot_id = generate_enterprise_id(db, "SLT")
-    slot = InterviewSlot(
-        slot_id=slot_id,
+
+    # SHARED SLOTS: multiple candidates may book the SAME interview slot.
+    # Self-scheduled AI interviews run in parallel, so a given date/time has no
+    # exclusivity conflict. Reuse an existing slot for this exact date/time/timezone
+    # (so every candidate who picks it shares one slot) and only create a new slot
+    # when none exists yet. A generous group capacity keeps it effectively open.
+    GROUP_CAPACITY = 100
+    slot = db.query(InterviewSlot).filter_by(
         date=data.date,
         start_time=data.start_time,
-        end_time="TBD",
         timezone=data.timezone,
-        max_bookings=1,
-        is_active=True
-    )
-    db.add(slot)
-    
+        is_active=True,
+    ).first()
+    if slot:
+        slot_id = slot.slot_id
+        # Make sure the shared slot can hold more candidates.
+        if (slot.max_bookings or 1) < GROUP_CAPACITY:
+            slot.max_bookings = GROUP_CAPACITY  # type: ignore
+    else:
+        slot_id = generate_enterprise_id(db, "SLT")
+        slot = InterviewSlot(
+            slot_id=slot_id,
+            date=data.date,
+            start_time=data.start_time,
+            end_time="TBD",
+            timezone=data.timezone,
+            max_bookings=GROUP_CAPACITY,
+            is_active=True
+        )
+        db.add(slot)
+
     booking_id = generate_enterprise_id(db, "BKG")
     booking = SlotBooking(
         booking_id=booking_id,
