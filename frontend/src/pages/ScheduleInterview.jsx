@@ -247,11 +247,20 @@ export default function ScheduleInterview() {
                     let hh = parseInt(h);
                     const ampm = hh >= 12 ? 'PM' : 'AM';
                     hh = hh % 12 || 12;
+                    // Disallow times that have already passed when booking for TODAY (IST).
+                    // e.g. at 3:01 PM the 3:00 PM slot must not be selectable.
+                    const istNow = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' });
+                    const [nowH, nowM] = istNow.split(':').map(Number);
+                    const slotMinutes = parseInt(h) * 60 + parseInt(m);
+                    const isPastTime = selectedDate === today && slotMinutes <= (nowH * 60 + nowM);
                     return (
-                      <motion.button key={time} onClick={() => setSelectedTime(time)}
-                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                      <motion.button key={time} disabled={isPastTime}
+                        onClick={() => { if (!isPastTime) setSelectedTime(time); }}
+                        whileHover={isPastTime ? undefined : { scale: 1.02 }} whileTap={isPastTime ? undefined : { scale: 0.98 }}
                         className={`w-full py-3 rounded-xl border text-sm font-bold transition-all text-center ${
-                          isSelected
+                          isPastTime
+                            ? 'bg-slate-50 border-slate-100 text-slate-300 line-through opacity-60 cursor-not-allowed'
+                            : isSelected
                             ? 'bg-red-50 border-red-300 shadow-sm text-red-600'
                             : 'bg-slate-50 border-slate-100 hover:border-red-200 text-slate-600 hover:bg-red-50/30'
                         }`}

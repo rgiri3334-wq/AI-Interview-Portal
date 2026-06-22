@@ -3986,6 +3986,22 @@ async def custom_book_slot(data: CustomBookSlotRequest, background_tasks: Backgr
     if existing:
         raise HTTPException(status_code=409, detail="You already have a scheduled interview. Please cancel it first to reschedule.")
 
+    # Reject any slot whose start time has already passed (IST). e.g. at 3:01 PM
+    # a candidate must not be able to book the 3:00 PM slot. The frontend sends
+    # start_time like "3:00 PM"; compare it against the current IST wall clock.
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    try:
+        slot_dt = _dt.strptime(f"{data.date} {data.start_time}", "%Y-%m-%d %I:%M %p")
+    except Exception:
+        try:
+            slot_dt = _dt.strptime(f"{data.date} {data.start_time}", "%Y-%m-%d %H:%M")
+        except Exception:
+            slot_dt = None
+    if slot_dt is not None:
+        ist_now = (_dt.now(_tz.utc) + _td(hours=5, minutes=30)).replace(tzinfo=None)
+        if slot_dt <= ist_now:
+            raise HTTPException(status_code=400, detail="That time has already passed. Please choose a later slot.")
+
     candidate = db.query(Candidate).filter_by(candidate_id=data.candidate_id).first()
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
