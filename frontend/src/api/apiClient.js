@@ -129,6 +129,10 @@ export const apiClient = {
   getCandidate: (id) => api.get(`/api/candidates/${id}`),
   verifyKyc: (data) => withRetry(() => api.post('/api/kyc/verify', data)),
 
+  adminGetCandidates: () => api.get('/api/admin/candidates'),
+  adminInviteCandidate: (data) => api.post('/api/admin/candidates/invite', data),
+  adminResendInvite: (data) => api.post('/api/admin/candidates/invite/resend', data),
+
   // ── AI Engine ─────────────────────────────────────────────────────────
   generateQuestion: (data) => withRetry(() => api.post('/generate-question', data)),
   assessCandidate:  (data) => withRetry(() => api.post('/api/interview/assess', data)),

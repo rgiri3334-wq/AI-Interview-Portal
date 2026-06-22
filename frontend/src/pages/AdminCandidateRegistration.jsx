@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserPlus, Users, XCircle, CheckCircle, Search, Mail, Filter } from 'lucide-react';
 import Sidebar from '../components/Layout/Sidebar';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { apiClient } from '../api/apiClient';
 
 const DEFAULT_STRUCTURE = {
   "Customer Support": ["Customer Success Manager"],
@@ -34,13 +33,8 @@ export default function AdminCandidateRegistration() {
   const fetchCandidates = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/admin/candidates`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('adminToken')}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCandidates(data);
-      }
+      const data = await apiClient.adminGetCandidates();
+      setCandidates(data);
     } catch (e) {
       console.error(e);
     } finally {
@@ -60,28 +54,16 @@ export default function AdminCandidateRegistration() {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/admin/candidates/invite`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionStorage.getItem('adminToken')}`
-        },
-        body: JSON.stringify({
-          name, email, department_id: department, role_id: role
-        })
+      await apiClient.adminInviteCandidate({
+        name, email, department_id: department, role_id: role
       });
-      const data = await res.json();
-      if (res.ok) {
-        setToast({ type: 'success', message: 'Invitation sent successfully!' });
-        setName(''); setEmail(''); setDepartment(''); setRole('');
-        fetchCandidates();
-        setActiveTab('list');
-        setListFilter('Pending');
-      } else {
-        setToast({ type: 'error', message: data.detail || 'Failed to send invite.' });
-      }
+      setToast({ type: 'success', message: 'Invitation sent successfully!' });
+      setName(''); setEmail(''); setDepartment(''); setRole('');
+      fetchCandidates();
+      setActiveTab('list');
+      setListFilter('Pending');
     } catch (e) {
-      setToast({ type: 'error', message: 'An error occurred.' });
+      setToast({ type: 'error', message: e.message || 'An error occurred.' });
     } finally {
       setLoading(false);
     }
@@ -90,22 +72,10 @@ export default function AdminCandidateRegistration() {
   const handleResend = async (candidate_email, candidate_name, department_id, role_id) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/admin/candidates/invite/resend`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionStorage.getItem('adminToken')}`
-        },
-        body: JSON.stringify({ email: candidate_email, name: candidate_name, department_id, role_id })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setToast({ type: 'success', message: 'Invitation resent successfully!' });
-      } else {
-        setToast({ type: 'error', message: data.detail || 'Failed to resend invite.' });
-      }
+      await apiClient.adminResendInvite({ email: candidate_email, name: candidate_name, department_id, role_id });
+      setToast({ type: 'success', message: 'Invitation resent successfully!' });
     } catch (e) {
-      setToast({ type: 'error', message: 'An error occurred.' });
+      setToast({ type: 'error', message: e.message || 'An error occurred.' });
     } finally {
       setLoading(false);
     }
