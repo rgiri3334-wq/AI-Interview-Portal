@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserPlus, Users, XCircle, CheckCircle, Search, Mail, Filter, Clock, Trash2 } from 'lucide-react';
+import { UserPlus, Users, XCircle, CheckCircle, Search, Mail, Filter, Clock, Trash2, RefreshCw } from 'lucide-react';
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
 
@@ -226,9 +226,14 @@ export default function AdminCandidateRegistration() {
                   className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-100/50"
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-                    <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                      <Filter size={24} className="text-slate-500" /> Candidate List Overview
-                    </h2>
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                        <Filter size={24} className="text-slate-500" /> Candidate List Overview
+                      </h2>
+                      <button onClick={fetchCandidates} disabled={loading} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Refresh List">
+                        <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                      </button>
+                    </div>
                     
                     {/* Sub-Tabs */}
                     <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
