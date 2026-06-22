@@ -88,9 +88,135 @@ def send_otp_email(to_email: str, code: str, purpose: str, candidate_name: str =
         return False
 
 def send_invitation_email(to_email: str, candidate_name: str, token: str, role_name: str):
-    logger.info(f"Mock sending invitation email to {to_email} with token {token}")
-    pass
+    if not SMTP_USER and not BREVO_API_KEY:
+        logger.warning("No Email Credentials configured. Skipping invite email send.")
+        return False
+
+    # The actual frontend URL (Vercel)
+    frontend_url = os.getenv("FRONTEND_URL", "https://ai-interview-portal.vercel.app")
+    magic_link = f"{frontend_url}/candidate-registration?token={token}"
+
+    subject = f"Invitation: Interview for {role_name} at Sterling E-Mobility"
+    
+    html_content = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px; color: #0f172a;">
+        <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; border-top: 4px solid #dc2626;">
+          <h2 style="color: #dc2626; margin-bottom: 5px; font-weight: 900; font-size: 22px; text-align: center; letter-spacing: 1px;">STERLING</h2>
+          <p style="text-align: center; color: #64748b; font-size: 12px; font-weight: bold; margin: 0 0 20px 0; letter-spacing: 2px; text-transform: uppercase;">E-MOBILITY</p>
+          <p style="font-size: 16px;">Hello {candidate_name},</p>
+          <p style="font-size: 16px; color: #475569;">You have been invited to interview for the <strong>{role_name}</strong> position.</p>
+          <p style="font-size: 16px; color: #475569;">Click the button below to complete your registration and schedule your interview:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{magic_link}" style="background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 6px; display: inline-block;">Complete Registration</a>
+          </div>
+          <p style="font-size: 14px; color: #64748b; text-align: center;">This magic link will expire in 3 hours.</p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+          <p style="font-size: 12px; color: #94a3b8; text-align: center;">Sterling AI Interview Engine &copy; Sterling E-Mobility</p>
+        </div>
+      </body>
+    </html>
+    """
+
+    if BREVO_API_KEY:
+        try:
+            url = "https://api.brevo.com/v3/smtp/email"
+            headers = {
+                "accept": "application/json",
+                "api-key": BREVO_API_KEY,
+                "content-type": "application/json"
+            }
+            data = {
+                "sender": {"name": "Sterling E-Mobility Recruiting", "email": SMTP_USER},
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "htmlContent": html_content
+            }
+            req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response:
+                logger.info(f"Successfully sent Invite email via Brevo API to {to_email}")
+                return True
+        except Exception as e:
+            logger.error(f"Failed to send Invite email via Brevo API to {to_email}: {str(e)}")
+            return False
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"Sterling E-Mobility Recruiting <{SMTP_USER}>"
+    msg["To"] = to_email
+    msg.attach(MIMEText(html_content, "html"))
+
+    try:
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.sendmail(SMTP_USER, to_email, msg.as_string())
+        server.quit()
+        logger.info(f"Successfully sent Invite email via SMTP to {to_email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send Invite email via SMTP to {to_email}: {str(e)}")
+        return False
 
 def send_registration_success_email(to_email: str, candidate_name: str):
-    logger.info(f"Mock sending success email to {to_email}")
-    pass
+    if not SMTP_USER and not BREVO_API_KEY:
+        logger.warning("No Email Credentials configured. Skipping success email send.")
+        return False
+
+    subject = "Registration Successful: Sterling E-Mobility"
+    
+    html_content = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px; color: #0f172a;">
+        <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; border-top: 4px solid #16a34a;">
+          <h2 style="color: #16a34a; margin-bottom: 5px; font-weight: 900; font-size: 22px; text-align: center; letter-spacing: 1px;">STERLING</h2>
+          <p style="text-align: center; color: #64748b; font-size: 12px; font-weight: bold; margin: 0 0 20px 0; letter-spacing: 2px; text-transform: uppercase;">E-MOBILITY</p>
+          <p style="font-size: 16px;">Hello {candidate_name},</p>
+          <p style="font-size: 16px; color: #475569;">Your registration has been successfully verified.</p>
+          <p style="font-size: 16px; color: #475569;">You can now log in to the candidate portal anytime using your registered email and the OTP system to access your dashboard, view schedules, and launch your AI Interview.</p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+          <p style="font-size: 12px; color: #94a3b8; text-align: center;">Sterling AI Interview Engine &copy; Sterling E-Mobility</p>
+        </div>
+      </body>
+    </html>
+    """
+
+    if BREVO_API_KEY:
+        try:
+            url = "https://api.brevo.com/v3/smtp/email"
+            headers = {
+                "accept": "application/json",
+                "api-key": BREVO_API_KEY,
+                "content-type": "application/json"
+            }
+            data = {
+                "sender": {"name": "Sterling E-Mobility", "email": SMTP_USER},
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "htmlContent": html_content
+            }
+            req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response:
+                logger.info(f"Successfully sent Success email via Brevo API to {to_email}")
+                return True
+        except Exception as e:
+            logger.error(f"Failed to send Success email via Brevo API to {to_email}: {str(e)}")
+            return False
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"Sterling E-Mobility <{SMTP_USER}>"
+    msg["To"] = to_email
+    msg.attach(MIMEText(html_content, "html"))
+
+    try:
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.sendmail(SMTP_USER, to_email, msg.as_string())
+        server.quit()
+        logger.info(f"Successfully sent Success email via SMTP to {to_email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send Success email via SMTP to {to_email}: {str(e)}")
+        return False
