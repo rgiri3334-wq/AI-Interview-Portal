@@ -1631,7 +1631,7 @@ async def verify_kyc(data: KycVerifyRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Failed to process KYC images.")
 
 @app.post("/api/candidates/{candidate_id}/apply", tags=["Candidates"])
-async def apply_for_role(candidate_id: str, data: ApplicationCreate, db: Session = Depends(get_db)):
+async def apply_for_role(candidate_id: str, data: ApplicationCreate, db: Session = Depends(get_db), _auth: dict = Depends(require_candidate_or_admin)):
     cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
     if not cand: raise HTTPException(status_code=404, detail="Candidate not found")
     

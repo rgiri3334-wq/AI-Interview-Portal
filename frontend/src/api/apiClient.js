@@ -32,6 +32,12 @@ api.interceptors.request.use((config) => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+  } else {
+    // For any candidate or generic API requests, inject candidateToken if it exists
+    const token = sessionStorage.getItem('candidateToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   // #19: only log requests in dev — avoids noisy/info-leaking console in production.
   if (import.meta.env?.DEV) {

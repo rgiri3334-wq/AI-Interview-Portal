@@ -152,7 +152,12 @@ export default function CandidateDetails() {
     const fetchProfile = async () => {
       if (!candidateId) return;
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/candidates/${candidateId}/portal`);
+        const token = sessionStorage.getItem('candidateToken');
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/candidates/${candidateId}/portal`, {
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : ''
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           const app = data.application || {};

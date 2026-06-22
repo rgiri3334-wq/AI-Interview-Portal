@@ -134,7 +134,12 @@ export default function CandidateHome() {
     if (!candidateId) { navigate('/candidate-login'); return; }
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/candidates/${candidateId}/portal`);
+      const token = sessionStorage.getItem('candidateToken');
+      const res = await fetch(`${API_BASE}/api/candidates/${candidateId}/portal`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         if (!data.candidate.experience_level) {
