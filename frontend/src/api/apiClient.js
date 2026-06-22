@@ -28,13 +28,17 @@ api.interceptors.request.use((config) => {
   config.headers['X-Request-ID'] = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
   
   if (config.url?.startsWith('/api/admin')) {
+    // Admin-only endpoints: always use the admin token.
     const token = sessionStorage.getItem('adminToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
   } else {
-    // For any candidate or generic API requests, inject candidateToken if it exists
-    const token = sessionStorage.getItem('candidateToken');
+    // Shared / generic endpoints (e.g. /api/reports/* accept admin OR candidate).
+    // Use whichever token the current session holds — prefer the admin token when
+    // an admin is logged in, otherwise fall back to the candidate token. Without
+    // this, an admin opening a report sent no valid token and got a 401.
+    const token = sessionStorage.getItem('adminToken') || sessionStorage.getItem('candidateToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
