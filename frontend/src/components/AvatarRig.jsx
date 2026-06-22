@@ -9,8 +9,39 @@ const damp = (current, target, factor, dt) => {
   return THREE.MathUtils.damp(current, target, factor, dt);
 };
 
+// ── Avatar model path ──────────────────────────────────────────────────────
+// Custom Avaturn male model. Full-body humanoid (~1.9 units tall), RPM-style
+// bone names (Head, Neck, Spine, RightArm, RightForeArm, RightHand, ...).
+// NOTE: this model currently has NO facial blendshapes / jaw bone, so lip-sync
+// cannot move the mouth. Re-export from Avaturn with visemes/ARKit blendshapes
+// to light up the existing morph-based lip-sync automatically.
+const AVATAR_MODEL_PATH = '/model.glb';
+
+// Resolve a bone by trying several common naming conventions (plain, RPM,
+// Mixamo with/without the "mixamorig:" colon prefix). Returns the first match.
+function resolveBone(nodes, scene, ...candidates) {
+  for (const name of candidates) {
+    if (nodes && nodes[name]) return nodes[name];
+  }
+  // Fallback: scan the scene graph by exact name (handles colon-prefixed names
+  // that aren't valid JS property keys on the nodes object).
+  if (scene) {
+    let hit = null;
+    scene.traverse((o) => {
+      if (hit) return;
+      for (const name of candidates) {
+        if (o.name === name || o.name === `mixamorig:${name}` || o.name === `mixamorig${name}`) {
+          hit = o; return;
+        }
+      }
+    });
+    if (hit) return hit;
+  }
+  return null;
+}
+
 export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenRef }) {
-  const { nodes, materials, scene } = useGLTF('/avatar.glb');
+  const { nodes, materials, scene } = useGLTF(AVATAR_MODEL_PATH);
 
   const groupRef = useRef();
 
@@ -26,7 +57,10 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
     blinkTimer: 0, isBlinking: false,
     saccadeTimer: 0, eyeTargetX: 0, eyeTargetY: 0,
     gestureTimer: 0, activeGesture: 0,
-    
+
+    // Greeting wave envelope
+    waveT: 0, wasGreeting: false,
+
     // Perlin noise offsets
     noiseX: Math.random() * 100,
     noiseY: Math.random() * 100
@@ -91,8 +125,26 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
     let targetLeftArmRoll = 1.2 + Math.cos(a.t * 0.6) * 0.02;
     let targetLeftForeArmPitch = 0.1;
 
-    // Behavior Matrix based on State
-    if (cur === AVATAR_STATES.SPEAKING) {
+    // ── Greeting wave envelope ────────────────────────────────────────────
+    // While greeting (first spoken turn), the right arm performs a friendly
+    // wave that eases in, holds, then eases out over ~4.5s. waveAmt is the
+    // 0..1 blend applied to the arm bones in the apply section below.
+    const isGreeting = cur === AVATAR_STATES.GREETING;
+    if (isGreeting && !a.wasGreeting) a.waveT = 0; // reset on entering greeting
+    a.wasGreeting = isGreeting;
+    let waveAmt = 0;
+    if (isGreeting) {
+      a.waveT += dt;
+      const WAVE_DURATION = 4.5;
+      const tN = Math.min(a.waveT / WAVE_DURATION, 1);
+      // ease-in over first 20%, hold, ease-out over last 15%
+      if (tN < 0.2) waveAmt = tN / 0.2;
+      else if (tN > 0.85) waveAmt = Math.max(0, 1 - (tN - 0.85) / 0.15);
+      else waveAmt = 1;
+    }
+
+    // Behavior Matrix based on State (greeting talks like speaking, plus wave)
+    if (cur === AVATAR_STATES.SPEAKING || cur === AVATAR_STATES.GREETING) {
       // Dynamic Speaking Head Movement
       targetHeadPitch = Math.sin(a.t * 3.0) * 0.04 + 0.02;
       targetHeadYaw += Math.sin(a.t * 1.5) * 0.05;
@@ -151,15 +203,16 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
     a.leftArmRoll = damp(a.leftArmRoll, targetLeftArmRoll, 5, dt);
     a.leftForeArmPitch = damp(a.leftForeArmPitch, targetLeftForeArmPitch, 5, dt);
 
-    // Apply to Bones (Fallback to Mixamo standard if RPM bones missing)
-    const head = nodes.Head || nodes.mixamorigHead;
-    const neck = nodes.Neck || nodes.mixamorigNeck;
-    const spine = nodes.Spine || nodes.Spine1 || nodes.mixamorigSpine;
-    
-    const rightArm = nodes.RightArm || nodes.mixamorigRightArm;
-    const rightForeArm = nodes.RightForeArm || nodes.mixamorigRightForeArm;
-    const leftArm = nodes.LeftArm || nodes.mixamorigLeftArm;
-    const leftForeArm = nodes.LeftForeArm || nodes.mixamorigLeftForeArm;
+    // Apply to Bones — resolveBone handles plain / RPM / Mixamo(:) naming.
+    const head = resolveBone(nodes, scene, 'Head');
+    const neck = resolveBone(nodes, scene, 'Neck');
+    const spine = resolveBone(nodes, scene, 'Spine', 'Spine1');
+
+    const rightArm = resolveBone(nodes, scene, 'RightArm');
+    const rightForeArm = resolveBone(nodes, scene, 'RightForeArm');
+    const rightHand = resolveBone(nodes, scene, 'RightHand');
+    const leftArm = resolveBone(nodes, scene, 'LeftArm');
+    const leftForeArm = resolveBone(nodes, scene, 'LeftForeArm');
 
     if (head) {
       head.rotation.x = a.headPitch;
@@ -182,9 +235,30 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
     if (leftArm) leftArm.rotation.z = -a.leftArmRoll;
     if (leftForeArm) leftForeArm.rotation.x = a.leftForeArmPitch;
 
-    // Apply to Eyes if available
-    const rightEye = nodes.RightEye || nodes.mixamorigRightEye;
-    const leftEye = nodes.LeftEye || nodes.mixamorigLeftEye;
+    // ── Greeting wave override (blended by waveAmt) ───────────────────────
+    // Raises the right hand up near the head and oscillates side-to-side.
+    // NOTE: bone-axis signs/magnitudes below are a sensible default for an
+    // Avaturn/RPM rig but may need a small visual tweak — adjust WAVE_* if the
+    // arm raises the wrong way when you preview with `npm run dev`.
+    if (waveAmt > 0) {
+      const WAVE_ARM_RAISE_Z = -0.1;  // upper-arm roll when raised
+      const WAVE_ARM_RAISE_X = -0.3;  // upper-arm lift forward/up
+      const WAVE_ELBOW_BEND  = -1.5;  // forearm bent up
+      const osc = Math.sin(a.t * 9) * 0.5 * waveAmt; // side-to-side hand motion
+      if (rightArm) {
+        rightArm.rotation.z = THREE.MathUtils.lerp(rightArm.rotation.z, WAVE_ARM_RAISE_Z, waveAmt);
+        rightArm.rotation.x = THREE.MathUtils.lerp(rightArm.rotation.x || 0, WAVE_ARM_RAISE_X, waveAmt);
+      }
+      if (rightForeArm) {
+        rightForeArm.rotation.x = THREE.MathUtils.lerp(rightForeArm.rotation.x, WAVE_ELBOW_BEND, waveAmt);
+        rightForeArm.rotation.y = osc;
+      }
+      if (rightHand) rightHand.rotation.z = osc * 0.8;
+    }
+
+    // Apply to Eyes if available (this model has no eye bones — resolves to null, no-op)
+    const rightEye = resolveBone(nodes, scene, 'RightEye');
+    const leftEye = resolveBone(nodes, scene, 'LeftEye');
     if (rightEye) {
       rightEye.rotation.x = damp(rightEye.rotation.x, a.eyeTargetY, 10, dt);
       rightEye.rotation.y = damp(rightEye.rotation.y, a.eyeTargetX, 10, dt);
@@ -235,4 +309,4 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
   );
 }
 
-useGLTF.preload('/avatar.glb');
+useGLTF.preload(AVATAR_MODEL_PATH);

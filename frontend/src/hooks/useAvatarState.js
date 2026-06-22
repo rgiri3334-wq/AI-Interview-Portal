@@ -21,6 +21,7 @@ export const AVATAR_STATES = {
   LISTENING:  'listening',
   THINKING:   'thinking',
   SPEAKING:   'speaking',
+  GREETING:   'greeting',   // first spoken turn → speaking + hand wave
   PROCESSING: 'processing',
   ASSERTIVE:  'assertive',
   FRIENDLY:   'friendly',
@@ -41,6 +42,8 @@ export function useAvatarState({ isSpeaking, isListening, isLoading, phase, qInd
     if (phase === 'ready' || phase === 'initializing') return AVATAR_STATES.FRIENDLY;
     if (phase === 'ending')                             return AVATAR_STATES.FRIENDLY;
 
+    // First spoken turn (the greeting) → GREETING so the avatar waves hello.
+    if (isSpeaking && phase === 'interviewing' && qIndex === 0) return AVATAR_STATES.GREETING;
     if (isSpeaking)   return AVATAR_STATES.SPEAKING;
     if (isLoading)    return AVATAR_STATES.THINKING;
     if (isListening)  return AVATAR_STATES.LISTENING;

@@ -106,7 +106,7 @@ export default function LiveInterview() {
   const transcriptEndRef = useRef(null);
 
   const { editorRef, language, setLanguage, handleEditorMount, getCode, clearCode } = useCodeWorkspace({ defaultLanguage: 'javascript' });
-  const { speak, stop: stopVoice, isSpeaking, getAudioFrequency, playActiveListeningCue } = useAudioStream();
+  const { speak, speakChunks, stop: stopVoice, isSpeaking, getAudioFrequency, playActiveListeningCue } = useAudioStream();
   const [nudgePill, setNudgePill] = useState(null);
   const nudgeTimerRef = useRef(null);
   const isStartingRef = useRef(false);
@@ -579,12 +579,11 @@ export default function LiveInterview() {
       const llmTime = performance.now() - t0;
       console.debug(`[Telemetry] LLM Orchestration Time: ${Math.round(llmTime)}ms | Action: ${res.action} | WPM: ${clampedWpm}`);
 
-      // SPRINT 4: Artificial "Thinking" Delay
-      // Enforce a minimum delay so the HR appears to actually think about the answer.
-      // This prevents robotic, instant responses.
-      const minThinkingTime = 2500 + Math.random() * 1500;
+      // Small floor only — just enough to avoid a jarringly instant reply. The
+      // natural "thinking" feel now comes from the two-beat spoken delivery
+      // (reaction → pause → question), not an artificial multi-second wait.
+      const minThinkingTime = 600;
       if (llmTime < minThinkingTime) {
-        setLoadingStatus("HR is reviewing your response...");
         await new Promise(r => setTimeout(r, minThinkingTime - llmTime));
       }
 
@@ -662,19 +661,21 @@ export default function LiveInterview() {
         const feedback = res.eq_feedback || '';
         const nextQ = res.next_technical_question || '';
 
-        let combined = feedback;
-        if (nextQ && !feedback.toLowerCase().includes(nextQ.toLowerCase())) {
-          combined += (combined.endsWith('.') || combined.endsWith('?') || combined.endsWith('!')) ? ` ${nextQ}` : `. ${nextQ}`;
-        }
+        // Caption still shows both, but we SPEAK them as two beats (reaction,
+        // pause, question) for a natural human cadence.
+        const includesQ = nextQ && feedback.toLowerCase().includes(nextQ.toLowerCase());
+        const captionCombined = includesQ || !nextQ
+          ? feedback
+          : `${feedback}${/[.?!]$/.test(feedback.trim()) ? '' : '.'} ${nextQ}`;
 
         if (!isMounted.current) return;
-        if (combined.trim()) {
-          setQuestion(combined);
-          setLoading(false); // Fix: Turn off loading so TTS captions show up!
-          await speak(combined);
+        if (captionCombined.trim()) {
+          setQuestion(captionCombined);
+          setLoading(false); // Turn off loading so TTS captions show up!
+          await speakChunks(includesQ ? [feedback] : [feedback, nextQ]);
         }
       } else {
-        const feedback = res.eq_feedback;
+        const feedback = res.eq_feedback || '';
         let nextQ = "";
 
         if (res.follow_up_question) {
@@ -685,16 +686,17 @@ export default function LiveInterview() {
           nextQ = "Thank you. Let's proceed.";
         }
 
-        let combined = feedback || '';
-        if (nextQ && !combined.toLowerCase().includes(nextQ.toLowerCase())) {
-          combined += (combined.endsWith('.') || combined.endsWith('?') || combined.endsWith('!')) ? ` ${nextQ}` : `. ${nextQ}`;
-        }
+        const includesQ = nextQ && feedback.toLowerCase().includes(nextQ.toLowerCase());
+        const captionCombined = includesQ || !nextQ
+          ? feedback
+          : `${feedback}${/[.?!]$/.test(feedback.trim()) ? '' : '.'} ${nextQ}`;
 
         if (!isMounted.current) return;
-        if (combined.trim()) {
-          setQuestion(combined);
-          setLoading(false); // Fix: Turn off loading so TTS captions show up!
-          await speak(combined);
+        if (captionCombined.trim()) {
+          setQuestion(captionCombined);
+          setLoading(false); // Turn off loading so TTS captions show up!
+          // Two-beat: react first, brief pause, then ask the next question.
+          await speakChunks(includesQ ? [feedback] : [feedback, nextQ]);
         }
       }
 

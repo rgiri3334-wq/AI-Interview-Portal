@@ -5,8 +5,15 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn Main:app --host 0.0.0.0 --port $PORT
     envVars:
+      # ── Database (Supabase Postgres) ──
       - key: DATABASE_URL
-        sync: false          # Paste your Supabase URI in the Render dashboard
+        sync: false          # Paste your Supabase session-pooler URI in the Render dashboard
+      - key: SUPABASE_URL
+        sync: false          # https://<project>.supabase.co  (for KYC/recording uploads)
+      - key: SUPABASE_KEY
+        sync: false          # Supabase service key
+
+      # ── AI / Voice provider keys ──
       - key: GEMINI_API_KEY
         sync: false
       - key: GROQ_API_KEY
@@ -15,8 +22,24 @@ services:
         sync: false
       - key: ELEVENLABS_API_KEY
         sync: false
-      - key: ALLOWED_ORIGIN
-        sync: false          # Set to your Vercel frontend URL (e.g. https://your-app.vercel.app)
+
+      # ── App secrets (required) ──
+      - key: JWT_SECRET
+        generateValue: true  # Render generates a strong, stable secret (keeps sessions valid across restarts)
+      - key: MASTER_ADMIN_PASSWORD
+        sync: false          # Seed password for the master admin account; change after first login
+
+      # ── CORS / URLs ──
+      # The app reads CORS_ALLOW_ORIGINS, ALLOWED_ORIGIN and FRONTEND_URL — set the
+      # Vercel frontend URL here so the browser isn't blocked by CORS.
+      - key: CORS_ALLOW_ORIGINS
+        sync: false          # e.g. https://your-app.vercel.app  (comma-separated for multiple)
+      - key: FRONTEND_URL
+        sync: false          # e.g. https://your-app.vercel.app  (used in email links too)
+      - key: BACKEND_URL
+        sync: false          # This service's public URL, e.g. https://your-backend.onrender.com
+
+      # ── Email (Gmail SMTP for OTP / notifications) ──
       - key: SMTP_USER
         sync: false          # Gmail address for OTP emails
       - key: SMTP_PASS
@@ -25,3 +48,9 @@ services:
         value: smtp.gmail.com
       - key: SMTP_PORT
         value: "587"
+
+      # ── Optional tuning (have sensible defaults) ──
+      - key: KYC_MATCH_THRESHOLD
+        value: "60"          # Min OCR name-match score to pass KYC
+      - key: TTS_VOICE
+        value: en-US-AndrewMultilingualNeural

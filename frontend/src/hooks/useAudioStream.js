@@ -28,15 +28,17 @@ export function useAudioStream() {
   // ── Voice preload ───────────────────────────────────────────────────────
   const getPreferredVoice = useCallback(() => {
     const voices = window.speechSynthesis.getVoices();
-    // Priority: warm female voices → Indian English → Google UK/US → any
+    // Priority: natural formal MALE English voices → any male → any English.
+    // (Edge's "…Online (Natural)" voices sound best when available.)
     return (
-      voices.find(v => v.name === 'Microsoft Heera - English (India)')  ||
-      voices.find(v => v.name === 'Google UK English Female')           ||
-      voices.find(v => v.name.includes('Samantha'))                     ||
-      voices.find(v => v.name.includes('Google') && v.lang.startsWith('en')) ||
-      voices.find(v => v.name.includes('Zira'))                         ||
-      voices.find(v => v.lang.startsWith('en') && v.gender === 'female') ||
-      voices.find(v => v.lang.startsWith('en'))                         ||
+      voices.find(v => /Guy Online.*Natural/i.test(v.name))                          ||
+      voices.find(v => /(Andrew|Brian|Eric|Davis|Guy)/i.test(v.name) && v.lang.startsWith('en')) ||
+      voices.find(v => v.name === 'Google UK English Male')                          ||
+      voices.find(v => /Daniel/i.test(v.name) && v.lang.startsWith('en'))            ||
+      voices.find(v => /(Microsoft David|Microsoft Mark|Alex|Fred|Rishi|Ravi)/i.test(v.name)) ||
+      voices.find(v => v.lang.startsWith('en') && v.gender === 'male')               ||
+      voices.find(v => v.name.includes('Google') && v.lang.startsWith('en'))         ||
+      voices.find(v => v.lang.startsWith('en'))                                      ||
       null
     );
   }, []);
@@ -171,7 +173,7 @@ export function useAudioStream() {
           utterance.rate = 0.95;
         }
         
-        utterance.pitch = 1.05;
+        utterance.pitch = 0.95; // slightly lower = composed, formal male tone
         utterance.volume = 1.0;
 
         const finalize = () => {
@@ -205,6 +207,72 @@ export function useAudioStream() {
     });
   }, [stop, startFrequencyAnalysis, stopFrequencyAnalysis, getPreferredVoice]);
 
+  // ── speakChunks — "two-beat" delivery ───────────────────────────────────
+  // Speaks an ordered list of phrases (e.g. [reaction, question]) with a real
+  // pause between them so the interviewer reacts, breathes, THEN asks — instead
+  // of reading one glued monotone blob. isSpeaking stays TRUE across the whole
+  // sequence so the mic doesn't flicker on between beats (no echo capture).
+  const speakChunks = useCallback((parts, options = {}) => {
+    const gapMs = options.gapMs ?? 420;
+    const list = (Array.isArray(parts) ? parts : [parts])
+      .map(p => (p || '').trim())
+      .filter(Boolean);
+
+    return new Promise((resolve) => {
+      if (list.length === 0) return resolve();
+      if (isSpeakingRef.current) stop();
+
+      setTimeout(() => {
+        if (echoDebounceRef.current) clearTimeout(echoDebounceRef.current);
+        window.speechSynthesis.cancel();
+
+        isSpeakingRef.current = true;
+        setIsSpeaking(true);
+        startFrequencyAnalysis();
+
+        const voice = getPreferredVoice();
+        let idx = 0;
+
+        const finalize = () => {
+          echoDebounceRef.current = setTimeout(() => {
+            isSpeakingRef.current = false;
+            setIsSpeaking(false);
+            utteranceRef.current = null;
+            stopFrequencyAnalysis();
+            resolve();
+          }, 600);
+        };
+
+        const speakNext = () => {
+          if (!isSpeakingRef.current) return resolve(); // stopped externally
+          if (idx >= list.length) return finalize();
+
+          const u = new SpeechSynthesisUtterance(list[idx++]);
+          utteranceRef.current = u;
+          if (voice) u.voice = voice;
+          u.rate = options.rate ?? 0.95;
+          u.pitch = options.pitch ?? 0.95;
+          u.volume = 1.0;
+
+          const keepAlive = setInterval(() => {
+            if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+          }, 5000);
+
+          const cont = () => {
+            clearInterval(keepAlive);
+            if (idx < list.length) setTimeout(speakNext, gapMs); // the pause
+            else finalize();
+          };
+          u.onend = cont;
+          u.onerror = cont;
+          window.speechSynthesis.speak(u);
+        };
+
+        speakNext();
+      }, 50);
+    });
+  }, [stop, startFrequencyAnalysis, stopFrequencyAnalysis, getPreferredVoice]);
+
   // ── Voice preloading (Safari/Chrome lazy init fix) ──────────────────────
   useEffect(() => {
     const load = () => window.speechSynthesis.getVoices();
@@ -222,5 +290,5 @@ export function useAudioStream() {
 
   const enqueue = useCallback((text) => speak(text), [speak]);
 
-  return { speak, enqueue, stop, isSpeaking, isReady: true, getAudioFrequency, playActiveListeningCue };
+  return { speak, speakChunks, enqueue, stop, isSpeaking, isReady: true, getAudioFrequency, playActiveListeningCue };
 }

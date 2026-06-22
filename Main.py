@@ -85,9 +85,10 @@ logger = logging.getLogger("EnterpriseInterviewAPI")
 # we fall back to an ephemeral random secret so the app still boots in dev, but we
 # emit a loud warning: an ephemeral secret invalidates every issued token on each
 # restart and must never be relied on in production.
-JWT_SECRET = os.environ.get("JWT_SECRET")
-if not JWT_SECRET:
-    JWT_SECRET = secrets.token_hex(32)
+# Annotated as `str` (not str | None) so type checkers know it is never None at
+# the jwt.encode/decode call sites. The `or` fallback guarantees a string value.
+JWT_SECRET: str = os.environ.get("JWT_SECRET") or secrets.token_hex(32)
+if not os.environ.get("JWT_SECRET"):
     logging.getLogger("EnterpriseInterviewAPI").warning(
         "JWT_SECRET is not set — using an ephemeral secret. Set JWT_SECRET in the "
         "environment for stable, secure tokens (all sessions reset on restart otherwise)."
@@ -418,18 +419,31 @@ app = FastAPI(
 )
 # ── CORS ──────────────────────────────────────────────────────────────────────
 # A wildcard origin ("*") combined with allow_credentials=True is both invalid per
-# the CORS spec and a security hole. Allowed origins are read from the
-# CORS_ALLOW_ORIGINS env var (comma-separated). If unset we fall back to a small
-# set of local dev origins only — never "*" while credentials are allowed.
-_cors_env = os.environ.get("CORS_ALLOW_ORIGINS", "").strip()
-if _cors_env:
-    ALLOWED_ORIGINS = [o.strip() for o in _cors_env.split(",") if o.strip()]
-else:
-    ALLOWED_ORIGINS = [
+# the CORS spec and a security hole, so we use an explicit allow-list.
+# Origins are collected from several env vars (comma-separated) so it works with
+# whatever the deploy platform sets:
+#   - CORS_ALLOW_ORIGINS  (preferred, comma-separated list)
+#   - ALLOWED_ORIGIN / ALLOWED_ORIGINS  (Render dashboard convention)
+#   - FRONTEND_URL        (single production frontend URL)
+# If nothing is set we fall back to local dev origins + the known Vercel app,
+# never "*" while credentials are allowed.
+_origins: set[str] = set()
+for _var in ("CORS_ALLOW_ORIGINS", "ALLOWED_ORIGINS", "ALLOWED_ORIGIN"):
+    for _o in os.environ.get(_var, "").split(","):
+        if _o.strip():
+            _origins.add(_o.strip())
+_fe = os.environ.get("FRONTEND_URL", "").strip()
+if _fe:
+    _origins.add(_fe)
+if not _origins:
+    _origins = {
         "http://localhost:5173",
         "http://localhost:3000",
         "http://127.0.0.1:5173",
-    ]
+        "https://ai-interview-portal.vercel.app",
+    }
+ALLOWED_ORIGINS = sorted(_origins)
+logger.info(f"CORS allow-list: {ALLOWED_ORIGINS}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
