@@ -1281,15 +1281,15 @@ def admin_invite_candidate(data: InviteCandidateRequest, background_tasks: Backg
     existing = db.query(Candidate).filter(Candidate.email == data.email.strip().lower()).first()
     if existing:
         raise HTTPException(status_code=400, detail="A candidate with this email already exists.")
-        
+
     # 2. Generate secure token
     token = secrets.token_urlsafe(32)
     expires_at = time.time() + (3 * 3600)  # 3 hours
-    
+
     # 2.5 Resolve department/role names to actual DB IDs (frontend passes names)
     dept = db.query(Department).filter(Department.department_name == data.department_id).first()
     real_dept_id = dept.department_id if dept else data.department_id
-    
+
     role = None
     if dept:
         role = db.query(JobRole).filter(JobRole.role_name == data.role_id, JobRole.department_id == dept.department_id).first()
@@ -1374,7 +1374,7 @@ def admin_delete_candidate(candidate_id: str, db: Session = Depends(get_db)):
     cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
     if not cand:
         raise HTTPException(status_code=404, detail="Candidate not found.")
-    
+
     db.delete(cand)
     db.commit()
     return {"status": "success", "message": "Candidate deleted successfully"}
@@ -2632,7 +2632,7 @@ async def delete_candidate(candidate_id: str, db: Session = Depends(get_db), _ad
     if not c:
         raise HTTPException(status_code=404, detail="Candidate not found")
     
-    # Due to cascade delete settings in models, deleting the candidate will 
+    # Due to cascade delete settings in models, deleting the candidate will
     # automatically delete all associated records (resumes, interviews, reports, etc.)
     try:
         db.delete(c)

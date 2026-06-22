@@ -132,19 +132,6 @@ export default function LiveInterview() {
     return () => { if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current); };
   }, [qIndex, phase]);
 
-  // Waveform bars — reads mic frequency data
-  const [waveBars, setWaveBars] = useState([4, 4, 4, 4, 4, 4, 4]);
-  useEffect(() => {
-    if (phase !== 'interviewing') return;
-    const id = setInterval(() => {
-      const freq = typeof getAudioFrequency === 'function' ? getAudioFrequency() : 0;
-      setWaveBars(prev => prev.map(() => isListening ? 4 + Math.random() * freq * 28 : 4));
-    }, 80);
-    return () => clearInterval(id);
-  }, [phase, getAudioFrequency, isListening]);
-
-
-
   // Sprint 3: Integrity Engine — collects signals throughout the interview
   const {
     integrityScore,
@@ -220,6 +207,21 @@ export default function LiveInterview() {
   // isListening is passed to Avatar3D for the LISTENING state display
 
   const lastCueWordCount = useRef(0);
+
+  // Waveform bars — reads mic frequency data.
+  // NOTE: must be declared AFTER useWebSocketSTT() so `isListening` exists when
+  // this effect's dependency array is evaluated during render. Declaring it
+  // earlier put `isListening` in the temporal dead zone and crashed the page
+  // with "Cannot access 'isListening' before initialization".
+  const [waveBars, setWaveBars] = useState([4, 4, 4, 4, 4, 4, 4]);
+  useEffect(() => {
+    if (phase !== 'interviewing') return;
+    const id = setInterval(() => {
+      const freq = typeof getAudioFrequency === 'function' ? getAudioFrequency() : 0;
+      setWaveBars(prev => prev.map(() => isListening ? 4 + Math.random() * freq * 28 : 4));
+    }, 80);
+    return () => clearInterval(id);
+  }, [phase, getAudioFrequency, isListening]);
 
   // SPRINT 4: Audio & VAD Improvements (Interruption & Active Listening)
   useEffect(() => {

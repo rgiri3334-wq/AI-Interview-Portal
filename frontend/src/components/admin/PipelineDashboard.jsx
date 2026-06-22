@@ -637,7 +637,11 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
                           </div>
                         </td>
                         <td className="p-5">
-                          <span className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-widest">{c.job_role}</span>
+                          {c.job_role && String(c.job_role).trim() ? (
+                            <span className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-widest">{c.job_role}</span>
+                          ) : (
+                            <span className="px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[10px] font-black text-amber-600 uppercase tracking-widest">Not Applied</span>
+                          )}
                         </td>
                         <td className="p-5" onClick={(e) => e.stopPropagation()}>
                           {isProctoringAct ? (
