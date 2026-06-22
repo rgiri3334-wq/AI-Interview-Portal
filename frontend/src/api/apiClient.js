@@ -132,6 +132,7 @@ export const apiClient = {
   adminGetCandidates: () => api.get('/api/admin/candidates'),
   adminInviteCandidate: (data) => api.post('/api/admin/candidates/invite', data),
   adminResendInvite: (data) => api.post('/api/admin/candidates/invite/resend', data),
+  adminDeleteCandidate: (id) => api.delete(`/api/admin/candidates/${id}`),
 
   // ── AI Engine ─────────────────────────────────────────────────────────
   generateQuestion: (data) => withRetry(() => api.post('/generate-question', data)),

@@ -1363,6 +1363,16 @@ def admin_resend_candidate_invite(data: InviteCandidateRequest, background_tasks
 
     return {"status": "success", "message": "Invitation resent successfully"}
 
+@app.delete("/api/admin/candidates/{candidate_id}", tags=["Admin Candidate Management"])
+def admin_delete_candidate(candidate_id: str, db: Session = Depends(get_db)):
+    cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
+    if not cand:
+        raise HTTPException(status_code=404, detail="Candidate not found.")
+    
+    db.delete(cand)
+    db.commit()
+    return {"status": "success", "message": "Candidate deleted successfully"}
+
 @app.get("/api/candidates/verify", tags=["Candidate Auth"])
 def verify_invitation(token: str, action: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     cand = db.query(Candidate).filter(Candidate.invitation_token == token).first()

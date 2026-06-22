@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserPlus, Users, XCircle, CheckCircle, Search, Mail, Filter, Clock } from 'lucide-react';
+import { UserPlus, Users, XCircle, CheckCircle, Search, Mail, Filter, Clock, Trash2 } from 'lucide-react';
 import Sidebar from '../components/Layout/Sidebar';
 import { apiClient } from '../api/apiClient';
 
@@ -69,13 +69,33 @@ export default function AdminCandidateRegistration() {
     }
   };
 
-  const handleResend = async (candidate_email, candidate_name, department_id, role_id) => {
+  const handleResend = async (c_email, c_name, c_dept, c_role) => {
     setLoading(true);
     try {
-      await apiClient.adminResendInvite({ email: candidate_email, name: candidate_name, department_id, role_id });
+      await apiClient.adminResendInvite({
+        email: c_email,
+        name: c_name,
+        department_id: c_dept,
+        role_id: c_role
+      });
       setToast({ type: 'success', message: 'Invitation resent successfully!' });
-    } catch (e) {
-      setToast({ type: 'error', message: e.message || 'An error occurred.' });
+    } catch (err) {
+      setToast({ type: 'error', message: err.detail || err.message || 'Error resending invite.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (candidate_id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this candidate?")) return;
+    
+    setLoading(true);
+    try {
+      await apiClient.adminDeleteCandidate(candidate_id);
+      setCandidates(prev => prev.filter(c => c.candidate_id !== candidate_id));
+      setToast({ type: 'success', message: 'Candidate deleted successfully!' });
+    } catch (err) {
+      setToast({ type: 'error', message: err.detail || err.message || 'Error deleting candidate.' });
     } finally {
       setLoading(false);
     }
@@ -294,11 +314,16 @@ export default function AdminCandidateRegistration() {
                                 </td>
                               )}
 
-                              <td className="py-4 px-6 text-right">
+                              <td className="py-4 px-6 text-right space-x-2">
                                 {cand.invitation_status === 'Pending' && (
-                                  <button onClick={() => handleResend(cand.email, cand.name, cand.department_id, cand.role_id)} disabled={loading} className="text-sm font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">
-                                    Resend Invite
-                                  </button>
+                                  <>
+                                    <button onClick={() => handleResend(cand.email, cand.name, cand.department_id, cand.role_id)} disabled={loading} className="text-sm font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 inline-flex items-center">
+                                      Resend Invite
+                                    </button>
+                                    <button onClick={() => handleDelete(cand.candidate_id)} disabled={loading} className="text-sm font-semibold text-slate-500 hover:text-red-600 bg-slate-50 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 inline-flex items-center" title="Delete Candidate">
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </>
                                 )}
                               </td>
                             </tr>
