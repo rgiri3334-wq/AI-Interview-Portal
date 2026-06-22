@@ -11,12 +11,13 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-// Generate 30-min time slots from 9:00 AM to 5:00 PM
+// Generate 15-min time slots from 9:00 AM to 9:00 PM (last slot 21:00)
 const generateTimeSlots = () => {
   const slots = [];
-  for (let h = 9; h <= 16; h++) {
-    slots.push(`${h === 9 ? '09' : h}:00`);
-    if (h !== 16) slots.push(`${h === 9 ? '09' : h}:30`);
+  for (let mins = 9 * 60; mins <= 21 * 60; mins += 15) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
   }
   return slots;
 };
