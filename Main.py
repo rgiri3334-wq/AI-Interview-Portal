@@ -4235,6 +4235,17 @@ async def get_candidate_portal(candidate_id: str, db: Session = Depends(get_db),
             "job_role": iv.role.role_name if iv.role else None,
         })
 
+    # Determine the actual job role for the candidate
+    current_job_role_name = None
+    if latest and latest.role:
+        current_job_role_name = latest.role.role_name
+    elif candidate.role_id:
+        role_record = db.query(JobRole).filter_by(role_id=candidate.role_id).first()
+        if role_record:
+            current_job_role_name = role_record.role_name
+        else:
+            current_job_role_name = candidate.role_id # fallback in case role_id is literally the string name
+
     return {
         "candidate": {
             "id": candidate.candidate_id,
@@ -4243,10 +4254,17 @@ async def get_candidate_portal(candidate_id: str, db: Session = Depends(get_db),
             "phone": candidate.phone,
             "kyc_verified": candidate.kyc_verified,
             "registered_at": candidate.registration_date,
+            "experience_level": candidate.experience_level,
+            "key_skills": candidate.key_skills,
+            "work_mode": candidate.work_mode,
+            "expected_salary": candidate.expected_salary,
+            "linkedin_url": candidate.linkedin,
+            "github_url": candidate.github,
+            "portfolio_url": candidate.portfolio,
         },
         "application": {
             "stage": app_stage,
-            "job_role": latest.role.role_name if (latest and latest.role) else None,
+            "job_role": current_job_role_name,
             "is_completed": is_completed,
             "score_tier": score_tier,
             "hiring_decision_visible": hiring_decision if hiring_decision in ("HIRED", "SHORTLISTED", "REJECTED") else None,
