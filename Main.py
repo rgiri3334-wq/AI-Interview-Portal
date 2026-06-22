@@ -2325,7 +2325,8 @@ async def get_leaderboard(db: Session = Depends(get_db)):
     Return ONE ROW PER INTERVIEW SESSION so admins see every attempt a candidate made,
     including proctoring-terminated sessions with grade F and PROCTORING_ACT status.
     """
-    cands = db.query(Candidate).order_by(Candidate.registration_date.desc()).all()
+    # Return only candidates who have confirmed their registration (i.e. not Pending/Canceled invites)
+    cands = db.query(Candidate).filter(Candidate.invitation_status == "Confirmed").order_by(Candidate.registration_date.desc()).all()
     rows = []
 
     # Group candidates by email to handle redundancy if they register multiple times
@@ -2357,7 +2358,16 @@ async def get_leaderboard(db: Session = Depends(get_db)):
         resume_score = getattr(resume, "resume_score", 0) if resume else 0
 
         if not all_interviews:
-            # Candidate registered but never started any interview
+            # Candidate registered but never started any interview. Resolve their job_role.
+            job_role_name = ""
+            if latest_c.role_id:
+                job_role = db.query(JobRole).filter(JobRole.role_id == latest_c.role_id).first()
+                if job_role:
+                    job_role_name = job_role.role_name
+                else:
+                    # In case role_id somehow holds the actual name instead of ID
+                    job_role_name = latest_c.role_id
+
             rows.append({
                 "id": latest_c.candidate_id,
                 "interview_id": None,
@@ -2365,7 +2375,7 @@ async def get_leaderboard(db: Session = Depends(get_db)):
                 "attempt_label": "No Interview Yet",
                 "name": c.name,
                 "email": c.email,
-                "job_role": "",
+                "job_role": job_role_name,
                 "experience": resume.experience_years if resume else "",
                 "resume_score": resume_score,
                 "resume_status": 200 if resume else 100,
