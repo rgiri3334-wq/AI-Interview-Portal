@@ -220,3 +220,48 @@ def send_registration_success_email(to_email: str, candidate_name: str):
     except Exception as e:
         logger.error(f"Failed to send Success email via SMTP to {to_email}: {str(e)}")
         return False
+def send_notification_email(to_email: str, candidate_name: str, subject: str, html_body: str):
+    """Reuses the existing email infrastructure to send any notification."""
+    if not SMTP_USER and not BREVO_API_KEY:
+        logger.warning("No Email Credentials configured. Skipping notification email send.")
+        return False
+
+    if BREVO_API_KEY:
+        try:
+            url = "https://api.brevo.com/v3/smtp/email"
+            headers = {
+                "accept": "application/json",
+                "api-key": BREVO_API_KEY,
+                "content-type": "application/json"
+            }
+            data = {
+                "sender": {"name": "Sterling E-Mobility Interviews", "email": SMTP_USER},
+                "to": [{"email": to_email, "name": candidate_name}],
+                "subject": subject,
+                "htmlContent": html_body
+            }
+            req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST")
+            with urllib.request.urlopen(req):
+                logger.info(f"Successfully sent notification email via Brevo API to {to_email}")
+                return True
+        except Exception as e:
+            logger.error(f"Notification email failed via Brevo API: {e}")
+            return False
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"Sterling E-Mobility Interviews <{SMTP_USER}>"
+    msg["To"] = to_email
+    msg.attach(MIMEText(html_body, "html"))
+
+    try:
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.sendmail(SMTP_USER, to_email, msg.as_string())
+        server.quit()
+        logger.info(f"Successfully sent notification email via SMTP to {to_email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send notification email via SMTP to {to_email}: {str(e)}")
+        return False

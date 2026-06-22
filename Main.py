@@ -3786,56 +3786,9 @@ async def websocket_interview(websocket: WebSocket, candidate_id: str):
 # ── SCHEDULING MODULE (Phase 1 — Candidate Portal Upgrade) ──────────────
 # ════════════════════════════════════════════════════════════════════════════
 
-from services.email_service import send_otp_email
+from services.email_service import send_otp_email, send_notification_email
 
-def send_notification_email(to_email: str, candidate_name: str, subject: str, html_body: str):
-    """Reuses the existing email infrastructure to send any notification."""
-    import json, urllib.request, os
-    BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
-    SMTP_USER = os.getenv("SMTP_USER", "")
-    if not SMTP_USER and not BREVO_API_KEY:
-        return False
-    if BREVO_API_KEY:
-        try:
-            url = "https://api.brevo.com/v3/smtp/email"
-            headers = {
-                "accept": "application/json",
-                "api-key": BREVO_API_KEY,
-                "content-type": "application/json"
-            }
-            data = {
-                "sender": {"name": "Sterling E-Mobility Interviews", "email": SMTP_USER},
-                "to": [{"email": to_email, "name": candidate_name}],
-                "subject": subject,
-                "htmlContent": html_body
-            }
-            req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST")
-            with urllib.request.urlopen(req):
-                return True
-        except Exception as e:
-            logger.error(f"Notification email failed: {e}")
-            return False
-    import smtplib
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
-    SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-    SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-    SMTP_PASS = os.getenv("SMTP_PASS", "")
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = f"Sterling E-Mobility <{SMTP_USER}>"
-    msg["To"] = to_email
-    msg.attach(MIMEText(html_body, "html"))
-    try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASS)
-        server.sendmail(SMTP_USER, to_email, msg.as_string())
-        server.quit()
-        return True
-    except Exception as e:
-        logger.error(f"Notification SMTP failed: {e}")
-        return False
+
 
 
 # ── Slot Models (Pydantic) ────────────────────────────────────────────────
