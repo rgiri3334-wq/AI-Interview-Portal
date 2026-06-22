@@ -17,6 +17,41 @@ import html2canvas from 'html2canvas';
 import sterlingLogo from '../assets/sterling_logo.png';
 import { formatIST } from '../utils/istTime';
 
+// SECURITY (#4): The AI's `evaluated_answer` embeds the candidate's RAW answer
+// wrapped in highlight <span>s. Rendering it via dangerouslySetInnerHTML without
+// sanitizing is a stored-XSS vector. This whitelist sanitizer keeps ONLY
+// `<span class="...">` tags (the highlights) and escapes everything else to text,
+// neutralizing scripts, event handlers, <img onerror>, etc.
+function escapeText(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function sanitizeHighlightHtml(html) {
+  if (!html) return '';
+  if (typeof window === 'undefined' || !window.DOMParser) return escapeText(html);
+  try {
+    const doc = new window.DOMParser().parseFromString(String(html), 'text/html');
+    const walk = (node) => {
+      let out = '';
+      node.childNodes.forEach((child) => {
+        if (child.nodeType === 3) {                    // text node
+          out += escapeText(child.textContent);
+        } else if (child.nodeType === 1) {             // element
+          if (child.tagName === 'SPAN') {              // only spans survive
+            const cls = (child.getAttribute('class') || '').replace(/"/g, '');
+            out += `<span class="${escapeText(cls)}">${walk(child)}</span>`;
+          } else {
+            out += walk(child);                        // unknown tag → inner text only
+          }
+        }
+      });
+      return out;
+    };
+    return walk(doc.body);
+  } catch (e) {
+    return escapeText(html);
+  }
+}
+
 // ── Sterling Premium Score Ring ──────────────────────────────────────────
 function ScoreRing({ score, max = 100, color = '#DC2626', label, size = 120 }) {
   const r = (size - 12) / 2;
@@ -61,16 +96,13 @@ const radarFromReport = (r) => [
 ];
 
 const getTimelineData = (r) => {
-  if (!r || r.technical_score === 0 || r.overall_score === 0 || r.hiring_decision === 'PROCTORING_ACT') {
-    return Array.from({length: 10}, (_, i) => ({ q: `Q${i+1}`, score: 0 }));
+  // Use REAL per-question scores from the backend. No fabricated values — if there
+  // are no stored scores, the chart shows flat zeros.
+  const scores = Array.isArray(r?.per_question_scores) ? r.per_question_scores : [];
+  if (scores.length === 0) {
+    return Array.from({ length: 10 }, (_, i) => ({ q: `Q${i + 1}`, score: 0 }));
   }
-  return [
-    { q: 'Q1', score: 6.5 }, { q: 'Q2', score: 7.0 },
-    { q: 'Q3', score: 8.5 }, { q: 'Q4', score: 7.5 },
-    { q: 'Q5', score: 9.0 }, { q: 'Q6', score: 8.5 },
-    { q: 'Q7', score: 9.5 }, { q: 'Q8', score: 10.0 },
-    { q: 'Q9', score: 9.0 }, { q: 'Q10', score: 10.0 },
-  ];
+  return scores.map((s, i) => ({ q: `Q${i + 1}`, score: Number(s) || 0 }));
 };
 
 export default function Report() {
@@ -82,6 +114,10 @@ export default function Report() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isExporting, setIsExporting] = useState(false);
   const exportRef = useRef(null);
+  // Feature 4: admin decision workflow
+  const [decision, setDecision] = useState(null);
+  const [savingDecision, setSavingDecision] = useState(false);
+  const [decisionMsg, setDecisionMsg] = useState('');
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -141,6 +177,36 @@ export default function Report() {
 
   const grade = overall >= 90 ? 'S' : overall >= 80 ? 'A' : overall >= 70 ? 'B' : overall >= 60 ? 'C' : 'F';
   const gradeColor = overall >= 80 ? '#10B981' : overall >= 60 ? '#DC2626' : '#991B1B';
+
+  // ── Feature 4: decision workflow ──────────────────────────────────────────
+  const currentDecision = decision ?? iv.hiring_decision ?? 'PENDING';
+  const applyDecision = async (value) => {
+    setSavingDecision(true); setDecisionMsg('');
+    try {
+      await apiClient.updateHiringDecision(iv.interview_id, value);
+      setDecision(value);
+      setDecisionMsg('Decision saved.');
+    } catch (e) {
+      setDecisionMsg('Could not save decision. Please retry.');
+    } finally { setSavingDecision(false); }
+  };
+  const emailDecision = async () => {
+    setSavingDecision(true); setDecisionMsg('');
+    try {
+      await apiClient.sendDecisionEmail(c.id);
+      setDecisionMsg('Decision email sent to candidate.');
+    } catch (e) {
+      setDecisionMsg('Could not send email.');
+    } finally { setSavingDecision(false); }
+  };
+
+  // ── Feature 3: consolidated red flags (real data, no fabrication) ─────────
+  const redFlags = [];
+  if (iv.termination_reason === 'PROCTORING_ACT') redFlags.push('Interview terminated by proctoring');
+  if ((iv.proctoring_warnings || 0) > 0) redFlags.push(`${iv.proctoring_warnings} proctoring warning(s)`);
+  if ((iv.integrity_score ?? 100) < 70) redFlags.push(`Integrity ${iv.integrity_score ?? 100}/100 (${iv.integrity_verdict || 'FLAGGED'})`);
+  if (Array.isArray(iv.integrity_signals) && iv.integrity_signals.length > 0) redFlags.push(`${iv.integrity_signals.length} integrity signal(s)`);
+  if (c.kyc_verified === false) redFlags.push('KYC not verified');
 
   const handleExport = async () => {
     if (!exportRef.current) return;
@@ -259,6 +325,51 @@ export default function Report() {
             {/* 1. OVERVIEW TAB */}
             {(isExporting || activeTab === 'overview') && (
               <motion.div key="overview" id="export-tab-overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                {/* Feature 3 + 4: Red Flags + Hiring Decision */}
+                <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className={`rounded-2xl p-6 border shadow-sm ${redFlags.length ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                    <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2 mb-4">
+                      <ShieldAlert size={16} className={redFlags.length ? 'text-red-600' : 'text-emerald-600'} />
+                      {redFlags.length ? 'Red Flags' : 'No Red Flags'}
+                    </h3>
+                    {redFlags.length ? (
+                      <ul className="space-y-2">
+                        {redFlags.map((f, i) => (
+                          <li key={i} className="flex items-center gap-2 text-sm text-red-700 font-medium">
+                            <AlertCircle size={14} className="shrink-0" /> {f}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-emerald-700 font-medium flex items-center gap-2"><CheckCircle size={14} /> Clean session — no integrity or proctoring concerns.</p>
+                    )}
+                  </div>
+
+                  <div className="rounded-2xl p-6 border border-slate-200 bg-white shadow-sm">
+                    <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2 mb-4 text-slate-900">
+                      <Award size={16} className="text-red-600" /> Hiring Decision
+                    </h3>
+                    <p className="text-xs text-slate-500 mb-3">Current: <span className="font-bold text-slate-800">{currentDecision}</span></p>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {[
+                        { v: 'HIRED', label: 'Hire', cls: 'bg-emerald-600 hover:bg-emerald-700' },
+                        { v: 'SHORTLISTED', label: 'Shortlist', cls: 'bg-blue-600 hover:bg-blue-700' },
+                        { v: 'ON_HOLD', label: 'Hold', cls: 'bg-amber-500 hover:bg-amber-600' },
+                        { v: 'REJECTED', label: 'Reject', cls: 'bg-red-600 hover:bg-red-700' },
+                      ].map(b => (
+                        <button key={b.v} disabled={savingDecision} onClick={() => applyDecision(b.v)}
+                          className={`px-4 py-2 rounded-lg text-white text-xs font-bold disabled:opacity-50 transition ${b.cls} ${currentDecision === b.v ? 'ring-2 ring-offset-2 ring-slate-400' : ''}`}>
+                          {b.label}
+                        </button>
+                      ))}
+                    </div>
+                    <button disabled={savingDecision} onClick={emailDecision}
+                      className="text-xs font-bold text-red-600 hover:text-red-800 disabled:opacity-50 flex items-center gap-1">
+                      <MessageSquare size={14} /> Email decision to candidate
+                    </button>
+                    {decisionMsg && <p className="text-xs text-slate-500 mt-2">{decisionMsg}</p>}
+                  </div>
+                </div>
                 {/* Identity Banner */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-8 shadow-sm flex items-center justify-between">
                   <div className="flex items-center gap-6">
@@ -409,27 +520,37 @@ export default function Report() {
                       </div>
                     </div>
 
-                    {/* Video Glimpse */}
+                    {/* Interview Recording — full video with native controls (play/seek/fullscreen) */}
                     <div className="flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 md:col-span-1">
                       <div className="p-4 bg-slate-800 text-white flex justify-between items-center">
-                        <span className="text-xs font-bold uppercase tracking-widest">20s Video Loop</span>
-                        <span className="text-xs text-slate-300 flex items-center gap-1"><RefreshCcw size={12}/> Autoplay</span>
+                        <span className="text-xs font-bold uppercase tracking-widest">Interview Recording</span>
+                        <span className="text-xs text-slate-300 flex items-center gap-1"><Camera size={12}/> Proctored</span>
                       </div>
                       <div className="aspect-video bg-black relative flex-1">
-                        {iv.video_clip_url ? (
-                          <video src={iv.video_clip_url} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                        {iv.recording_url ? (
+                          <video
+                            src={iv.recording_url}
+                            controls
+                            preload="metadata"
+                            playsInline
+                            className="w-full h-full object-contain bg-black"
+                          >
+                            Your browser cannot play this recording.
+                          </video>
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm italic">Clip Unavailable</div>
+                          <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm italic px-4 text-center">
+                            No recording available for this attempt.
+                          </div>
                         )}
                       </div>
                       <div className="p-4 bg-white border-t border-slate-200 flex justify-between items-center">
                         <div>
-                          <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">Full Recording</p>
+                          <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">Duration</p>
                           <p className="text-sm font-bold text-slate-900">{iv.duration_seconds ? Math.floor(iv.duration_seconds/60) + 'm ' + (iv.duration_seconds%60) + 's' : 'N/A'}</p>
                         </div>
                         {iv.recording_url && (
                           <a href={iv.recording_url} target="_blank" rel="noreferrer" className="text-red-600 hover:text-red-800 font-bold text-xs uppercase flex items-center gap-1">
-                            Watch <ChevronRight size={14}/>
+                            View Full <ChevronRight size={14}/>
                           </a>
                         )}
                       </div>
@@ -592,14 +713,21 @@ export default function Report() {
                     {transcript && transcript.length > 0 ? transcript.map((qa, idx) => (
                       <div key={idx} className="bg-slate-50 border border-slate-100 rounded-xl p-6 relative">
                         <div className="absolute top-0 left-0 w-1 h-full bg-slate-200 rounded-l-xl"></div>
-                        <div className="mb-4">
-                          <span className="text-xs font-bold text-red-600 uppercase tracking-widest mb-1 block">Question {idx + 1}</span>
-                          <p className="text-slate-800 font-semibold">{qa.question}</p>
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                          <div>
+                            <span className="text-xs font-bold text-red-600 uppercase tracking-widest mb-1 block">Question {idx + 1}</span>
+                            <p className="text-slate-800 font-semibold">{qa.question}</p>
+                          </div>
+                          <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-black ${
+                            (qa.score ?? 0) >= 7 ? 'bg-green-100 text-green-700'
+                            : (qa.score ?? 0) >= 4 ? 'bg-amber-100 text-amber-700'
+                            : 'bg-red-100 text-red-700'
+                          }`}>{(Number(qa.score) || 0).toFixed(1)}/10</span>
                         </div>
                         <div className="mb-4 bg-white p-4 rounded border border-slate-200">
                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Candidate Response</span>
                            {qa.answer ? (
-                             <p className="text-slate-700 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: qa.answer }} />
+                             <p className="text-slate-700 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(qa.answer) }} />
                            ) : (
                              <p className="text-slate-700 text-sm leading-relaxed italic text-slate-400">No response recorded</p>
                            )}

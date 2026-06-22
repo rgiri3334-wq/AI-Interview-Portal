@@ -33,10 +33,13 @@ api.interceptors.request.use((config) => {
       config.headers.Authorization = `Bearer ${token}`;
     }
   }
-  console.log(
-    `%c[API] ${config.method?.toUpperCase()} ${config.url}`,
-    'color: #00D1FF; font-weight: bold;'
-  );
+  // #19: only log requests in dev — avoids noisy/info-leaking console in production.
+  if (import.meta.env?.DEV) {
+    console.log(
+      `%c[API] ${config.method?.toUpperCase()} ${config.url}`,
+      'color: #00D1FF; font-weight: bold;'
+    );
+  }
   return config;
 });
 

@@ -21,6 +21,5 @@ opencv-python-headless
 pytesseract
 thefuzz
 python-Levenshtein
-moviepy
 edge-tts
 pytz

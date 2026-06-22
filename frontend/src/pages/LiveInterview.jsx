@@ -952,20 +952,44 @@ export default function LiveInterview() {
     );
   }
 
+  // SECURITY (#2): run candidate JS inside an isolated Web Worker instead of
+  // `new Function(code)()` on the page. A Worker has NO access to the DOM,
+  // React state, or sessionStorage (the admin/candidate token), so the candidate
+  // can no longer read tokens or tamper with the proctored interview from the
+  // editor. A 5s timeout guards against infinite loops.
+  const runJsInWorker = (code) => new Promise((resolve) => {
+    const workerSrc = `self.onmessage = function (e) {
+      var logs = [];
+      console.log = function () { logs.push(Array.prototype.map.call(arguments, String).join(' ')); };
+      try {
+        // eslint-disable-next-line no-new-func
+        (new Function(e.data))();
+        self.postMessage({ ok: true, output: logs.join('\\n') });
+      } catch (err) {
+        self.postMessage({ ok: false, output: String((err && err.message) || err) });
+      }
+    };`;
+    let url;
+    try {
+      const blob = new Blob([workerSrc], { type: 'application/javascript' });
+      url = URL.createObjectURL(blob);
+      const worker = new Worker(url);
+      const cleanup = () => { try { worker.terminate(); } catch (_) {} try { URL.revokeObjectURL(url); } catch (_) {} };
+      const timer = setTimeout(() => { cleanup(); resolve({ ok: false, output: 'Execution timed out (5s). Possible infinite loop.' }); }, 5000);
+      worker.onmessage = (e) => { clearTimeout(timer); cleanup(); resolve(e.data); };
+      worker.onerror = (err) => { clearTimeout(timer); cleanup(); resolve({ ok: false, output: String(err.message || 'Execution error') }); };
+      worker.postMessage(code);
+    } catch (err) {
+      if (url) { try { URL.revokeObjectURL(url); } catch (_) {} }
+      resolve({ ok: false, output: 'Sandbox unavailable in this browser.' });
+    }
+  });
+
   const handleRunCode = async () => {
     const code = getCode();
     if (language === 'javascript' || language === 'typescript') {
-      try {
-        const logs = [];
-        const originalLog = console.log;
-        console.log = (...args) => logs.push(args.join(' '));
-        // eslint-disable-next-line no-new-func
-        new Function(code)();
-        console.log = originalLog;
-        setOverlayMsg("Output:\n" + (logs.join('\n') || "Execution complete. No output."));
-      } catch (e) {
-        setOverlayMsg("Syntax Error:\n" + e.message);
-      }
+      const res = await runJsInWorker(code);
+      setOverlayMsg((res.ok ? "Output:\n" : "Error:\n") + (res.output || "Execution complete. No output."));
     } else if (language === 'python') {
       setLoadingStatus("Compiling Python...");
       setLoading(true);

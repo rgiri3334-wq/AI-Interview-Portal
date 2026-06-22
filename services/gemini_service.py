@@ -97,7 +97,7 @@ def _get_admin_question_data(job_role: str, asked_questions: list, current_quest
                             persona = c_data["persona"]
                         if "weights" in c_data:
                             weights = c_data["weights"]
-                    except:
+                    except Exception:
                         pass
 
             # 2. Get keywords for CURRENT question (if assessing)

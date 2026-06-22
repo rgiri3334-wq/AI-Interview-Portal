@@ -60,7 +60,7 @@ if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
     except Exception as e:
-        print(f"Error initializing Supabase client: {e}")
+        logging.getLogger("EnterpriseInterviewAPI").error(f"Error initializing Supabase client: {e}")
 
 BACKEND_URL = os.environ.get("BACKEND_URL", "https://ai-interview-portal-1.onrender.com")
 
@@ -156,29 +156,38 @@ def _seed_initial_data(db):
                 db.add(JobRole(role_id=role_id, department_id=dept.department_id, role_name=role_name))
                 db.commit()
                 
-    # Seed Master Admin
+    # ── Owner Master Admin (fixed password) ──────────────────────────────────
+    # The single owner account `sparkhire.sterling@gmail.com` is always kept at the
+    # fixed password below. This is an UPSERT: it creates the account on first boot
+    # and, on every subsequent boot, force-resets the password ONLY if it has drifted
+    # from MASTER_PASSWORD (so it self-heals even on an already-seeded database).
+    # NOTE: all OTHER master/sub admins are created via POST /api/admin/users with
+    # their OWN passwords and are never modified here.
+    # SECURITY: this hardcodes a plaintext credential in source — anyone with repo
+    # access can log in as the owner. Keep the repo private.
     master_admin_email = "sparkhire.sterling@gmail.com".lower()
+    MASTER_PASSWORD = "Betheonly@1"
     master_admin = db.query(AdminUser).filter_by(email=master_admin_email).first()
     if not master_admin:
-        # The master admin password must come from the environment. We deliberately
-        # do NOT ship a hardcoded plaintext default. If it is missing we generate a
-        # strong random password and log it once so the operator can capture it and
-        # reset it — the account is never seeded with a known/guessable secret.
-        master_password = os.environ.get("MASTER_ADMIN_PASSWORD")
-        if not master_password:
-            master_password = secrets.token_urlsafe(16)
-            logger.warning(
-                "MASTER_ADMIN_PASSWORD not set. Generated a one-time random master "
-                "admin password: %s  — store it now and rotate via the admin panel.",
-                master_password,
-            )
-        hashed = bcrypt.hashpw(master_password.encode(), bcrypt.gensalt()).decode()
         db.add(AdminUser(
             admin_id=f"ADMIN-{uuid.uuid4().hex[:8].upper()}",
             email=master_admin_email,
-            password_hash=hashed
+            password_hash=bcrypt.hashpw(MASTER_PASSWORD.encode(), bcrypt.gensalt()).decode(),
+            role="master_admin",
         ))
         db.commit()
+    else:
+        # Only rewrite if the stored password isn't already MASTER_PASSWORD
+        # (avoids a needless DB write + new hash on every restart).
+        try:
+            already_set = bcrypt.checkpw(MASTER_PASSWORD.encode(), master_admin.password_hash.encode("utf-8"))
+        except Exception:
+            already_set = False
+        if not already_set or master_admin.role != "master_admin":
+            master_admin.password_hash = bcrypt.hashpw(MASTER_PASSWORD.encode(), bcrypt.gensalt()).decode()  # type: ignore
+            master_admin.role = "master_admin"  # type: ignore
+            db.commit()
+            logger.info("Owner master admin password/role re-synced to fixed value.")
 
     logger.info("Database synchronized (SQLAlchemy 14-table schema).")
 
@@ -236,7 +245,7 @@ async def telemetry_worker():
                         started = datetime.fromisoformat(s.started_at.replace('Z', '+00:00'))
                         if (now - started).total_seconds() < 7200:
                             active_sessions += 1
-                    except:
+                    except Exception:
                         pass
                 
                 # 3. Base Platform Traffic on Real Interviews Started Today
@@ -950,7 +959,7 @@ async def create_admin_user(data: AdminUserCreate, req: Request, db: Session = D
             payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
             actor_email = payload.get("email", "SYSTEM")
             actor_role = payload.get("role", "sub_admin")
-        except:
+        except Exception:
             pass
 
     email_lower = data.email.lower()
@@ -992,7 +1001,7 @@ async def delete_admin_user(admin_id: str, req: Request, db: Session = Depends(g
             token = auth_header.split(" ")[1]
             payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
             actor_email = payload.get("email", "SYSTEM")
-        except:
+        except Exception:
             pass
 
     admin = db.query(AdminUser).filter(AdminUser.admin_id == admin_id).first()
@@ -1097,8 +1106,8 @@ def send_candidate_otp(
     raw_code = str(secrets.randbelow(900000) + 100000)  # Always 6 digits: 100000–999999
     otp_hash = _hash_otp(raw_code)
     expires_iso = datetime.fromtimestamp(
-        time.time() + 1800, tz=timezone.utc
-    ).isoformat()  # 30 minutes from now
+        time.time() + 600, tz=timezone.utc
+    ).isoformat()  # 10 minutes — matches the "expires in 10 minutes" text in the OTP email
 
     otp_id = generate_enterprise_id(db, "OTP")
     db.add(OTPStore(
@@ -2155,7 +2164,7 @@ async def get_system_health(db: Session = Depends(get_db)):
         try:
             started = datetime.fromisoformat(session.started_at.replace('Z', '+00:00'))
             dur_seconds = int((now - started).total_seconds())
-        except:
+        except Exception:
             dur_seconds = 0
             
         if dur_seconds > 7200:
@@ -2199,7 +2208,7 @@ async def get_system_health(db: Session = Depends(get_db)):
     for log in telemetry_logs:
         try:
             t = datetime.fromisoformat(log.timestamp.replace('Z', '+00:00')).strftime("%H:%M")
-        except:
+        except Exception:
             t = "00:00"
         api_telemetry.append({
             "time": t,
@@ -2285,7 +2294,7 @@ async def get_audit_logs(db: Session = Depends(get_db)):
             elif dur < 3600: rel = f"{dur//60} mins ago"
             elif dur < 86400: rel = f"{dur//3600} hours ago"
             else: rel = f"{dur//86400} days ago"
-        except:
+        except Exception:
             rel = "Unknown"
 
         results.append({
@@ -3377,17 +3386,25 @@ def _build_interview_dict(iv_session, report):
     transcript = []
     try:
         convos = sorted(iv_session.conversation, key=lambda c: c.timestamp) if iv_session.conversation else []
-    except:
+    except Exception:
         convos = []
         
     try:
         key_evals = list(iv_session.keyword_evals) if iv_session.keyword_evals else []
-    except:
+    except Exception:
         key_evals = []
-    
+
+    # Real per-question scores (0-10) from UnifiedInterviewData.answer_score — used
+    # for the per-question breakdown AND the trajectory chart (no fabricated data).
+    try:
+        unified = sorted(iv_session.unified_answers, key=lambda u: u.timestamp) if iv_session.unified_answers else []
+    except Exception:
+        unified = []
+
     questions = [c.message for c in convos if c.speaker == "AI"]
     answers = [c.message for c in convos if c.speaker == "Candidate"]
-    
+
+    per_question_scores = []
     for i in range(max(len(questions), len(answers))):
         positive_kws = []
         negative_kws = []
@@ -3395,17 +3412,25 @@ def _build_interview_dict(iv_session, report):
             try:
                 positive_kws = json.loads(key_evals[i].matched_keywords or "[]")
                 negative_kws = json.loads(key_evals[i].missing_keywords or "[]")
-            except:
+            except Exception:
                 pass
-        
+
+        # Real per-question score; 0 when this question has no stored score.
+        try:
+            q_score = round(float(unified[i].answer_score), 1) if i < len(unified) else 0.0
+        except Exception:
+            q_score = 0.0
+
         q_text = questions[i] if i < len(questions) else ""
         a_text = answers[i] if i < len(answers) else ""
-        
+
         # Only add to transcript if there's actually a question or answer
         if q_text or a_text:
+            per_question_scores.append(q_score)
             transcript.append({
                 "question": q_text,
                 "answer": a_text,
+                "score": q_score,
                 "positive_keywords": positive_kws,
                 "negative_keywords": negative_kws
             })
@@ -3448,8 +3473,14 @@ def _build_interview_dict(iv_session, report):
         "environment_score": float(getattr(report, "environment_score", 100) if report else 100),
         "grade": getattr(report, "grade", "F" if is_proctoring_terminated else "N/A") if report else ("F" if is_proctoring_terminated else "N/A"),
         "transcript": transcript,
-        "video_clip_url": getattr(iv_session, "video_clip_url", None),
-        "recording_url": getattr(iv_session, "video_clip_url", None),
+        "per_question_scores": per_question_scores,  # real 0-10 scores for the trajectory chart
+        # FIX: previously BOTH keys returned video_clip_url (copy-paste bug), so the
+        # "full recording" link was wrong and — since clip generation was removed —
+        # always empty. Now recording_url returns the real recording, and the preview
+        # falls back to the full recording when no short clip exists.
+        "video_clip_url": getattr(iv_session, "video_clip_url", None) or getattr(iv_session, "recording_url", None),
+        "recording_url": getattr(iv_session, "recording_url", None),
+        "duration_seconds": int(getattr(iv_session, "duration_seconds", 0) or 0),
     }
 
 @app.get("/api/reports/{candidate_id}", tags=["Data"])
@@ -3486,7 +3517,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db),
         if not val: return default
         val_str = str(val)
         try: return json.loads(val_str)
-        except: return [s.strip() for s in val_str.split(",")]
+        except Exception: return [s.strip() for s in val_str.split(",")]
 
     def _safe_parse_string(val, default=""):
         if not val: return default
@@ -3495,7 +3526,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db),
             parsed = json.loads(val_str)
             if isinstance(parsed, list): return "\n".join([str(x) for x in parsed])
             return str(parsed)
-        except:
+        except Exception:
             return val_str
 
     def _parse_experience(val):
@@ -3736,7 +3767,7 @@ async def websocket_interview(websocket: WebSocket, candidate_id: str):
         logger.error(f"[WS] Error for {candidate_id}: {e}")
         try:
             await websocket.close(code=1011)
-        except:
+        except Exception:
             pass
 
 
