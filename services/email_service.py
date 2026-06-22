@@ -94,7 +94,7 @@ def send_invitation_email(to_email: str, candidate_name: str, token: str, role_n
 
     # The actual frontend URL (Vercel)
     frontend_url = os.getenv("FRONTEND_URL", "https://ai-interview-portal.vercel.app")
-    magic_link = f"{frontend_url}/candidate-registration?token={token}"
+    magic_link = f"{frontend_url}/verify-invitation?token={token}&action=confirm"
 
     subject = f"Invitation: Interview for {role_name} at Sterling E-Mobility"
     
