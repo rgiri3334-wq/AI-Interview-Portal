@@ -105,6 +105,111 @@ const getTimelineData = (r) => {
   return scores.map((s, i) => ({ q: `Q${i + 1}`, score: Number(s) || 0 }));
 };
 
+// Interview recording card. By default it plays a looping "highlights" reel of
+// 4 random 5-second clips (20s total) pulled from across the full recording.
+// A "Watch Full Video" toggle at the bottom switches to the full player with
+// native controls (and back to highlights).
+function RecordingCard({ recordingUrl, durationSeconds }) {
+  const videoRef = useRef(null);
+  const [showFull, setShowFull] = useState(false);
+  const clipsRef = useRef([]);
+  const idxRef = useRef(0);
+  const CLIP_LEN = 5;   // seconds per highlight clip
+  const NUM_CLIPS = 4;  // 4 clips x 5s = 20s reel
+
+  const pickClips = (duration) => {
+    if (!duration || duration <= CLIP_LEN) return [0];
+    const maxStart = Math.max(0, duration - CLIP_LEN);
+    // 4 random start points spread across the video, sorted for natural flow.
+    return Array.from({ length: NUM_CLIPS }, () => Math.random() * maxStart).sort((a, b) => a - b);
+  };
+
+  const startHighlights = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    clipsRef.current = pickClips(v.duration);
+    idxRef.current = 0;
+    try { v.currentTime = clipsRef.current[0] || 0; } catch (_) {}
+    v.play().catch(() => {});
+  };
+
+  const handleTimeUpdate = () => {
+    if (showFull) return;
+    const v = videoRef.current;
+    if (!v || !clipsRef.current.length) return;
+    const start = clipsRef.current[idxRef.current] ?? 0;
+    if (v.currentTime - start >= CLIP_LEN || v.currentTime >= (v.duration - 0.25)) {
+      idxRef.current += 1;
+      if (idxRef.current >= clipsRef.current.length) {
+        clipsRef.current = pickClips(v.duration); // re-randomize each loop
+        idxRef.current = 0;
+      }
+      try { v.currentTime = clipsRef.current[idxRef.current] || 0; } catch (_) {}
+      v.play().catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !recordingUrl) return;
+    if (showFull) {
+      v.pause();
+      try { v.currentTime = 0; } catch (_) {}
+    } else if (v.readyState >= 1) {
+      startHighlights();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showFull]);
+
+  return (
+    <>
+      <div className="aspect-video bg-black relative flex-1">
+        {recordingUrl ? (
+          <>
+            <video
+              ref={videoRef}
+              src={recordingUrl}
+              autoPlay={!showFull}
+              muted={!showFull}
+              controls={showFull}
+              playsInline
+              preload="metadata"
+              onLoadedMetadata={() => { if (!showFull) startHighlights(); }}
+              onTimeUpdate={handleTimeUpdate}
+              className="w-full h-full object-contain bg-black"
+            >
+              Your browser cannot play this recording.
+            </video>
+            {!showFull && (
+              <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1.5 pointer-events-none">
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" /> Highlights · 4 × 5s
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm italic px-4 text-center">
+            No recording available for this attempt.
+          </div>
+        )}
+      </div>
+      <div className="p-4 bg-white border-t border-slate-200 flex justify-between items-center">
+        <div>
+          <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">Duration</p>
+          <p className="text-sm font-bold text-slate-900">{durationSeconds ? Math.floor(durationSeconds / 60) + 'm ' + (durationSeconds % 60) + 's' : 'N/A'}</p>
+        </div>
+        {recordingUrl && (
+          <button
+            onClick={() => setShowFull(s => !s)}
+            className="text-red-600 hover:text-red-800 font-bold text-xs uppercase flex items-center gap-1"
+          >
+            {showFull ? 'Show Highlights' : 'Watch Full Video'} <ChevronRight size={14} />
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function Report() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -526,34 +631,7 @@ export default function Report() {
                         <span className="text-xs font-bold uppercase tracking-widest">Interview Recording</span>
                         <span className="text-xs text-slate-300 flex items-center gap-1"><Camera size={12}/> Proctored</span>
                       </div>
-                      <div className="aspect-video bg-black relative flex-1">
-                        {iv.recording_url ? (
-                          <video
-                            src={iv.recording_url}
-                            controls
-                            preload="metadata"
-                            playsInline
-                            className="w-full h-full object-contain bg-black"
-                          >
-                            Your browser cannot play this recording.
-                          </video>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm italic px-4 text-center">
-                            No recording available for this attempt.
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4 bg-white border-t border-slate-200 flex justify-between items-center">
-                        <div>
-                          <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">Duration</p>
-                          <p className="text-sm font-bold text-slate-900">{iv.duration_seconds ? Math.floor(iv.duration_seconds/60) + 'm ' + (iv.duration_seconds%60) + 's' : 'N/A'}</p>
-                        </div>
-                        {iv.recording_url && (
-                          <a href={iv.recording_url} target="_blank" rel="noreferrer" className="text-red-600 hover:text-red-800 font-bold text-xs uppercase flex items-center gap-1">
-                            View Full <ChevronRight size={14}/>
-                          </a>
-                        )}
-                      </div>
+                      <RecordingCard recordingUrl={iv.recording_url} durationSeconds={iv.duration_seconds} />
                     </div>
                   </div>
                 </div>
