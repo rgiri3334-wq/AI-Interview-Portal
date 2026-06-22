@@ -296,10 +296,10 @@ export default function CandidateDetails() {
       
       <main className="flex-1 overflow-y-auto relative pb-20">
         {/* Background Gradients */}
-        <div className="absolute top-0 left-0 right-0 h-[400px] bg-gradient-to-br from-red-600 via-red-700 to-slate-900 overflow-hidden z-0">
+        <div className="absolute top-0 left-0 right-0 h-[320px] bg-gradient-to-br from-slate-900 via-red-900/40 to-slate-900 overflow-hidden z-0">
           <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-          <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-red-500 rounded-full blur-[100px] opacity-40" />
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500 rounded-full blur-[120px] opacity-20" />
+          <div className="absolute -bottom-24 left-1/4 w-[500px] h-[500px] bg-red-600/20 rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
         </div>
 
         <div className="relative z-10 px-4 sm:px-8 pt-8 max-w-5xl mx-auto">
@@ -323,23 +323,23 @@ export default function CandidateDetails() {
           )}
 
           {/* Hero Banner */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10 text-white flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 text-white flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-              <h1 className="text-4xl md:text-5xl font-black mb-3 tracking-tight">
+              <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">
                 Candidate Profile
               </h1>
-              <p className="text-red-100 font-medium text-lg max-w-2xl">
+              <p className="text-slate-300 font-medium text-lg max-w-2xl">
                 {hasAppliedRole 
                   ? `Update your background and portfolio details, ${candidateName.split(' ')[0]}.`
                   : `Welcome ${candidateName.split(' ')[0]}! Complete your profile to proceed.`}
               </p>
             </div>
             {hasAppliedRole && (
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col items-end shadow-xl">
-                <p className="text-[10px] uppercase tracking-widest font-black text-red-200 mb-1">Locked Role</p>
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col items-end shadow-2xl">
+                <p className="text-[10px] uppercase tracking-widest font-black text-slate-400 mb-1">JOB ROLE</p>
                 <div className="flex items-center gap-2">
-                  <Briefcase size={20} className="text-white" />
-                  <span className="text-xl font-black text-white">{form.job_role}</span>
+                  <Briefcase size={20} className="text-red-400" />
+                  <span className="text-xl font-black text-white tracking-tight">{form.job_role}</span>
                 </div>
               </div>
             )}
