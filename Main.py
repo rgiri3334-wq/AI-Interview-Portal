@@ -1280,18 +1280,29 @@ def admin_invite_candidate(data: InviteCandidateRequest, background_tasks: Backg
     token = secrets.token_urlsafe(32)
     expires_at = time.time() + (3 * 3600)  # 3 hours
     
+    # 2.5 Resolve department/role names to actual DB IDs (frontend passes names)
+    dept = db.query(Department).filter(Department.department_name == data.department_id).first()
+    real_dept_id = dept.department_id if dept else data.department_id
+    
+    role = None
+    if dept:
+        role = db.query(JobRole).filter(JobRole.role_name == data.role_id, JobRole.department_id == dept.department_id).first()
+    else:
+        role = db.query(JobRole).filter(JobRole.role_name == data.role_id).first()
+    real_role_id = role.role_id if role else data.role_id
+
     # 3. Create Candidate
     cid = generate_enterprise_id(db, "CAN")
     cand = Candidate(
         candidate_id=cid,
         name=data.name.strip(),
         email=data.email.strip().lower(),
-        department_id=data.department_id,
-        role_id=data.role_id,
-        invitation_status="Confirmed",
+        department_id=real_dept_id,
+        role_id=real_role_id,
+        invitation_status="Pending",
         invitation_token=token,
         invitation_expires_at=expires_at,
-        is_verified=True
+        is_verified=False
     )
     db.add(cand)
     db.commit()
