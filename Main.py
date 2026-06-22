@@ -2383,16 +2383,21 @@ async def get_leaderboard(db: Session = Depends(get_db)):
                 
         resume_score = getattr(resume, "resume_score", 0) if resume else 0
 
+        # Resolve the candidate's assigned job role from ANY record in the email
+        # group. This mirrors the candidate-portal logic (/portal) so the admin
+        # pipeline shows the SAME role the candidate sees on their dashboard.
+        # Handles duplicate records and a role_id that literally stores the name.
+        group_job_role = ""
+        for gc in group:
+            if gc.role_id:
+                jr = db.query(JobRole).filter(JobRole.role_id == gc.role_id).first()
+                group_job_role = jr.role_name if jr else str(gc.role_id)
+                if group_job_role:
+                    break
+
         if not all_interviews:
-            # Candidate registered but never started any interview. Resolve their job_role.
-            job_role_name = ""
-            if latest_c.role_id:
-                job_role = db.query(JobRole).filter(JobRole.role_id == latest_c.role_id).first()
-                if job_role:
-                    job_role_name = job_role.role_name
-                else:
-                    # In case role_id somehow holds the actual name instead of ID
-                    job_role_name = latest_c.role_id
+            # Candidate registered but never started any interview.
+            job_role_name = group_job_role
 
             rows.append({
                 "id": latest_c.candidate_id,
@@ -2469,7 +2474,7 @@ async def get_leaderboard(db: Session = Depends(get_db)):
                 "session_started_at": iv.started_at,
                 "name": latest_c.name,
                 "email": latest_c.email,
-                "job_role": iv.role.role_name if iv.role else "",
+                "job_role": (iv.role.role_name if iv.role else group_job_role),
                 "experience": resume.experience_years if resume else "",
                 "resume_score": resume_score,
                 "resume_status": 200 if resume else 100,

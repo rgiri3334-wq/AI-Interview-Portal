@@ -129,6 +129,7 @@ export default function CandidateHome() {
   const [loading, setLoading] = useState(true);
   const [isInterviewReady, setIsInterviewReady] = useState(false);
   const [isMarkingNoShow, setIsMarkingNoShow] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const load = useCallback(async () => {
     if (!candidateId) { navigate('/candidate-login'); return; }
@@ -174,7 +175,31 @@ export default function CandidateHome() {
     }
   };
 
-  if (loading || isMarkingNoShow) return (
+  const handleCancelSlot = async () => {
+    if (!portal?.booking?.booking_id || isCancelling) return;
+    if (!window.confirm("Cancel this interview slot? You'll be able to book a new one afterwards.")) return;
+    setIsCancelling(true);
+    try {
+      const token = sessionStorage.getItem('candidateToken');
+      const res = await fetch(`${API_BASE}/api/bookings/${portal.booking.booking_id}/cancel`, {
+        method: 'PATCH',
+        headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Could not cancel the slot. Please try again.');
+        return;
+      }
+      await load();
+    } catch (e) {
+      console.error("Failed to cancel slot:", e);
+      alert('Network error while cancelling. Please try again.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  if (loading || isMarkingNoShow || isCancelling) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="text-center">
         <div className="w-14 h-14 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -329,6 +354,10 @@ export default function CandidateHome() {
                         ⚠️ You have 15 minutes to join!
                       </p>
                     )}
+                    <button onClick={handleCancelSlot} disabled={isCancelling}
+                      className="w-full mt-3 py-3 rounded-2xl bg-white border border-slate-200 hover:border-red-300 hover:text-red-600 text-slate-500 font-black uppercase tracking-widest text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isCancelling ? "Cancelling…" : "Cancel / Reschedule Slot"}
+                    </button>
                   </div>
                 </div>
               ) : app.is_completed ? (

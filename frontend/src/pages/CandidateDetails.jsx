@@ -545,12 +545,16 @@ export default function CandidateDetails() {
 
                 {resumeResult && !resumeLoading && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                    className={`mt-4 p-4 rounded-xl border ${resumeResult.resume_score >= 70 ? 'bg-green-50 border-green-200' : resumeResult.resume_score >= 50 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-                    <div className="flex justify-between items-center mb-2">
-                      <p className="font-black text-xs text-slate-800 uppercase tracking-wider">AI Screen Score</p>
-                      <span className="font-black text-sm">{resumeResult.resume_score}/100</span>
-                    </div>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed">{resumeResult.shortlist_reason}</p>
+                    className="mt-4 p-4 rounded-xl border bg-emerald-50 border-emerald-200">
+                    {/* Candidate-facing confirmation only — the AI screening score is
+                        intentionally NOT shown to candidates. It is stored server-side
+                        for the recruiting team's review. */}
+                    <p className="font-black text-xs text-emerald-700 uppercase tracking-wider flex items-center gap-2">
+                      <CheckCircle size={14} /> Resume Received &amp; Screened
+                    </p>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-1">
+                      Thanks! Your resume has been submitted successfully and will be reviewed as part of your application.
+                    </p>
                   </motion.div>
                 )}
 
