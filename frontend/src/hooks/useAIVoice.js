@@ -16,32 +16,24 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-// Try to find the best quality voice
+// Try to find the best quality MALE English voice (the AI interviewer is male).
+// Mirrors the live-interview voice logic so the briefing and interview match.
+const FEMALE_VOICE = /(Aria|Jenny|Zira|Hazel|Female|Samantha|Victoria|Susan|Catherine|Sonia|Libby|Michelle|Eva|Heera|Salli|Joanna|Kendra|Ivy|Neerja|Swara)/i;
+
 const selectVoice = (voices) => {
   if (!voices.length) return null;
 
-  // Priority: neural/natural English voices
-  const priorities = [
-    'Google US English',
-    'Microsoft Aria Online',
-    'Microsoft Guy Online',
-    'Google UK English Female',
-    'Google UK English Male',
-    'Microsoft David - English (United States)',
-    'en-US',
-    'en-GB',
-    'en',
-  ];
-
-  for (const name of priorities) {
-    const found = voices.find(v =>
-      v.name.includes(name) || v.lang.startsWith(name)
-    );
-    if (found) return found;
-  }
-
-  // Fallback: any English voice
-  return voices.find(v => v.lang.startsWith('en')) || voices[0];
+  return (
+    voices.find(v => /Guy Online.*Natural/i.test(v.name))                                   ||
+    voices.find(v => /(Andrew|Brian|Eric|Davis|Guy)/i.test(v.name) && v.lang.startsWith('en')) ||
+    voices.find(v => v.name === 'Google UK English Male')                                    ||
+    voices.find(v => /Daniel/i.test(v.name) && v.lang.startsWith('en'))                      ||
+    voices.find(v => /(Microsoft David|Microsoft Mark|Alex|Fred|Rishi|Ravi|Prabhat)/i.test(v.name)) ||
+    voices.find(v => v.lang.startsWith('en') && /\bmale\b/i.test(v.name) && !FEMALE_VOICE.test(v.name)) ||
+    voices.find(v => v.lang.startsWith('en') && !FEMALE_VOICE.test(v.name))                  ||
+    voices.find(v => v.lang.startsWith('en'))                                                ||
+    voices[0]
+  );
 };
 
 export function useAIVoice({ rate = 0.95, pitch = 0.95, volume = 1.0 } = {}) {

@@ -11,6 +11,9 @@
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 
+// Known female voice names to avoid so the AI interviewer always sounds male.
+const FEMALE_VOICE = /(Aria|Jenny|Zira|Hazel|Female|Samantha|Victoria|Susan|Catherine|Sonia|Libby|Michelle|Eva|Heera|Salli|Joanna|Kendra|Ivy|Neerja|Swara)/i;
+
 export function useAudioStream() {
   const [isSpeaking, setIsSpeaking] = useState(false);
 
@@ -35,9 +38,11 @@ export function useAudioStream() {
       voices.find(v => /(Andrew|Brian|Eric|Davis|Guy)/i.test(v.name) && v.lang.startsWith('en')) ||
       voices.find(v => v.name === 'Google UK English Male')                          ||
       voices.find(v => /Daniel/i.test(v.name) && v.lang.startsWith('en'))            ||
-      voices.find(v => /(Microsoft David|Microsoft Mark|Alex|Fred|Rishi|Ravi)/i.test(v.name)) ||
+      voices.find(v => /(Microsoft David|Microsoft Mark|Alex|Fred|Rishi|Ravi|Prabhat)/i.test(v.name)) ||
       voices.find(v => v.lang.startsWith('en') && v.gender === 'male')               ||
-      voices.find(v => v.name.includes('Google') && v.lang.startsWith('en'))         ||
+      // Avoid known female voices before falling back to any English voice.
+      voices.find(v => v.name.includes('Google') && v.lang.startsWith('en') && !FEMALE_VOICE.test(v.name)) ||
+      voices.find(v => v.lang.startsWith('en') && !FEMALE_VOICE.test(v.name))        ||
       voices.find(v => v.lang.startsWith('en'))                                      ||
       null
     );
