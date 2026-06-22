@@ -13,12 +13,12 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // ── Stage pipeline config ─────────────────────────────────────────────────────
 const STAGES = [
-  { key: 'REGISTERED',           label: 'Registered',         icon: User,        activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
-  { key: 'APPLIED',              label: 'Applied',            icon: FileText,    activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
-  { key: 'INTERVIEW_PENDING',    label: 'Schedule Interview', icon: Calendar,    activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
-  { key: 'INTERVIEW_SCHEDULED',  label: 'Interview Scheduled',icon: Clock,       activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
-  { key: 'UNDER_REVIEW',         label: 'Under Review',       icon: Shield,      activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
-  { key: 'DECISION_MADE',        label: 'Decision Made',      icon: Star,        activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
+  { key: 'REGISTERED', label: 'Registered', icon: User, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
+  { key: 'APPLIED', label: 'Applied', icon: FileText, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
+  { key: 'INTERVIEW_PENDING', label: 'Schedule Interview', icon: Calendar, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
+  { key: 'INTERVIEW_SCHEDULED', label: 'Interview Scheduled', icon: Clock, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
+  { key: 'UNDER_REVIEW', label: 'Under Review', icon: Shield, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
+  { key: 'DECISION_MADE', label: 'Decision Made', icon: Star, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
 ];
 
 // ── Countdown Timer (With 15-Min Expiration) ──────────────────────────────
@@ -52,7 +52,7 @@ function CountdownTimer({ targetDate, targetTime, onStartReady, onMissed }) {
 
       if (diff <= 0) {
         if (onStartReady) onStartReady();
-        const graceDiff = 900000 + diff; 
+        const graceDiff = 900000 + diff;
         const m = Math.floor((graceDiff % 3600000) / 60000);
         const s = Math.floor((graceDiff % 60000) / 1000);
         setTimeLeft({ m, s, h: 0, isGracePeriod: true });
@@ -102,10 +102,10 @@ function CountdownTimer({ targetDate, targetTime, onStartReady, onMissed }) {
 
 // ── Score Tier Badge ──────────────────────────────────────────────────────────
 const TIER_CONFIG = {
-  'Exceptional':      { color: 'text-white', bg: 'bg-slate-900', border: 'border-slate-800', emoji: '🏆' },
-  'Strong':           { color: 'text-slate-800', bg: 'bg-emerald-50', border: 'border-emerald-200', emoji: '⭐' },
-  'Good':             { color: 'text-slate-800', bg: 'bg-blue-50', border: 'border-blue-200', emoji: '✅' },
-  'Needs Development':{ color: 'text-slate-600', bg: 'bg-amber-50', border: 'border-amber-200', emoji: '📈' },
+  'Exceptional': { color: 'text-white', bg: 'bg-slate-900', border: 'border-slate-800', emoji: '🏆' },
+  'Strong': { color: 'text-slate-800', bg: 'bg-emerald-50', border: 'border-emerald-200', emoji: '⭐' },
+  'Good': { color: 'text-slate-800', bg: 'bg-blue-50', border: 'border-blue-200', emoji: '✅' },
+  'Needs Development': { color: 'text-slate-600', bg: 'bg-amber-50', border: 'border-amber-200', emoji: '📈' },
 };
 
 function TierBadge({ tier }) {
@@ -192,7 +192,7 @@ export default function CandidateHome() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-red-600 selection:text-white pb-20">
-      
+
       {/* ── NAV ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-xl border-b border-white/20 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -216,7 +216,7 @@ export default function CandidateHome() {
         <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay pointer-events-none" />
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-red-500 rounded-full mix-blend-screen filter blur-[100px] opacity-50 animate-pulse" />
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-slate-50 to-transparent" />
-        
+
         <div className="max-w-5xl mx-auto relative z-10">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
@@ -230,7 +230,7 @@ export default function CandidateHome() {
                   </span>
                 )}
               </div>
-              
+
               <h1 className="text-5xl sm:text-6xl font-black tracking-tighter text-white leading-tight drop-shadow-sm">
                 {candidate.name || 'Candidate'}
                 <span className="text-red-300">.</span>
@@ -242,11 +242,11 @@ export default function CandidateHome() {
                 }
               </p>
             </div>
-            
+
             <div className="flex gap-3">
-               <button onClick={() => navigate('/candidate')} className="px-5 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 rounded-2xl text-white text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg">
-                 <Edit3 size={16} /> Update Profile
-               </button>
+              <button onClick={() => navigate('/candidate')} className="px-5 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 rounded-2xl text-white text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg">
+                <Edit3 size={16} /> Update Profile
+              </button>
             </div>
           </motion.div>
         </div>
@@ -254,7 +254,7 @@ export default function CandidateHome() {
 
       <main className="px-4 sm:px-8 max-w-5xl mx-auto -mt-16 relative z-20">
         <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
-          
+
           {/* ── APPLICATION STATUS PIPELINE ── */}
           <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-8 flex items-center gap-2">
@@ -268,21 +268,18 @@ export default function CandidateHome() {
                 return (
                   <React.Fragment key={stage.key}>
                     <div className="flex flex-col items-center flex-1 min-w-0">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-all ${
-                        isDone ? stage.doneColor :
-                        isActive ? stage.activeColor :
-                        'bg-slate-50 border border-slate-200 text-slate-400'
-                      } ${isDone || isActive ? 'border' : ''}`}>
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-all ${isDone ? stage.doneColor :
+                          isActive ? stage.activeColor :
+                            'bg-slate-50 border border-slate-200 text-slate-400'
+                        } ${isDone || isActive ? 'border' : ''}`}>
                         {isDone ? <CheckCircle size={20} /> : <Icon size={20} />}
                       </div>
-                      <span className={`text-[10px] font-black uppercase tracking-widest text-center leading-tight hidden sm:block ${
-                        isActive ? 'text-red-600' : isDone ? 'text-slate-800' : 'text-slate-400'
-                      }`}>{stage.label}</span>
+                      <span className={`text-[10px] font-black uppercase tracking-widest text-center leading-tight hidden sm:block ${isActive ? 'text-red-600' : isDone ? 'text-slate-800' : 'text-slate-400'
+                        }`}>{stage.label}</span>
                     </div>
                     {i < STAGES.length - 1 && (
-                      <div className={`h-1 flex-1 mx-2 rounded-full transition-colors ${
-                        i < currentStageIdx ? 'bg-slate-800' : 'bg-slate-100'
-                      }`} />
+                      <div className={`h-1 flex-1 mx-2 rounded-full transition-colors ${i < currentStageIdx ? 'bg-slate-800' : 'bg-slate-100'
+                        }`} />
                     )}
                   </React.Fragment>
                 );
@@ -291,7 +288,7 @@ export default function CandidateHome() {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
+
             {/* ── INTERVIEW ACTION CARD ── */}
             <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col">
               <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
@@ -310,27 +307,27 @@ export default function CandidateHome() {
                     <p className="text-red-600 font-extrabold text-lg">{booking.start_time} – {booking.end_time}</p>
                     <p className="text-xs text-slate-500 font-bold mt-2 flex items-center gap-1"><MapPin size={12} />{booking.timezone}</p>
                   </div>
-                  
+
                   <div className="mb-8">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 text-center">Time Remaining</p>
-                    <CountdownTimer 
-                      targetDate={booking.date} 
-                      targetTime={booking.start_time} 
+                    <CountdownTimer
+                      targetDate={booking.date}
+                      targetTime={booking.start_time}
                       onStartReady={() => setIsInterviewReady(true)}
                       onMissed={handleNoShow}
                     />
                   </div>
-                  
+
                   <div className="mt-auto">
                     <button onClick={handleStartInterview} disabled={!isInterviewReady}
                       className="w-full py-4 rounded-2xl bg-red-600 hover:bg-red-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black uppercase tracking-widest text-sm transition-all shadow-lg flex items-center justify-center gap-3">
-                      {isInterviewReady ? "START INTERVIEW" : "WAITING FOR SLOT"} 
+                      {isInterviewReady ? "START INTERVIEW" : "WAITING FOR SLOT"}
                       <ArrowRight size={18} />
                     </button>
                     {isInterviewReady && (
-                       <p className="text-center text-xs font-bold text-red-600 mt-3 animate-pulse">
-                          ⚠️ You have 15 minutes to join!
-                       </p>
+                      <p className="text-center text-xs font-bold text-red-600 mt-3 animate-pulse">
+                        ⚠️ You have 15 minutes to join!
+                      </p>
                     )}
                   </div>
                 </div>
@@ -372,7 +369,7 @@ export default function CandidateHome() {
 
             {/* ── METRICS & DETAILS CARD ── */}
             <div className="space-y-6">
-               <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
                   <User size={16} className="text-red-600" /> Technical Profile
                 </h2>
@@ -403,18 +400,18 @@ export default function CandidateHome() {
 
               {/* ── QUICK TOOLS ── */}
               <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
-                 <button onClick={() => navigate('/schedule-interview')} className="group p-6 bg-white/80 backdrop-blur-xl rounded-3xl border border-white hover:border-red-200 hover:shadow-lg transition-all flex flex-col items-center justify-center gap-3 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                   <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-red-50 transition-colors">
-                     <Calendar size={20} className="text-slate-600 group-hover:text-red-600 transition-colors" />
-                   </div>
-                   <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Manage Schedule</span>
-                 </button>
-                 <button onClick={() => navigate('/prep-kit')} className="group p-6 bg-white/80 backdrop-blur-xl rounded-3xl border border-white hover:border-red-200 hover:shadow-lg transition-all flex flex-col items-center justify-center gap-3 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                   <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
-                     <Video size={20} className="text-red-600" />
-                   </div>
-                   <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Launch Prep Kit</span>
-                 </button>
+                <button onClick={() => navigate('/schedule-interview')} className="group p-6 bg-white/80 backdrop-blur-xl rounded-3xl border border-white hover:border-red-200 hover:shadow-lg transition-all flex flex-col items-center justify-center gap-3 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-red-50 transition-colors">
+                    <Calendar size={20} className="text-slate-600 group-hover:text-red-600 transition-colors" />
+                  </div>
+                  <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Manage Schedule</span>
+                </button>
+                <button onClick={() => navigate('/prep-kit')} className="group p-6 bg-white/80 backdrop-blur-xl rounded-3xl border border-white hover:border-red-200 hover:shadow-lg transition-all flex flex-col items-center justify-center gap-3 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                  <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+                    <Video size={20} className="text-red-600" />
+                  </div>
+                  <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Launch Prep Kit</span>
+                </button>
               </motion.div>
             </div>
           </div>
@@ -429,9 +426,8 @@ export default function CandidateHome() {
                 {attempts.map((a) => (
                   <div key={a.attempt_number} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black ${
-                        a.is_completed ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-200'
-                      }`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black ${a.is_completed ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-200'
+                        }`}>
                         #{a.attempt_number}
                       </div>
                       <div>
@@ -440,8 +436,8 @@ export default function CandidateHome() {
                       </div>
                     </div>
                     <div className="flex items-center">
-                      {a.score_tier ? <TierBadge tier={a.score_tier} /> : 
-                       (!a.is_completed && <span className="text-[10px] font-black text-slate-400 bg-white border border-slate-200 px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-sm">ABORTED</span>)}
+                      {a.score_tier ? <TierBadge tier={a.score_tier} /> :
+                        (!a.is_completed && <span className="text-[10px] font-black text-slate-400 bg-white border border-slate-200 px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-sm">ABORTED</span>)}
                     </div>
                   </div>
                 ))}

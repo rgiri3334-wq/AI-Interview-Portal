@@ -73,7 +73,9 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
 
     // Perlin noise offsets
     noiseX: Math.random() * 100,
-    noiseY: Math.random() * 100
+    noiseY: Math.random() * 100,
+
+    hasWaved: false
   });
 
   const avatarStateRef = useRef(avatarState);
@@ -136,17 +138,19 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
     let targetLeftForeArmPitch = 0.1;
 
     // ── Greeting wave envelope ────────────────────────────────────────────
-    // While greeting (first spoken turn), the right arm performs a friendly
-    // wave that eases in, holds, then eases out over ~4.5s. waveAmt is the
-    // 0..1 blend applied to the arm bones in the apply section below.
+    // Raises the right hand up near the head and oscillates side-to-side.
+    // The wave triggers exactly ONCE when entering the GREETING state.
     const isGreeting = cur === AVATAR_STATES.GREETING;
-    if (isGreeting && !a.wasGreeting) a.waveT = 0; // reset on entering greeting
+    if (isGreeting && !a.wasGreeting && !a.hasWaved) {
+      a.waveT = 0; // start wave
+      a.hasWaved = true;
+    }
     a.wasGreeting = isGreeting;
     let waveAmt = 0;
-    if (isGreeting) {
+    if (a.hasWaved && a.waveT < 4.5) {
       a.waveT += dt;
       const WAVE_DURATION = 4.5;
-      const tN = Math.min(a.waveT / WAVE_DURATION, 1);
+      const tN = a.waveT / WAVE_DURATION;
       // ease-in over first 20%, hold, ease-out over last 15%
       if (tN < 0.2) waveAmt = tN / 0.2;
       else if (tN > 0.85) waveAmt = Math.max(0, 1 - (tN - 0.85) / 0.15);

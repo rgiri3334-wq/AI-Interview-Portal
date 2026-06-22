@@ -16,6 +16,7 @@ export default function InterviewPrepKit() {
   // 'disclaimer' -> 'video' -> 'end'
   const [phase, setPhase] = useState('disclaimer');
   const [currentCaption, setCurrentCaption] = useState('');
+  const [sentenceIndex, setSentenceIndex] = useState(0);
   const isPlayingRef = useRef(false);
 
   const { speak, stop, isSpeaking, isReady: voiceReady } = useAIVoice();
@@ -38,6 +39,7 @@ export default function InterviewPrepKit() {
     for (let i = 0; i < SCRIPT.length; i++) {
       if (!isPlayingRef.current) break; // if skipped
       setCurrentCaption(SCRIPT[i]);
+      setSentenceIndex(i);
       await speak(SCRIPT[i]);
     }
 
@@ -120,7 +122,12 @@ export default function InterviewPrepKit() {
 
               {/* Avatar Canvas */}
               <div className="flex-1 relative bg-slate-900">
-                <Avatar3D isSpeaking={isSpeaking} hideOverlays={true} />
+                <Avatar3D 
+                  isSpeaking={isSpeaking} 
+                  hideOverlays={true} 
+                  qIndex={sentenceIndex}
+                  phase={sentenceIndex === SCRIPT.length - 1 ? 'goodbye' : 'interviewing'}
+                />
               </div>
 
               {/* Captions Bar */}
