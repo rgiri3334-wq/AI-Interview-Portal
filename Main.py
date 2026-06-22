@@ -659,6 +659,12 @@ class ApplicationCreate(BaseModel):
     job_role: str
     experience: str = Field(default="Fresher (0 years)")
     skills: str = Field(default="")
+    github_url: str = Field(default="")
+    linkedin_url: str = Field(default="")
+    portfolio_url: str = Field(default="")
+    expected_salary: str = Field(default="")
+    work_mode: str = Field(default="")
+    phone_number: str = Field(default="")
 
 class CandidateResponse(BaseModel):
     id: str; name: str; email: str; phone: str; created_at: str
@@ -1638,6 +1644,16 @@ async def apply_for_role(candidate_id: str, data: ApplicationCreate, db: Session
     role = db.query(JobRole).filter(JobRole.role_name == data.job_role).first()
     if not role:
         raise HTTPException(status_code=400, detail="Invalid job role. Role not found in database.")
+    
+    cand.experience_level = data.experience # type: ignore
+    cand.key_skills = data.skills # type: ignore
+    cand.github = data.github_url # type: ignore
+    cand.linkedin = data.linkedin_url # type: ignore
+    cand.portfolio = data.portfolio_url # type: ignore
+    cand.expected_salary = data.expected_salary # type: ignore
+    cand.work_mode = data.work_mode # type: ignore
+    cand.phone = data.phone_number # type: ignore
+    cand.role_id = role.role_id # type: ignore
     
     rid = generate_enterprise_id(db, "RES")
     new_resume = Resume(
