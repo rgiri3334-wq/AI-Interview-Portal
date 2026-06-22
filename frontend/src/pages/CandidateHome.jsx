@@ -142,10 +142,7 @@ export default function CandidateHome() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (!data.candidate.experience_level) {
-          navigate('/candidate');
-          return;
-        }
+        // Removed automatic redirect to let user see dashboard first
         setPortal(data);
       }
     } catch (e) { console.error(e); }
@@ -346,7 +343,7 @@ export default function CandidateHome() {
                   <p className="text-slate-500 text-sm font-medium mb-6">Your data has been transmitted securely for review.</p>
                   {app.score_tier && <TierBadge tier={app.score_tier} />}
                 </div>
-              ) : app.job_role ? (
+              ) : (candidate.experience_level && app.job_role) ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
                   <div className="w-20 h-20 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-6 border border-slate-100">
                     <Calendar size={40} />
@@ -364,10 +361,10 @@ export default function CandidateHome() {
                     <FileText size={40} />
                   </div>
                   <p className="font-black text-slate-800 text-xl uppercase tracking-tighter mb-2">Registration Pending</p>
-                  <p className="text-slate-500 text-sm font-medium mb-8">Lock in a job role and submit your details.</p>
+                  <p className="text-slate-500 text-sm font-medium mb-8">Complete your application to unlock interview slots.</p>
                   <button onClick={() => navigate('/candidate')}
                     className="w-full py-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm transition-all shadow-[0_4px_15px_rgba(220,38,38,0.3)]">
-                    COMPLETE PROFILE
+                    COMPLETE REGISTRATION
                   </button>
                 </div>
               )}
