@@ -215,9 +215,9 @@ export default function CandidateHome() {
       </nav>
 
       {/* ── HERO HEADER (Gradient & Glass) ── */}
-      <div className="bg-gradient-to-br from-slate-900 via-red-900/40 to-slate-900 pt-32 pb-24 px-4 sm:px-8 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-red-600/20 rounded-full mix-blend-screen filter blur-[120px] pointer-events-none" />
+      <div className="bg-gradient-to-br from-red-700 via-red-600 to-slate-900 pt-32 pb-24 px-4 sm:px-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay pointer-events-none" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-red-500 rounded-full mix-blend-screen filter blur-[100px] opacity-50 animate-pulse" />
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-slate-50 to-transparent" />
         
         <div className="max-w-5xl mx-auto relative z-10">
