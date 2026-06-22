@@ -222,7 +222,7 @@ export default function CandidateHome() {
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <span className="px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-black uppercase tracking-widest rounded-xl flex items-center gap-2">
-                  <Hash size={12} /> {candidate.candidate_id || 'ID PENDING'}
+                  <Hash size={12} /> {candidate.id || 'ID PENDING'}
                 </span>
                 {candidate.kyc_verified && (
                   <span className="px-3 py-1 bg-emerald-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-100 text-xs font-black uppercase tracking-widest rounded-xl flex items-center gap-1">
@@ -232,7 +232,7 @@ export default function CandidateHome() {
               </div>
               
               <h1 className="text-5xl sm:text-6xl font-black tracking-tighter text-white leading-tight drop-shadow-sm">
-                {candidate.name?.split(' ')[0] || 'Candidate'}
+                {candidate.name || 'Candidate'}
                 <span className="text-red-300">.</span>
               </h1>
               <p className="text-red-100/80 mt-3 font-medium text-lg max-w-xl">
