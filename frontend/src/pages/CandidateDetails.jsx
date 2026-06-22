@@ -312,7 +312,7 @@ export default function CandidateDetails() {
                 <ArrowLeft size={16} /> Dashboard
               </button>
               <div className="flex items-center gap-2">
-                <img src={logoUrl} alt="Sterling Logo" className="w-8 h-8 object-contain brightness-0 invert" />
+                <img src={logoUrl} alt="Sterling Logo" className="w-8 h-8 object-contain" />
                 <div className="font-bold text-white text-xl tracking-tight">Sterling<span className="font-light ml-1 text-red-200">E-Mobility</span></div>
               </div>
               <button onClick={handleLogout}

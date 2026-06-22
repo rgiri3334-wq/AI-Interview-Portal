@@ -91,7 +91,7 @@ export default function CandidateOnboarding() {
       <div className="w-full bg-slate-900 h-64 relative overflow-hidden flex items-center justify-center">
         <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 to-red-900/40 mix-blend-overlay"></div>
         <div className="relative z-10 text-center">
-          <img src={logoUrl} alt="Logo" className="w-16 h-16 mx-auto mb-4 object-contain brightness-0 invert" />
+          <img src={logoUrl} alt="Logo" className="w-16 h-16 mx-auto mb-4 object-contain" />
           <h1 className="text-3xl font-black text-white tracking-tight">Complete Your Application</h1>
           <p className="text-red-100 font-medium mt-2">Welcome {candidateName}. Please finalize your details to proceed.</p>
         </div>
