@@ -46,7 +46,11 @@ SIGNAL_WEIGHTS = {
     "resume_challenge_fail_2": 18,  # 2nd consecutive failure on SAME claim → deduction
 
     # Behavioral signals (weighted low because individually meaningless)
-    "zero_filler_words":       5,   # No natural speech disfluencies at all (scripted?)
+    # FAIRNESS FIX: "zero_filler_words" no longer deducts. Absence of fillers (um/uh)
+    # disproportionately flags non-native English speakers, articulate candidates, and
+    # those who simply prepared — it is not evidence of cheating. Kept at weight 0 so
+    # it can still surface as an informational signal without penalizing the score.
+    "zero_filler_words":       0,   # (was 5) absence of fillers is not a cheating signal
     "perfect_structure_every": 8,   # Every answer is robotically structured (STAR/format)
     "abnormally_fast_wpm":    10,   # >280 WPM sustained (reading from script)
     "abnormally_low_wpm":      0,   # <30 WPM (confusion, not cheating)
@@ -320,10 +324,13 @@ class IntegrityEngine:
                 "note": f"Average WPM {avg_wpm:.0f} (>280) — possible script reading."
             })
 
-        # Check for zero filler words across entire interview (unnaturally clean)
+        # NOTE: zero-filler-word detection intentionally does not deduct (weight 0).
+        # Penalizing the absence of fillers unfairly flags non-native English speakers
+        # and well-prepared candidates, so it is recorded only as an informational
+        # signal with no score impact.
         if total_filler_words == 0 and total_answers >= 5:
             self.record_signal("zero_filler_words", {
-                "note": "Zero filler words detected across all answers. Possibly scripted."
+                "note": "Zero filler words detected (informational only — no score impact)."
             })
 
         # Check if candidate used robotically perfect structure every time

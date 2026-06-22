@@ -22,7 +22,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 import pytz # type: ignore
 from utils.ist_time import ist_now, ist_isoformat, IST
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form, BackgroundTasks, Request, Depends
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form, BackgroundTasks, Request, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -64,6 +64,14 @@ if SUPABASE_URL and SUPABASE_KEY:
 
 BACKEND_URL = os.environ.get("BACKEND_URL", "https://ai-interview-portal-1.onrender.com")
 
+# Branding: logo used in transactional emails. Configurable via LOGO_URL so we don't
+# hardcode a raw GitHub URL (which can break on repo rename / branch changes and is
+# rate-limited). Falls back to the repo asset only if the env var is not set.
+LOGO_URL = os.environ.get(
+    "LOGO_URL",
+    "https://raw.githubusercontent.com/rgiri3334-wq/AI-Interview-Portal/main/frontend/src/assets/sterling_logo.png",
+)
+
 # ── Logging ───────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
@@ -73,16 +81,35 @@ logging.basicConfig(
 logger = logging.getLogger("EnterpriseInterviewAPI")
 
 # ── JWT Config ───────────────────────────────────────────────
-JWT_SECRET = "STERLING_SECURE_JWT_SECRET_KEY_2026"
+# JWT_SECRET MUST be supplied via the environment in production. If it is not set
+# we fall back to an ephemeral random secret so the app still boots in dev, but we
+# emit a loud warning: an ephemeral secret invalidates every issued token on each
+# restart and must never be relied on in production.
+JWT_SECRET = os.environ.get("JWT_SECRET")
+if not JWT_SECRET:
+    JWT_SECRET = secrets.token_hex(32)
+    logging.getLogger("EnterpriseInterviewAPI").warning(
+        "JWT_SECRET is not set — using an ephemeral secret. Set JWT_SECRET in the "
+        "environment for stable, secure tokens (all sessions reset on restart otherwise)."
+    )
 
 # ── Database ──────────────────────────────────────────────────────────────
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
 
 def init_db():
     Base.metadata.create_all(bind=engine)
-    
+
     # Seed required enterprise statuses if not present
-    db = next(get_db())
+    # NOTE: use SessionLocal() in a try/finally so the session is always closed.
+    # Previously this used `next(get_db())`, which never advanced the generator
+    # and therefore leaked the session (the get_db() cleanup never ran).
+    db = SessionLocal()
+    try:
+        _seed_initial_data(db)
+    finally:
+        db.close()
+
+def _seed_initial_data(db):
     default_statuses = [
         (100, "REGISTERED", "Candidate registered in system"),
         (200, "READY", "Candidate is ready for interview"),
@@ -132,7 +159,19 @@ def init_db():
     master_admin_email = "sparkhire.sterling@gmail.com".lower()
     master_admin = db.query(AdminUser).filter_by(email=master_admin_email).first()
     if not master_admin:
-        hashed = bcrypt.hashpw("Betheonly@1".encode(), bcrypt.gensalt()).decode()
+        # The master admin password must come from the environment. We deliberately
+        # do NOT ship a hardcoded plaintext default. If it is missing we generate a
+        # strong random password and log it once so the operator can capture it and
+        # reset it — the account is never seeded with a known/guessable secret.
+        master_password = os.environ.get("MASTER_ADMIN_PASSWORD")
+        if not master_password:
+            master_password = secrets.token_urlsafe(16)
+            logger.warning(
+                "MASTER_ADMIN_PASSWORD not set. Generated a one-time random master "
+                "admin password: %s  — store it now and rotate via the admin panel.",
+                master_password,
+            )
+        hashed = bcrypt.hashpw(master_password.encode(), bcrypt.gensalt()).decode()
         db.add(AdminUser(
             admin_id=f"ADMIN-{uuid.uuid4().hex[:8].upper()}",
             email=master_admin_email,
@@ -204,11 +243,20 @@ async def telemetry_worker():
                 total_interviews = db.query(InterviewSession).filter(InterviewSession.started_at >= today_start).count()
                 
                 # 4. Save to DB
+                # Telemetry must reflect REAL measurements, never fabricated random
+                # numbers. api_requests_count is the real count of interviews started
+                # today; ai_tokens_generated is pulled from the orchestrator's actual
+                # usage stats (0 if unavailable).
+                try:
+                    orch_stats = get_orchestrator_stats() or {}
+                    ai_tokens = int(orch_stats.get("total_tokens", orch_stats.get("tokens_generated", 0)) or 0)
+                except Exception:
+                    ai_tokens = 0
                 log = SystemTelemetryLog(
-                    api_requests_count=total_interviews + random.randint(5, 20),
+                    api_requests_count=total_interviews,
                     db_latency_ms=latency,
                     active_sessions=active_sessions,
-                    ai_tokens_generated=random.randint(1000, 5000)
+                    ai_tokens_generated=ai_tokens
                 )
                 db.add(log)
                 db.commit()
@@ -294,7 +342,7 @@ async def reminder_worker():
                             <html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:20px;color:#0f172a;">
                             <div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;border:1px solid #e2e8f0;border-top:4px solid #f59e0b;">
                               <div style="text-align:center;margin-bottom:20px;">
-                                <img src="https://raw.githubusercontent.com/rgiri3334-wq/AI-Interview-Portal/main/frontend/src/assets/sterling_logo.png" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
+                                <img src="{LOGO_URL}" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
                               </div>
                               <h2 style="color:#f59e0b;font-weight:900;text-align:center;letter-spacing:1px;">STERLING E-MOBILITY</h2>
                               <p style="text-align:center;color:#64748b;font-size:12px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;">Interview Reminder</p>
@@ -369,16 +417,43 @@ app = FastAPI(
     lifespan=lifespan,
 )
 # ── CORS ──────────────────────────────────────────────────────────────────────
+# A wildcard origin ("*") combined with allow_credentials=True is both invalid per
+# the CORS spec and a security hole. Allowed origins are read from the
+# CORS_ALLOW_ORIGINS env var (comma-separated). If unset we fall back to a small
+# set of local dev origins only — never "*" while credentials are allowed.
+_cors_env = os.environ.get("CORS_ALLOW_ORIGINS", "").strip()
+if _cors_env:
+    ALLOWED_ORIGINS = [o.strip() for o in _cors_env.split(",") if o.strip()]
+else:
+    ALLOWED_ORIGINS = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+    ]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+def _apply_cors_headers(resp: JSONResponse, origin: str) -> JSONResponse:
+    """Inject CORS headers on manually-built responses, but only for origins we
+    actually allow. Reflecting an arbitrary origin would defeat the CORS policy."""
+    if origin and origin in ALLOWED_ORIGINS:
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Access-Control-Allow-Credentials"] = "true"
+        resp.headers["Access-Control-Allow-Methods"] = "*"
+        resp.headers["Access-Control-Allow-Headers"] = "*"
+    return resp
+
 # ── Static Files (Recordings Fallback) ──────────────────────────────────────────
+# NOTE: KYC images (Aadhaar scans, selfies) and interview recordings contain
+# sensitive PII and are intentionally NOT served via an unauthenticated
+# StaticFiles mount. They are served through the authenticated /api/recordings/{filename}
+# endpoint defined below (require_admin). The local "recordings" dir is a write-only
+# backup/cache.
 os.makedirs("recordings", exist_ok=True)
-app.mount("/api/recordings", StaticFiles(directory="recordings"), name="recordings")
 
 
 @app.middleware("http")
@@ -390,12 +465,7 @@ async def verify_admin_jwt(request: Request, call_next):
     def _cors_401(detail: str) -> JSONResponse:
         origin = request.headers.get("origin", "")
         resp = JSONResponse(status_code=401, content={"detail": detail})
-        if origin:
-            resp.headers["Access-Control-Allow-Origin"] = origin
-            resp.headers["Access-Control-Allow-Credentials"] = "true"
-            resp.headers["Access-Control-Allow-Methods"] = "*"
-            resp.headers["Access-Control-Allow-Headers"] = "*"
-        return resp
+        return _apply_cors_headers(resp, origin)
 
     if request.url.path.startswith("/api/admin") and request.method != "OPTIONS":
         # Allow public read access to company structure for candidate registration
@@ -426,32 +496,76 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "hint": "Check request body schema against API docs at /docs",
         },
     )
-    if origin:
-        resp.headers["Access-Control-Allow-Origin"] = origin
-        resp.headers["Access-Control-Allow-Credentials"] = "true"
-        resp.headers["Access-Control-Allow-Methods"] = "*"
-        resp.headers["Access-Control-Allow-Headers"] = "*"
-    return resp
+    return _apply_cors_headers(resp, origin)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Catch-all — return JSON, never HTML tracebacks."""
-    logger.error(f"Unhandled exception on {request.url}: {exc}", exc_info=True)
+    """Catch-all — return JSON, never HTML tracebacks.
+
+    We log the full exception server-side (with traceback) but never leak the raw
+    exception text to the client, since it can reveal stack details, file paths,
+    SQL, or secrets. Clients get a generic message plus a correlation id they can
+    quote to support."""
+    error_id = uuid.uuid4().hex[:12]
+    logger.error(
+        f"Unhandled exception [{error_id}] on {request.url}: {exc}", exc_info=True
+    )
     origin = request.headers.get("origin", "")
     resp = JSONResponse(
         status_code=500,
         content={
             "error": "Internal Server Error",
-            "detail": str(exc),
-            "path": str(request.url),
+            "detail": "An unexpected error occurred. Please try again later.",
+            "error_id": error_id,
         },
     )
-    if origin:
-        resp.headers["Access-Control-Allow-Origin"] = origin
-        resp.headers["Access-Control-Allow-Credentials"] = "true"
-        resp.headers["Access-Control-Allow-Methods"] = "*"
-        resp.headers["Access-Control-Allow-Headers"] = "*"
-    return resp
+    return _apply_cors_headers(resp, origin)
+
+# ── Auth Dependencies ─────────────────────────────────────────────────────
+# Reusable FastAPI dependencies so individual endpoints can require a valid token.
+# Admin tokens carry sub="admin"; candidate tokens carry role="candidate" and
+# sub=<candidate_id> (see admin_login / verify_otp).
+
+def _decode_bearer(authorization: str | None) -> dict:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+def require_admin(authorization: str | None = Header(default=None)) -> dict:
+    """Require a valid admin JWT."""
+    payload = _decode_bearer(authorization)
+    if payload.get("sub") != "admin" and payload.get("role") not in ("master_admin", "sub_admin", "admin"):
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+    return payload
+
+def require_candidate_or_admin(candidate_id: str, authorization: str | None = Header(default=None)) -> dict:
+    """Allow an admin, or the candidate who owns `candidate_id`, to access a resource."""
+    payload = _decode_bearer(authorization)
+    is_admin = payload.get("sub") == "admin" or payload.get("role") in ("master_admin", "sub_admin", "admin")
+    if is_admin:
+        return payload
+    if payload.get("role") == "candidate" and payload.get("sub") == candidate_id:
+        return payload
+    raise HTTPException(status_code=403, detail="Not authorized for this candidate's data")
+
+# ── Authenticated media (recordings / KYC images) ─────────────────────────
+# Replaces the previous public StaticFiles mount. Aadhaar scans, selfies and
+# interview recordings are PII and require an admin token to retrieve.
+@app.get("/api/recordings/{filename}", tags=["Data"])
+async def get_protected_recording(filename: str, _admin: dict = Depends(require_admin)):
+    from pathlib import Path
+    # Prevent path traversal — only allow plain filenames within recordings/.
+    safe_name = os.path.basename(filename)
+    if safe_name != filename or not safe_name:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    file_path = Path("recordings") / safe_name
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(str(file_path))
 
 # ── NLP Utilities ─────────────────────────────────────────────────────────
 FILLER_WORDS = {"um","uh","like","basically","literally","actually","so","right",
@@ -577,9 +691,8 @@ class AssessResponse(BaseModel):
     # ── Silent AI/Plagiarism Detection (invisible to candidate) ──────────
     ai_detection:            dict  = Field(default_factory=dict, description="Multi-layer silent AI/plagiarism analysis result")
 
-class SaveInterviewRequest(BaseModel):
-    interview_data: list[dict]
-    overall_score: float
+# NOTE: A second, older SaveInterviewRequest({interview_data, overall_score}) used
+# to be defined here. It was shadowed by the fuller definition below and is removed.
 
 class AdminUserCreate(BaseModel):
     email: str
@@ -645,12 +758,8 @@ class SaveInterviewRequest(BaseModel):
 class DecisionUpdateRequest(BaseModel):
     decision: str
 
-class AdminQuestion(BaseModel):
-    department: str
-    role: str
-    question: str
-    keywords: str
-    difficulty: str = Field(default="Medium")
+# NOTE: A duplicate AdminQuestion model (identical to the one defined above) was
+# removed from here.
 
 class DashboardData(BaseModel):
     total_candidates:    int   = Field(default=0)
@@ -990,7 +1099,9 @@ def send_candidate_otp(
     db.commit()
 
     # ── Send OTP via email ────────────────────────────────────────────────
-    logger.info(f"[OTP] Code for {_mask_identifier(identifier)} ({purpose}): {raw_code}")
+    # SECURITY: never log the raw OTP. Anyone with log access could read it and
+    # bypass verification. Log only the masked identifier and purpose.
+    logger.info(f"[OTP] Generated code for {_mask_identifier(identifier)} ({purpose}).")
 
     # Send via email service in the background to prevent API timeouts
     from services.email_service import send_otp_email
@@ -1136,7 +1247,7 @@ def admin_get_candidates(db: Session = Depends(get_db)):
     return candidates
 
 @app.post("/api/admin/candidates/invite", tags=["Admin Candidate Management"])
-def admin_invite_candidate(data: InviteCandidateRequest, db: Session = Depends(get_db)):
+def admin_invite_candidate(data: InviteCandidateRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     # 1. Check if email exists
     existing = db.query(Candidate).filter(Candidate.email == data.email.strip().lower()).first()
     if existing:
@@ -1162,17 +1273,14 @@ def admin_invite_candidate(data: InviteCandidateRequest, db: Session = Depends(g
     db.add(cand)
     db.commit()
     
-    # 4. Send Email (in background)
+    # 4. Send Email via FastAPI's request-lifecycle background tasks (not a raw
+    # threading.Thread). Capture ORM values before scheduling to avoid
+    # DetachedInstanceError once the session is closed.
     from services.email_service import send_invitation_email
-    background_tasks = BackgroundTasks()
-    # In a real app, we'd add background_tasks to function signature and use it,
-    # but we can also just spawn a new thread or use asyncio.create_task for now
-    import threading
-    # Capture variables before thread to prevent DetachedInstanceError
     c_email = str(cand.email)
     c_name = str(cand.name)
     c_role = str(cand.role_id)
-    
+
     def email_task():
         try:
             send_invitation_email(
@@ -1183,12 +1291,12 @@ def admin_invite_candidate(data: InviteCandidateRequest, db: Session = Depends(g
             )
         except Exception as e:
             logger.error(f"Failed to send invite email: {e}")
-    threading.Thread(target=email_task).start()
-    
+    background_tasks.add_task(email_task)
+
     return {"status": "success", "message": "Invitation sent successfully", "candidate_id": cid}
 
 @app.post("/api/admin/candidates/invite/resend", tags=["Admin Candidate Management"])
-def admin_resend_candidate_invite(data: InviteCandidateRequest, db: Session = Depends(get_db)):
+def admin_resend_candidate_invite(data: InviteCandidateRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     cand = db.query(Candidate).filter(Candidate.email == data.email.strip().lower()).first()
     if not cand:
         raise HTTPException(status_code=404, detail="Candidate not found.")
@@ -1202,12 +1310,11 @@ def admin_resend_candidate_invite(data: InviteCandidateRequest, db: Session = De
     cand.invitation_expires_at = time.time() + (3 * 3600)  # type: ignore
     db.commit()
 
-    import threading
     from services.email_service import send_invitation_email
     c_email = str(cand.email)
     c_name = str(cand.name)
     c_role = str(cand.role_id)
-    
+
     def email_task():
         try:
             send_invitation_email(
@@ -1218,12 +1325,12 @@ def admin_resend_candidate_invite(data: InviteCandidateRequest, db: Session = De
             )
         except Exception as e:
             logger.error(f"Failed to resend invite email: {e}")
-    threading.Thread(target=email_task).start()
-    
+    background_tasks.add_task(email_task)
+
     return {"status": "success", "message": "Invitation resent successfully"}
 
 @app.get("/api/candidates/verify", tags=["Candidate Auth"])
-def verify_invitation(token: str, action: str, db: Session = Depends(get_db)):
+def verify_invitation(token: str, action: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     cand = db.query(Candidate).filter(Candidate.invitation_token == token).first()
     if not cand:
         raise HTTPException(status_code=404, detail="Invalid or expired token.")
@@ -1237,8 +1344,7 @@ def verify_invitation(token: str, action: str, db: Session = Depends(get_db)):
         cand.invitation_status = "Confirmed"  # type: ignore
         cand.invitation_token = None  # type: ignore # Prevent reuse
         db.commit()
-        # Trigger success email
-        import threading
+        # Trigger success email via FastAPI background tasks
         from services.email_service import send_registration_success_email
         assert cand is not None
         c_email = str(cand.email)
@@ -1247,8 +1353,8 @@ def verify_invitation(token: str, action: str, db: Session = Depends(get_db)):
             try:
                 send_registration_success_email(c_email, c_name)
             except Exception as e:
-                pass
-        threading.Thread(target=success_email_task).start()
+                logger.error(f"Failed to send registration success email: {e}")
+        background_tasks.add_task(success_email_task)
         return {"status": "success", "message": "Registration Confirmed. You may now log in."}
         
     elif action == "cancel":
@@ -1324,7 +1430,7 @@ async def complete_candidate_profile(
     return {"status": "success", "message": "Profile completed successfully"}
 
 @app.get("/api/candidates/{candidate_id}", tags=["Candidates"])
-async def get_candidate(candidate_id: str, db: Session = Depends(get_db)):
+async def get_candidate(candidate_id: str, db: Session = Depends(get_db), _auth: dict = Depends(require_candidate_or_admin)):
     cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
     if not cand: raise HTTPException(status_code=404, detail="Candidate not found")
     
@@ -1348,16 +1454,9 @@ async def get_candidate(candidate_id: str, db: Session = Depends(get_db)):
         "interviews": interviews
     }
 
-@app.delete("/api/candidates/{candidate_id}", tags=["Candidates"])
-async def delete_candidate(candidate_id: str, db: Session = Depends(get_db)):
-    cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
-    if not cand:
-        raise HTTPException(status_code=404, detail="Candidate not found")
-    
-    # SQLAlchemy will handle cascade deletes if configured, otherwise we delete the candidate
-    db.delete(cand)
-    db.commit()
-    return {"status": "success", "message": "Candidate deleted successfully"}
+# NOTE: The DELETE /api/candidates/{candidate_id} route is defined once, below in
+# the Admin section (with require_admin auth and rollback handling). A duplicate
+# definition that previously lived here was removed.
 
 @app.post("/api/kyc/verify", tags=["Candidates"])
 async def verify_kyc(data: KycVerifyRequest, db: Session = Depends(get_db)):
@@ -1421,10 +1520,14 @@ async def verify_kyc(data: KycVerifyRequest, db: Session = Depends(get_db)):
             masked_number = f"XXXX XXXX {raw_num[-4:]}"
             
         # 6. Evaluate Result
-        # For a production app, threshold is usually > 75. 
-        # For this simulation, we'll gracefully pass it even if OCR fails due to poor webcam quality.
-        verified = True
-        extracted_name = best_match_name if best_match_score > 60 else cand.name
+        # SECURITY: verification must reflect the actual name match, not be hardcoded
+        # to True. The OCR'd Aadhaar name is fuzzy-matched against the candidate name;
+        # verification passes only when the match score clears the configurable
+        # threshold (default 60). This prevents anyone from passing KYC with an
+        # arbitrary / mismatched document.
+        kyc_threshold = int(os.environ.get("KYC_MATCH_THRESHOLD", "60"))
+        verified = best_match_score >= kyc_threshold
+        extracted_name = best_match_name if best_match_score >= kyc_threshold else cand.name
         
         # 7. Save images to Supabase Storage
         upload_dir = "recordings"
@@ -1471,7 +1574,12 @@ async def verify_kyc(data: KycVerifyRequest, db: Session = Depends(get_db)):
         
         return {
             "verified": verified,
-            "detail": f"Identity verified. Match score: {best_match_score}%",
+            "detail": (
+                f"Identity verified. Match score: {best_match_score}%"
+                if verified else
+                f"Identity could not be verified — name match score {best_match_score}% "
+                f"is below the required threshold ({kyc_threshold}%). Please retry with a clearer Aadhaar image."
+            ),
             "extracted_name": extracted_name
         }
     except Exception as e:
@@ -2321,11 +2429,8 @@ async def get_leaderboard(db: Session = Depends(get_db)):
 
             rows.append(d)
 
-    # Sort: PROCTORING_ACT first (most urgent), then by session_started_at desc
-    def sort_key(r):
-        is_proct = 1 if r.get("termination_reason") == "PROCTORING_ACT" else 0
-        return (-is_proct, r.get("session_started_at", "") or "")
-
+    # Sort by session_started_at desc (most recent first).
+    # (A previously-defined unused `sort_key` helper was removed as dead code.)
     rows.sort(key=lambda r: r.get("session_started_at", "") or "", reverse=True)
 
     # Deduplicate globally by Email + Job Role, keeping only the most recent attempt
@@ -2452,7 +2557,7 @@ async def terminate_proctoring(req: ProctoringTerminationRequest, db: Session = 
 
 
 @app.delete("/api/candidates/{candidate_id}", tags=["Admin"])
-async def delete_candidate(candidate_id: str, db: Session = Depends(get_db)):
+async def delete_candidate(candidate_id: str, db: Session = Depends(get_db), _admin: dict = Depends(require_admin)):
     c = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Candidate not found")
@@ -2465,7 +2570,8 @@ async def delete_candidate(candidate_id: str, db: Session = Depends(get_db)):
         return {"status": "success", "message": f"Candidate {candidate_id} deleted."}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to delete candidate {candidate_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete candidate.")
 
 # ── AI Engine: Smart Question Generation ─────────────────────────────────
 
@@ -2933,45 +3039,66 @@ async def upload_recording_chunk(
 ):
     """Handles chunked upload of massive video recordings to bypass proxy limits."""
     from pathlib import Path
+    import time as _time
     temp_dir = Path("temp_recordings")
     temp_dir.mkdir(exist_ok=True)
-    
+
+    # Sweep abandoned partial uploads: if a client disconnects mid-upload the final
+    # chunk never arrives and the temp file is never cleaned. Delete any temp file
+    # older than the configured TTL (default 6h) so they cannot accumulate forever.
+    try:
+        ttl_seconds = int(os.environ.get("TEMP_RECORDING_TTL_SECONDS", str(6 * 3600)))
+        now_ts = _time.time()
+        for stale in temp_dir.glob("recording_*.webm"):
+            try:
+                if now_ts - stale.stat().st_mtime > ttl_seconds:
+                    stale.unlink()
+            except OSError:
+                pass
+    except Exception as e:
+        logger.warning(f"Temp recording sweep failed: {e}")
+
     file_path = temp_dir / f"recording_{interview_id}_{sessionId}.webm"
-    
+
     # Append chunk
     with open(file_path, "ab") as f:
         f.write(await chunk.read())
-        
-    if chunkIndex == totalChunks - 1:
-        # This was the final chunk, now upload to Supabase
-        iv = db.query(InterviewSession).filter_by(interview_id=interview_id).first()
-        if not iv: raise HTTPException(status_code=404, detail="Interview not found")
 
-        raw_bytes = file_path.read_bytes()
-        recording_url = ""
-        
-        if supabase_client:
+    if chunkIndex == totalChunks - 1:
+        # This was the final chunk, now upload to Supabase.
+        # Wrap in try/finally so the temp file is always removed, even on error.
+        try:
+            iv = db.query(InterviewSession).filter_by(interview_id=interview_id).first()
+            if not iv: raise HTTPException(status_code=404, detail="Interview not found")
+
+            raw_bytes = file_path.read_bytes()
+            recording_url = ""
+
+            if supabase_client:
+                try:
+                    filename = f"INT_{interview_id}_{int(datetime.now(timezone.utc).timestamp())}.webm"
+                    supabase_client.storage.from_("interview-recordings").upload(
+                        filename, raw_bytes, file_options={"content-type": "video/webm", "upsert": "true"}
+                    )
+                    recording_url = supabase_client.storage.from_("interview-recordings").get_public_url(filename)
+                except Exception as e:
+                    logger.error(f"Failed to upload chunked video to Supabase: {e}")
+
+            if not recording_url:
+                base_url = os.getenv('SUPABASE_URL', 'https://supabase.co')
+                recording_url = f"{base_url}/storage/v1/object/public/interview-recordings/INT_{interview_id}.webm"
+
+            iv.recording_url = recording_url # type: ignore
+            db.commit()
+
+            return {"status": "completed", "recording_url": recording_url}
+        finally:
+            # Cleanup temp file (always, even if upload/commit raised)
             try:
-                filename = f"INT_{interview_id}_{int(datetime.now(timezone.utc).timestamp())}.webm"
-                supabase_client.storage.from_("interview-recordings").upload(
-                    filename, raw_bytes, file_options={"content-type": "video/webm", "upsert": "true"}
-                )
-                recording_url = supabase_client.storage.from_("interview-recordings").get_public_url(filename)
-            except Exception as e:
-                logger.error(f"Failed to upload chunked video to Supabase: {e}")
-                
-        if not recording_url:
-            base_url = os.getenv('SUPABASE_URL', 'https://supabase.co')
-            recording_url = f"{base_url}/storage/v1/object/public/interview-recordings/INT_{interview_id}.webm"
-            
-        iv.recording_url = recording_url # type: ignore
-        db.commit()
-        
-        # Cleanup temp file
-        file_path.unlink()
-        
-        return {"status": "completed", "recording_url": recording_url}
-        
+                file_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+
     return {"status": "chunk_received", "chunkIndex": chunkIndex}
 
 # ── AI Engine: Final Report ───────────────────────────────────────────────
@@ -2995,69 +3122,10 @@ async def get_ai_report(candidate_id: str, db: Session = Depends(get_db)):
     return {"candidate": {"name": c.name, "job_role": job_role_name}, "ai_report": report}
 
 # ── Data: Save Interview & Recordings ──────────────────────────────────────────────────
-
-@app.post("/api/interviews/{interview_id}/recording", tags=["Data"])
-async def upload_recording(interview_id: str, bg: BackgroundTasks, file: UploadFile = File(...), db: Session = Depends(get_db)):
-    iv = db.query(InterviewSession).filter_by(interview_id=interview_id).first()
-    if not iv:
-        raise HTTPException(status_code=404, detail="Interview session not found")
-        
-    upload_dir = "recordings"
-    os.makedirs(upload_dir, exist_ok=True)
-    file_path = f"{upload_dir}/{interview_id}.webm"
-    clip_path = f"{upload_dir}/{interview_id}_clip.webm"
-    
-    with open(file_path, "wb") as buffer:
-        import shutil
-        shutil.copyfileobj(file.file, buffer)
-        
-    def generate_clip():
-        try:
-            from moviepy import VideoFileClip
-            clip = VideoFileClip(file_path)
-            duration = clip.duration
-            if duration > 20:
-                start_time = random.uniform(0, duration - 20)
-                subclip = clip.subclipped(start_time, start_time + 20)
-                subclip = subclip.without_audio()
-                subclip.write_videofile(clip_path, codec="libvpx", audio=False, logger=None)
-            else:
-                shutil.copy(file_path, clip_path)
-            clip.close()
-        except Exception as e:
-            logger.error(f"Failed to generate video clip: {e}")
-            
-        # Supabase Upload Logic
-        if supabase_client:
-            try:
-                with open(file_path, "rb") as f:
-                    supabase_client.storage.from_("interview-recordings").upload(f"{interview_id}.webm", f.read(), file_options={"content-type": "video/webm", "upsert": "true"})
-                
-                if os.path.exists(clip_path):
-                    with open(clip_path, "rb") as f:
-                        supabase_client.storage.from_("interview-recordings").upload(f"{interview_id}_clip.webm", f.read(), file_options={"content-type": "video/webm", "upsert": "true"})
-            except Exception as e:
-                logger.error(f"Failed to upload recordings to Supabase: {e}")
-            
-    # Run clip generation and upload in background
-    bg.add_task(generate_clip)
-        
-    # Local fallback URL
-    recording_url = f"{BACKEND_URL}/api/recordings/{interview_id}.webm"
-    clip_url = f"{BACKEND_URL}/api/recordings/{interview_id}_clip.webm"
-    
-    if supabase_client:
-        try:
-            recording_url = supabase_client.storage.from_("interview-recordings").get_public_url(f"{interview_id}.webm")
-            clip_url = supabase_client.storage.from_("interview-recordings").get_public_url(f"{interview_id}_clip.webm")
-        except Exception:
-            pass
-    
-    iv.recording_url = recording_url # type: ignore
-    iv.video_clip_url = clip_url # type: ignore
-    db.commit()
-    
-    return {"status": "success", "url": recording_url, "clip_url": clip_url}
+# NOTE: A duplicate POST /api/interviews/{interview_id}/recording route (tags=["Data"])
+# used to live here. FastAPI always routes to the first-registered match — the one in
+# the "AI Engine" section above — so this definition was dead code and has been removed
+# to eliminate the ambiguity flagged in the audit.
 
 
 @app.post("/api/interviews/save", tags=["Data"])
@@ -3204,7 +3272,7 @@ async def send_decision_email_manual(candidate_id: str, db: Session = Depends(ge
         html = f"""
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
           <div style="text-align:center;margin-bottom:20px;">
-            <img src="https://raw.githubusercontent.com/rgiri3334-wq/AI-Interview-Portal/main/frontend/src/assets/sterling_logo.png" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
+            <img src="{LOGO_URL}" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
           </div>
           <div style="background:#dc2626;padding:24px;border-radius:12px;text-align:center;margin-bottom:24px;">
             <h1 style="color:#fff;margin:0;font-size:28px;font-weight:900;">🎉 Congratulations!</h1>
@@ -3220,7 +3288,7 @@ async def send_decision_email_manual(candidate_id: str, db: Session = Depends(ge
         html = f"""
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
           <div style="text-align:center;margin-bottom:20px;">
-            <img src="https://raw.githubusercontent.com/rgiri3334-wq/AI-Interview-Portal/main/frontend/src/assets/sterling_logo.png" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
+            <img src="{LOGO_URL}" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
           </div>
           <div style="background:#1e293b;padding:24px;border-radius:12px;text-align:center;margin-bottom:24px;">
             <h1 style="color:#fff;margin:0;font-size:24px;font-weight:900;">Application Update</h1>
@@ -3236,7 +3304,7 @@ async def send_decision_email_manual(candidate_id: str, db: Session = Depends(ge
         html = f"""
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
           <div style="text-align:center;margin-bottom:20px;">
-            <img src="https://raw.githubusercontent.com/rgiri3334-wq/AI-Interview-Portal/main/frontend/src/assets/sterling_logo.png" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
+            <img src="{LOGO_URL}" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
           </div>
           <p style="font-size:16px;color:#1e293b;">Dear <strong>{name}</strong>,</p>
           <p style="font-size:16px;color:#475569;">Your interview has been received and is currently <strong>under review</strong> by our hiring team. We will update you as soon as a decision is made.</p>
@@ -3248,7 +3316,7 @@ async def send_decision_email_manual(candidate_id: str, db: Session = Depends(ge
         html = f"""
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;">
           <div style="text-align:center;margin-bottom:20px;">
-            <img src="https://raw.githubusercontent.com/rgiri3334-wq/AI-Interview-Portal/main/frontend/src/assets/sterling_logo.png" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
+            <img src="{LOGO_URL}" alt="Sterling E-Mobility" style="width:100px;height:auto;" />
           </div>
           <div style="background:#f59e0b;padding:24px;border-radius:12px;text-align:center;margin-bottom:24px;">
             <h1 style="color:#fff;margin:0;font-size:24px;font-weight:900;">Proctoring Review</h1>
@@ -3371,7 +3439,7 @@ def _build_interview_dict(iv_session, report):
     }
 
 @app.get("/api/reports/{candidate_id}", tags=["Data"])
-async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db)):
+async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db), _auth: dict = Depends(require_candidate_or_admin)):
     """Return the MOST RECENT interview report for a candidate (backward compat)."""
     c = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
     if not c: raise HTTPException(status_code=404, detail="Candidate not found")
@@ -3495,7 +3563,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db))
 
 
 @app.get("/api/reports/{candidate_id}/all", tags=["Data"])
-async def get_all_candidate_reports(candidate_id: str, db: Session = Depends(get_db)):
+async def get_all_candidate_reports(candidate_id: str, db: Session = Depends(get_db), _auth: dict = Depends(require_candidate_or_admin)):
     """
     Return ALL interview sessions for a candidate as a list, newest first.
     Each item includes session timestamp, attempt number, grade, termination_reason,
@@ -3889,7 +3957,7 @@ async def custom_book_slot(data: CustomBookSlotRequest, background_tasks: Backgr
         html = f"""
         <html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:20px;color:#0f172a;">
         <div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;border:1px solid #e2e8f0;border-top:4px solid #dc2626;">
-          <h2 style="color:#dc2626;font-weight:900;text-align:center;letter-spacing:1px;">SPARK-HIRE</h2>
+          <h2 style="color:#dc2626;font-weight:900;text-align:center;letter-spacing:1px;">Sterling E-Mobility</h2>
           <p style="text-align:center;color:#64748b;font-size:12px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;">Interview Confirmed</p>
           <p>Hello <strong>{candidate.name}</strong>,</p>
           <p>Your interview has been scheduled successfully! 🎉</p>
@@ -3900,7 +3968,7 @@ async def custom_book_slot(data: CustomBookSlotRequest, background_tasks: Backgr
           </div>
           <p style="color:#475569;">Please ensure your camera, microphone, and internet connection are ready before joining.</p>
           <p style="color:#475569;">You will receive a reminder 24 hours and 1 hour before your interview.</p>
-          <p style="font-size:12px;color:#94a3b8;text-align:center;margin-top:30px;">Need to reschedule? Log in to your Spark-Hire portal and visit "My Interview".</p>
+          <p style="font-size:12px;color:#94a3b8;text-align:center;margin-top:30px;">Need to reschedule? Log in to your Sterling portal and visit "My Interview".</p>
           <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;"/>
           <p style="font-size:12px;color:#94a3b8;text-align:center;">Sterling AI Interview Engine © Sterling E-Mobility</p>
         </div></body></html>
@@ -3920,12 +3988,18 @@ async def custom_book_slot(data: CustomBookSlotRequest, background_tasks: Backgr
 @app.post("/api/slots/book", tags=["Scheduling"])
 async def book_slot(data: BookSlotRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Candidate books an interview slot."""
-    slot = db.query(InterviewSlot).filter_by(slot_id=data.slot_id, is_active=True).first()
+    # RACE-CONDITION FIX: lock the slot row for the duration of this transaction so
+    # two concurrent requests can't both pass the capacity check and overbook the
+    # slot. On PostgreSQL this emits SELECT ... FOR UPDATE; on SQLite it is a safe
+    # no-op. The capacity count is taken with a fresh query (not the cached
+    # relationship) so it reflects committed rows.
+    slot = db.query(InterviewSlot).filter_by(slot_id=data.slot_id, is_active=True).with_for_update().first()
     if not slot:
         raise HTTPException(status_code=404, detail="Slot not found or no longer available")
 
-    booked_count = len([b for b in slot.bookings if b.status == "BOOKED"])
+    booked_count = db.query(SlotBooking).filter_by(slot_id=data.slot_id, status="BOOKED").count()
     if booked_count >= slot.max_bookings:
+        db.rollback()
         raise HTTPException(status_code=409, detail="This slot is already full. Please choose another.")
 
     # Check if candidate already has an active booking
@@ -3952,7 +4026,7 @@ async def book_slot(data: BookSlotRequest, background_tasks: BackgroundTasks, db
         html = f"""
         <html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:20px;color:#0f172a;">
         <div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;border:1px solid #e2e8f0;border-top:4px solid #dc2626;">
-          <h2 style="color:#dc2626;font-weight:900;text-align:center;letter-spacing:1px;">SPARK-HIRE</h2>
+          <h2 style="color:#dc2626;font-weight:900;text-align:center;letter-spacing:1px;">Sterling E-Mobility</h2>
           <p style="text-align:center;color:#64748b;font-size:12px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;">Interview Confirmed</p>
           <p>Hello <strong>{candidate.name}</strong>,</p>
           <p>Your interview has been scheduled successfully! 🎉</p>
@@ -3963,7 +4037,7 @@ async def book_slot(data: BookSlotRequest, background_tasks: BackgroundTasks, db
           </div>
           <p style="color:#475569;">Please ensure your camera, microphone, and internet connection are ready before joining.</p>
           <p style="color:#475569;">You will receive a reminder 24 hours and 1 hour before your interview.</p>
-          <p style="font-size:12px;color:#94a3b8;text-align:center;margin-top:30px;">Need to reschedule? Log in to your Spark-Hire portal and visit "My Interview".</p>
+          <p style="font-size:12px;color:#94a3b8;text-align:center;margin-top:30px;">Need to reschedule? Log in to your Sterling portal and visit "My Interview".</p>
           <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;"/>
           <p style="font-size:12px;color:#94a3b8;text-align:center;">Sterling AI Interview Engine © Sterling E-Mobility</p>
         </div></body></html>
@@ -3981,7 +4055,7 @@ async def book_slot(data: BookSlotRequest, background_tasks: BackgroundTasks, db
     }
 
 @app.get("/api/candidates/{candidate_id}/booking", tags=["Scheduling"])
-async def get_candidate_booking(candidate_id: str, db: Session = Depends(get_db)):
+async def get_candidate_booking(candidate_id: str, db: Session = Depends(get_db), _auth: dict = Depends(require_candidate_or_admin)):
     """Get the candidate's current active booking, if any."""
     booking = db.query(SlotBooking).filter_by(candidate_id=candidate_id, status="BOOKED").first()
     if not booking:
@@ -4049,7 +4123,7 @@ async def mark_no_show(booking_id: str, db: Session = Depends(get_db)):
 # ── Candidate Portal: Profile & Status ─────────────────────────────────────
 
 @app.get("/api/candidates/{candidate_id}/portal", tags=["Candidate Portal"])
-async def get_candidate_portal(candidate_id: str, db: Session = Depends(get_db)):
+async def get_candidate_portal(candidate_id: str, db: Session = Depends(get_db), _auth: dict = Depends(require_candidate_or_admin)):
     """Full candidate portal data: profile, booking, latest interview status."""
     candidate = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
     if not candidate:
