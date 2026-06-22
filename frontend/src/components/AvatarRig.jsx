@@ -15,7 +15,7 @@ const damp = (current, target, factor, dt) => {
 // NOTE: this model currently has NO facial blendshapes / jaw bone, so lip-sync
 // cannot move the mouth. Re-export from Avaturn with visemes/ARKit blendshapes
 // to light up the existing morph-based lip-sync automatically.
-const AVATAR_MODEL_PATH = '/model.glb';
+const AVATAR_MODEL_PATH = '/models/avatar.glb';
 
 // ── Framing ────────────────────────────────────────────────────────────────
 // How the model sits in the camera (camera is at z=3, fov=30). With this model
