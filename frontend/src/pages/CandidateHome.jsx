@@ -143,7 +143,7 @@ export default function CandidateHome() {
       if (res.ok) {
         const data = await res.json();
         if (!data.candidate.experience_level) {
-          navigate('/candidate-onboarding');
+          navigate('/candidate');
           return;
         }
         setPortal(data);
