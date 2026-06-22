@@ -3664,7 +3664,7 @@ async def get_all_candidate_reports(candidate_id: str, db: Session = Depends(get
 
 @app.get("/api/dashboard", response_model=DashboardData, tags=["Data"])
 async def get_dashboard_data(db: Session = Depends(get_db)):
-    total = db.query(Candidate).count()
+    total = db.query(Candidate).filter(Candidate.invitation_status == "Confirmed").count()
     # BUG-16 fix: Count only COMPLETED sessions (completed_at IS NOT NULL), not all sessions
     complete = db.query(InterviewSession).filter((InterviewSession.completed_at.isnot(None)) | (InterviewSession.overall_score > 0)).count()
     
@@ -3672,15 +3672,26 @@ async def get_dashboard_data(db: Session = Depends(get_db)):
     avg_tech = sum(i.technical_score for i in interviews) / len(interviews) if interviews else 0.0  # type: ignore
     avg_conf = sum(i.confidence_score for i in interviews) / len(interviews) if interviews else 0.0  # type: ignore
     
-    recent = db.query(Candidate).order_by(Candidate.registration_date.desc()).limit(5).all()
+    recent = db.query(Candidate).filter(Candidate.invitation_status == "Confirmed").order_by(Candidate.registration_date.desc()).limit(5).all()
     
     recent_dicts = []
     for r in recent:
         r_interviews = sorted(r.interviews, key=lambda i: i.started_at, reverse=True)  # type: ignore
         r_latest = r_interviews[0] if r_interviews else None
+        
+        job_role_name = ""
+        if r_latest and getattr(r_latest, "role", None):
+            job_role_name = r_latest.role.role_name
+        elif r.role_id:
+            role_obj = db.query(JobRole).filter(JobRole.role_id == r.role_id).first()
+            if role_obj:
+                job_role_name = role_obj.role_name
+            else:
+                job_role_name = r.role_id
+
         recent_dicts.append({
             "name": r.name,
-            "job_role": (r_latest.role.role_name if (r_latest and r_latest.role) else ""),
+            "job_role": job_role_name,
             "email": r.email,
             "created_at": r.registration_date
         })
