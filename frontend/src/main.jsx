@@ -27,6 +27,18 @@ console.log(
   "color: #94a3b8; font-weight: bold; font-size: 12px; padding: 4px;"
 );
 
+// ── Stale-deploy recovery ────────────────────────────────────────────────
+// When a new version is deployed, old chunk hashes are pruned. If this tab is
+// still running the previous build, Vite fires `vite:preloadError` when it
+// can't preload a chunk. Force one reload to pull the fresh build. The guard
+// prevents an infinite loop if a chunk is genuinely missing.
+window.addEventListener('vite:preloadError', () => {
+  if (!sessionStorage.getItem('__vite_preload_reloaded')) {
+    sessionStorage.setItem('__vite_preload_reloaded', '1');
+    window.location.reload();
+  }
+});
+
 // ── Strict DOM Mounting ──────────────────────────────────────────────────
 const rootElement = document.getElementById('root');
 

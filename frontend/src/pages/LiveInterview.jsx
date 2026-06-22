@@ -3,17 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert } from 'lucide-react';
 
+import { lazyWithReload } from '../utils/lazyWithReload';
 // Lazy-load Monaco Editor to break the circular init between @react-three/drei and @monaco-editor/react
 // This forces Vite/Rollup to put them in separate async chunks, eliminating the "Mn before init" crash.
-const Editor = React.lazy(() =>
-  import('@monaco-editor/react').then(mod => ({ default: mod.Editor }))
+// lazyWithReload self-heals stale-deploy chunk fetch failures.
+const Editor = lazyWithReload(
+  () => import('@monaco-editor/react').then(mod => ({ default: mod.Editor })),
+  'monaco-editor'
 );
 
 import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png';
 import { formatISTTime } from '../utils/istTime';
 // Lazy-load Avatar3D so @react-three/* is in its own async chunk (prevents circular init with Monaco)
-const Avatar3D = React.lazy(() => import('../components/Avatar3D'));
+const Avatar3D = lazyWithReload(() => import('../components/Avatar3D'), 'avatar3d');
 import PreFlightCheck from '../components/PreFlightCheck';
 
 import AvatarStage from '../components/interview/AvatarStage';

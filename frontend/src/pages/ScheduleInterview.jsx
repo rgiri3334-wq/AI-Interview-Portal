@@ -43,7 +43,10 @@ export default function ScheduleInterview() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const bRes = await fetch(`${API_BASE}/api/candidates/${candidateId}/booking`);
+      const token = sessionStorage.getItem('candidateToken');
+      const bRes = await fetch(`${API_BASE}/api/candidates/${candidateId}/booking`, {
+        headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+      });
       if (bRes.ok) {
         const bData = await bRes.json();
         setBooking(bData.booking || null);
