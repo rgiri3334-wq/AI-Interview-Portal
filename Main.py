@@ -456,6 +456,7 @@ logger.info(f"CORS allow-list: {ALLOWED_ORIGINS}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -463,7 +464,7 @@ app.add_middleware(
 def _apply_cors_headers(resp: JSONResponse, origin: str) -> JSONResponse:
     """Inject CORS headers on manually-built responses, but only for origins we
     actually allow. Reflecting an arbitrary origin would defeat the CORS policy."""
-    if origin and origin in ALLOWED_ORIGINS:
+    if origin and (origin in ALLOWED_ORIGINS or re.match(r"^https://.*\.vercel\.app$", origin)):
         resp.headers["Access-Control-Allow-Origin"] = origin
         resp.headers["Access-Control-Allow-Credentials"] = "true"
         resp.headers["Access-Control-Allow-Methods"] = "*"

@@ -77,7 +77,7 @@ async def generate_smart_question(
             "category": "Technical",
             "follow_up_hint": "Listen for exact keyword matches.",
         }
-        session.asked_questions.append(result["question"])
+        session.asked_questions.append(str(result["question"]))
         return result
 
     prompt = build_question_prompt(
