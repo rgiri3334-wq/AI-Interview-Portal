@@ -16,8 +16,7 @@ import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png';
 import { formatISTTime } from '../utils/istTime';
 // Lazy-load ParticleWaveform3D
-const ParticleWaveform3D = lazyWithReload(() => import('../components/interview/ParticleWaveform3D'), 'particleWaveform3D');
-import { Canvas } from '@react-three/fiber';
+import CSSWaveform from '../components/interview/CSSWaveform';
 import PreFlightCheck from '../components/PreFlightCheck';
 
 import AvatarStage from '../components/interview/AvatarStage';
@@ -901,16 +900,12 @@ export default function LiveInterview() {
 
           {/* LEFT: Avatar — visible immediately, no loading delay */}
           <div className="flex flex-col items-center gap-4">
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200"
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200 flex items-center justify-center"
               style={{ width: '280px', height: '340px', background: 'linear-gradient(160deg, #f8f9fa 0%, #e8edf2 60%, #dce3eb 100%)' }}>
-              <React.Suspense fallback={<div style={{width:'280px',height:'340px',display:'flex',alignItems:'center',justifyContent:'center',color:'#94a3b8',fontSize:'12px'}}>Loading Waveform...</div>}>
-                <Canvas camera={{ position: [0, 0, 10], fov: 45 }} dpr={[1, 1.5]}>
-                  <ParticleWaveform3D
-                    isSpeaking={false}
-                    theme="light"
-                  />
-                </Canvas>
-              </React.Suspense>
+              <CSSWaveform
+                isSpeaking={false}
+                theme="light"
+              />
             </div>
             <div className="text-center">
               <p className="text-sm font-bold text-slate-700">Your AI Interviewer</p>

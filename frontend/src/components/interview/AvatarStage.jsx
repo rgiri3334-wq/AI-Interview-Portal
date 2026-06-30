@@ -1,10 +1,8 @@
-import React, { Suspense } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-// Lazy-load Avatar3D so @react-three/* stays in its own async chunk
-const ParticleWaveform3D = React.lazy(() => import('./ParticleWaveform3D'));
+import CSSWaveform from './CSSWaveform';
 import Background from './Background';
 import CaptionsOverlay from './CaptionsOverlay';
-import { Canvas } from '@react-three/fiber';
 
 export default function AvatarStage({
   phase,
@@ -32,7 +30,7 @@ export default function AvatarStage({
     >
       <Background theme={theme} />
 
-      {/* 3D Canvas Container */}
+      {/* Waveform Container */}
       <motion.div 
         layout
         className={`relative z-10 overflow-hidden shadow-2xl transition-colors duration-500 rounded-[40px] border ${
@@ -51,11 +49,7 @@ export default function AvatarStage({
         }}
         transition={{ type: 'spring', damping: 30, stiffness: 200 }}
       >
-        <Suspense fallback={<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'#94a3b8',fontSize:'12px',background:'#000'}}>Booting VR Engine...</div>}>
-          <Canvas camera={{ position: [0, 0, 10], fov: 45 }} dpr={[1, 1.5]}>
-            <ParticleWaveform3D isSpeaking={isSpeaking} getAudioFrequency={getAudioFrequency} />
-          </Canvas>
-        </Suspense>
+        <CSSWaveform isSpeaking={isSpeaking} getAudioFrequency={getAudioFrequency} theme={theme} />
       </motion.div>
 
       {/* Dual-panel captions overlay the entire screen at the bottom */}

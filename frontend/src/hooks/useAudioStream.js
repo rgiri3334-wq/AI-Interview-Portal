@@ -124,7 +124,9 @@ export function useAudioStream() {
   // ── stop ────────────────────────────────────────────────────────────────
   const stop = useCallback(() => {
     if (echoDebounceRef.current) clearTimeout(echoDebounceRef.current);
-    window.speechSynthesis.cancel();
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
     isSpeakingRef.current = false;
     setIsSpeaking(false);
     stopFrequencyAnalysis();
@@ -151,12 +153,14 @@ export function useAudioStream() {
     return new Promise((resolve) => {
       if (!text?.trim()) return resolve();
 
-      if (isSpeakingRef.current) {
+      if (isSpeakingRef.current || window.speechSynthesis.speaking) {
         stop();
       }
 
       if (echoDebounceRef.current) clearTimeout(echoDebounceRef.current);
-      window.speechSynthesis.cancel(); // Cancel immediately to let it flush
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel(); // Cancel immediately to let it flush
+      }
 
       setTimeout(() => {
         isSpeakingRef.current = true;
@@ -226,10 +230,12 @@ export function useAudioStream() {
 
     return new Promise((resolve) => {
       if (list.length === 0) return resolve();
-      if (isSpeakingRef.current) stop();
+      if (isSpeakingRef.current || window.speechSynthesis.speaking) stop();
 
       if (echoDebounceRef.current) clearTimeout(echoDebounceRef.current);
-      window.speechSynthesis.cancel(); // Cancel immediately in current tick
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel(); // Cancel immediately in current tick
+      }
 
       setTimeout(() => {
         isSpeakingRef.current = true;
