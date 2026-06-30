@@ -1,9 +1,10 @@
 import React, { Suspense } from 'react';
 import { motion } from 'framer-motion';
 // Lazy-load Avatar3D so @react-three/* stays in its own async chunk
-const Avatar3D = React.lazy(() => import('../Avatar3D'));
+const ParticleWaveform3D = React.lazy(() => import('./ParticleWaveform3D'));
 import Background from './Background';
 import CaptionsOverlay from './CaptionsOverlay';
+import { Canvas } from '@react-three/fiber';
 
 export default function AvatarStage({
   phase,
@@ -17,7 +18,8 @@ export default function AvatarStage({
   finalTranscript,
   interimTranscript,
   theme,
-  isCodeOpen
+  isCodeOpen,
+  getAudioFrequency
 }) {
   const isDark = theme === 'dark';
 
@@ -30,7 +32,7 @@ export default function AvatarStage({
     >
       <Background theme={theme} />
 
-      {/* 3D Canvas Container (Now a framed window in the center) */}
+      {/* 3D Canvas Container */}
       <motion.div 
         layout
         className={`relative z-10 overflow-hidden shadow-2xl transition-colors duration-500 rounded-[40px] border ${
@@ -49,15 +51,10 @@ export default function AvatarStage({
         }}
         transition={{ type: 'spring', damping: 30, stiffness: 200 }}
       >
-        <Suspense fallback={<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'#94a3b8',fontSize:'12px',background:'#000'}}>Booting 3D Engine...</div>}>
-          <Avatar3D 
-            isSpeaking={isSpeaking} 
-            isListening={isListening} 
-            isLoading={loading} 
-            phase={phase} 
-            qIndex={qIndex} 
-            warnings={warnings} 
-          />
+        <Suspense fallback={<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'#94a3b8',fontSize:'12px',background:'#000'}}>Booting VR Engine...</div>}>
+          <Canvas camera={{ position: [0, 0, 10], fov: 45 }} dpr={[1, 1.5]}>
+            <ParticleWaveform3D isSpeaking={isSpeaking} getAudioFrequency={getAudioFrequency} />
+          </Canvas>
         </Suspense>
       </motion.div>
 

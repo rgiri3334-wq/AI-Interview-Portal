@@ -155,16 +155,17 @@ export function useAudioStream() {
         stop();
       }
 
-      setTimeout(() => {
-        if (echoDebounceRef.current) clearTimeout(echoDebounceRef.current);
-        window.speechSynthesis.cancel();
+      if (echoDebounceRef.current) clearTimeout(echoDebounceRef.current);
+      window.speechSynthesis.cancel(); // Cancel immediately to let it flush
 
+      setTimeout(() => {
         isSpeakingRef.current = true;
         setIsSpeaking(true);
         startFrequencyAnalysis();
 
         const utterance = new SpeechSynthesisUtterance(text);
         utteranceRef.current = utterance;
+        window.__ttsUtterance = utterance; // GC Protection
 
         const voice = getPreferredVoice();
         if (voice) utterance.voice = voice;
@@ -208,7 +209,7 @@ export function useAudioStream() {
         };
 
         window.speechSynthesis.speak(utterance);
-      }, 50);
+      }, 50); // brief delay for cancel to flush before speaking
     });
   }, [stop, startFrequencyAnalysis, stopFrequencyAnalysis, getPreferredVoice]);
 
@@ -227,10 +228,10 @@ export function useAudioStream() {
       if (list.length === 0) return resolve();
       if (isSpeakingRef.current) stop();
 
-      setTimeout(() => {
-        if (echoDebounceRef.current) clearTimeout(echoDebounceRef.current);
-        window.speechSynthesis.cancel();
+      if (echoDebounceRef.current) clearTimeout(echoDebounceRef.current);
+      window.speechSynthesis.cancel(); // Cancel immediately in current tick
 
+      setTimeout(() => {
         isSpeakingRef.current = true;
         setIsSpeaking(true);
         startFrequencyAnalysis();
@@ -254,6 +255,7 @@ export function useAudioStream() {
 
           const u = new SpeechSynthesisUtterance(list[idx++]);
           utteranceRef.current = u;
+          window.__ttsUtterance = u; // GC protection
           if (voice) u.voice = voice;
           u.rate = options.rate ?? 0.95;
           u.pitch = options.pitch ?? 0.95;
@@ -274,7 +276,7 @@ export function useAudioStream() {
         };
 
         speakNext();
-      }, 50);
+      }, 50); // brief delay for cancel to flush before speaking
     });
   }, [stop, startFrequencyAnalysis, stopFrequencyAnalysis, getPreferredVoice]);
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Shield, AlertTriangle, FileText, CheckSquare, Square } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function KycGuidelines() {
+export default function ProfilePhotoGuidelines() {
   const navigate = useNavigate();
   const [accepted, setAccepted] = useState(false);
 
@@ -43,8 +43,8 @@ export default function KycGuidelines() {
 
           <div className="space-y-6 text-slate-600 mb-10 leading-relaxed">
             <div>
-              <h4 className="font-bold text-slate-900 mb-1">1. Identity Verification (KYC)</h4>
-              <p>In the next step, you will be required to capture a live photo of your <strong>Aadhar Card</strong> alongside a live selfie. This is used exclusively to verify your identity against your application. Your ID image will <strong>not</strong> be stored permanently after the verification process is complete.</p>
+              <h4 className="font-bold text-slate-900 mb-1">1. Identity Verification</h4>
+              <p>In the next step, you will be required to capture a live profile photo. This is used exclusively to verify your identity against your application. Your profile photo will be securely stored.</p>
             </div>
             <div>
               <h4 className="font-bold text-slate-900 mb-1">2. AI Evaluation</h4>
@@ -72,7 +72,7 @@ export default function KycGuidelines() {
             </div>
             <div>
               <h4 className={`font-bold text-lg ${accepted ? 'text-slate-900' : 'text-slate-500'}`}>I have read and agree to the privacy terms</h4>
-              <p className="text-sm text-slate-500">I explicitly consent to continuous video recording and AI-driven KYC verification.</p>
+              <p className="text-sm text-slate-500">I explicitly consent to continuous video recording and providing my profile photo.</p>
             </div>
           </div>
 
@@ -88,10 +88,10 @@ export default function KycGuidelines() {
               whileHover={{ scale: accepted ? 1.02 : 1 }}
               whileTap={{ scale: accepted ? 0.98 : 1 }}
               disabled={!accepted}
-              onClick={() => navigate('/kyc-capture')}
+              onClick={() => navigate('/profile-photo-capture')}
               className={`flex-[2] py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${accepted ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
             >
-              {accepted ? 'Proceed to KYC' : 'Accept Terms to Proceed'}
+              {accepted ? 'Proceed to Capture Photo' : 'Accept Terms to Proceed'}
             </motion.button>
           </div>
 

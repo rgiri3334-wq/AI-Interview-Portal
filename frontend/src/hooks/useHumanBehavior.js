@@ -19,6 +19,18 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
+// Suppress MediaPipe's WASM stderr logging which shows up as red console errors
+const originalConsoleError = console.error;
+console.error = function (...args) {
+  if (typeof args[0] === 'string' && (
+      args[0].includes('TensorFlow Lite XNNPACK delegate') ||
+      args[0].includes('Graph successfully started running')
+  )) {
+    return; // Ignore harmless WASM INFO logs
+  }
+  originalConsoleError.apply(console, args);
+};
+
 export function useHumanBehavior(
   videoRef,
   onVisionSignal,          // → feeds integrity engine (silent, no UI)
@@ -37,6 +49,7 @@ export function useHumanBehavior(
   const noFaceStreak = useRef(0);
   const postureYawStreak = useRef(0);
   const posturePitchStreak = useRef(0); // [STRICT-9] Down-pitch streak for phone-on-lap
+  const multiplePeopleStreak = useRef(0);
 
   // [BUG-3 FIX] EMA baseline
   const baselineYaw = useRef(null);
@@ -142,7 +155,15 @@ export function useHumanBehavior(
 
         // ── MULTIPLE PEOPLE ─────────────────────────────────────────────────
         if (faces.length > 1) {
-          _fireSignal('multiple_people', { note: 'Multiple faces detected in frame!' });
+          multiplePeopleStreak.current += 1;
+          if (multiplePeopleStreak.current === 1) {
+            _fireSignal('multiple_people', { note: 'Multiple faces detected in frame!' });
+          }
+          if (multiplePeopleStreak.current >= 10) {
+            _fireSignal('multiple_people_critical', { note: 'Multiple faces present for >10 seconds. Terminating.' });
+          }
+        } else {
+          multiplePeopleStreak.current = 0;
         }
 
         // ── EYE TRACKING (BLENDSHAPES) ──────────────────────────────────────

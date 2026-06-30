@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { AlertTriangle } from 'lucide-react';
 
 const GOODBYES = [
   "It was a genuine pleasure getting to know you today.",
@@ -12,12 +13,18 @@ const GOODBYES = [
 
 export default function InterviewGoodbye() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const terminationReason = location.state?.terminationReason;
+
   const candidateName = sessionStorage.getItem('candidateName') || 'there';
   const firstName = candidateName.split(' ')[0];
   const [goodbye] = useState(() => GOODBYES[Math.floor(Math.random() * GOODBYES.length)]);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
+    // If terminated, do not auto-redirect
+    if (terminationReason) return;
+
     // Animate progress bar over 5 seconds then redirect
     const start = Date.now();
     const duration = 5000;
@@ -30,7 +37,7 @@ export default function InterviewGoodbye() {
       }
     }, 50);
     return () => clearInterval(iv);
-  }, [navigate]);
+  }, [navigate, terminationReason]);
 
   const particles = Array.from({ length: 20 }, (_, i) => ({
     id: i,
@@ -40,6 +47,36 @@ export default function InterviewGoodbye() {
     size: 4 + Math.random() * 8,
     color: ['#dc2626', '#f59e0b', '#10b981', '#6366f1', '#f43f5e'][Math.floor(Math.random() * 5)],
   }));
+
+  if (terminationReason) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="max-w-lg w-full bg-red-950/40 border border-red-500/50 rounded-2xl p-8 backdrop-blur-md shadow-[0_0_80px_rgba(220,38,38,0.2)] text-center"
+        >
+          <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle className="w-10 h-10 text-red-500" />
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-4">Interview Terminated</h1>
+          <p className="text-red-200 text-lg mb-8 leading-relaxed">
+            {terminationReason}
+          </p>
+          <div className="bg-black/50 p-4 rounded-lg border border-red-500/20 text-sm text-red-300/80 mb-8">
+            This incident has been logged and reported to the administrative team for review. 
+            Any recorded footage prior to termination has been saved.
+          </div>
+          <button
+            onClick={() => navigate('/candidate-home')}
+            className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors"
+          >
+            Return to Dashboard
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-red-950 flex items-center justify-center overflow-hidden relative font-sans">

@@ -281,7 +281,7 @@ export default function CandidateDetails() {
 
   const handleStartInterview = () => {
     if (!isInterviewReady) return;
-    navigate('/kyc-guidelines');
+    navigate('/profile-photo-guidelines');
   };
 
   if (initialLoad) return (

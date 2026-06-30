@@ -137,7 +137,7 @@ export const apiClient = {
   applyForRole: (candidateId, data) => withRetry(() => api.post(`/api/candidates/${candidateId}/apply`, data)),
   sendDecisionEmail: (candidateId) => withRetry(() => api.post(`/api/candidates/${candidateId}/send-decision-email`)),
   getCandidate: (id) => api.get(`/api/candidates/${id}`),
-  verifyKyc: (data) => withRetry(() => api.post('/api/kyc/verify', data)),
+  uploadProfilePhoto: (data) => withRetry(() => api.post('/api/profile-photo/upload', data)),
 
   adminGetCandidates: () => api.get('/api/admin/candidates'),
   adminInviteCandidate: (data) => api.post('/api/admin/candidates/invite', data),
@@ -155,6 +155,17 @@ export const apiClient = {
     form.append('file', audioBlob, 'audio.webm');
     return withRetry(() =>
       api.post('/api/transcribe', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 15000,
+      })
+    );
+  },
+
+  analyzeAudioAuthenticity: (audioBlob) => {
+    const form = new FormData();
+    form.append('file', audioBlob, 'audio.webm');
+    return withRetry(() =>
+      api.post('/api/analyze-audio-authenticity', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 15000,
       })

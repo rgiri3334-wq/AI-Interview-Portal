@@ -159,7 +159,7 @@ export default function CandidateHome() {
 
   const handleStartInterview = () => {
     if (!isInterviewReady) return;
-    navigate('/kyc-guidelines');
+    navigate('/profile-photo-guidelines');
   };
 
   const handleNoShow = async () => {

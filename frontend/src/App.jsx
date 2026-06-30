@@ -15,8 +15,8 @@ import SystemHealth from './pages/SystemHealth';
 import AdminManagement from './pages/AdminManagement';
 import CandidateLanding from './pages/CandidateLanding';
 import EquipmentTest from './pages/EquipmentTest';
-import KycGuidelines from './pages/KycGuidelines';
-import KycCapture from './pages/KycCapture';
+import ProfilePhotoGuidelines from './pages/ProfilePhotoGuidelines';
+import ProfilePhotoCapture from './pages/ProfilePhotoCapture';
 // ── Phase 1+2: Candidate Portal Upgrade ─────────────────────────────────────
 import CandidateHome from './pages/CandidateHome';
 import ScheduleInterview from './pages/ScheduleInterview';
@@ -89,8 +89,8 @@ export default function App() {
 
           {/* ── KYC Pre-Flight Pipeline ── */}
           <Route path="/equipment-test" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><EquipmentTest /></ProtectedRoute>} />
-          <Route path="/kyc-guidelines" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><KycGuidelines /></ProtectedRoute>} />
-          <Route path="/kyc-capture" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><KycCapture /></ProtectedRoute>} />
+          <Route path="/profile-photo-guidelines" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><ProfilePhotoGuidelines /></ProtectedRoute>} />
+          <Route path="/profile-photo-capture" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><ProfilePhotoCapture /></ProtectedRoute>} />
 
           {/* ── Admin Routes ── */}
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><Dashboard /></ProtectedRoute>} />

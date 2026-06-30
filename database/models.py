@@ -227,6 +227,8 @@ class UnifiedInterviewData(Base):
     missing_keywords = Column(Text, default="[]")
     answer_score = Column(Float, default=0.0)
     answer_feedback = Column(Text, nullable=True)
+    plagiarism_score = Column(Integer, server_default="0", default=0)
+    plagiarism_reasoning = Column(Text, nullable=True)
     timestamp = Column(String, default=ist_isoformat)
 
     candidate = relationship("Candidate", back_populates="unified_answers")
@@ -268,6 +270,9 @@ class FinalReport(Base):
     eye_tracking_score = Column(Float, server_default="100.0", default=100.0)
     authenticity_score = Column(Float, server_default="100.0", default=100.0)
     environment_score = Column(Float, server_default="100.0", default=100.0)
+    
+    plagiarism_score = Column(Integer, server_default="0", default=0)
+    plagiarism_reasoning = Column(Text, nullable=True)
     
     summary = Column(Text, nullable=True)
     timeline_data = Column(Text, default="[]")

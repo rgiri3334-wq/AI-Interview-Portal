@@ -183,7 +183,7 @@ export default function EquipmentTest() {
             whileHover={{ scale: allPassed ? 1.02 : 1 }}
             whileTap={{ scale: allPassed ? 0.98 : 1 }}
             disabled={!allPassed}
-            onClick={() => navigate('/kyc-guidelines')}
+            onClick={() => navigate('/profile-photo-guidelines')}
             className={`w-full py-4 px-6 rounded-xl font-bold uppercase tracking-widest transition-all ${allPassed ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
           >
             {allPassed ? 'Proceed to Guidelines' : 'Testing Equipment...'}

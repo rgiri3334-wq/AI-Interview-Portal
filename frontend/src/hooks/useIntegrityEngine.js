@@ -40,6 +40,9 @@ const SIGNAL_WEIGHTS = {
   // Eye Tracking (20%)
   off_screen_gaze:         { cat: 'eye', val: 15 },
   continuous_off_screen:   { cat: 'eye', val: 50 },
+  
+  // Voice (Applies to Auth)
+  voice_authenticity_failed: { cat: 'auth', val: 100 }, // Huge penalty
 };
 
 // ── GPT Syntax Patterns ────────────
@@ -279,6 +282,7 @@ export function useIntegrityEngine() {
       signal_count: significant.length,
       signal_log: signalsRef.current,
       significant_signals: significant,
+      voice_authenticity_flagged: signalsRef.current.some(s => s.signal === 'voice_authenticity_failed'),
       computed_at: new Date().toISOString(),
     };
   }, [calculateTotalScore]);

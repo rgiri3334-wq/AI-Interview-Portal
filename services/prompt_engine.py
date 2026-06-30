@@ -410,6 +410,13 @@ Evaluate the candidate *relative to their specific experience tier*. A Fresher s
 - 7-8: Very Good. If the candidate covers 60-70% of the expected concepts/keywords semantically, this is a STRONG real-world answer. Humans rarely hit 100% perfection in a live interview.
 - 9-10: Exceptional. Complete mastery of the topic with incredible clarity.
 
+**Syntactic Plagiarism & AI-Generation Detection:**
+You must evaluate the answer for AI-generated syntactic signatures. A human speaking live on a microphone sounds very different from ChatGPT.
+- Look for robotic vocabulary: "delve", "furthermore", "in conclusion", "crucial", "testament to", "multifaceted".
+- Look for overly structured syntax: Spoken answers rarely have perfect 3-point bulleted lists with transition sentences.
+- Give a `plagiarism_score` from 0 (completely human/messy) to 100 (definitely AI generated).
+- Provide a 1 sentence `plagiarism_reasoning` explaining specific words/structures that influenced the score.
+
 **Your task:**
 Evaluate the answer with realistic, fair objectivity for a Round 1 Screening.
 
@@ -446,6 +453,8 @@ Return ONLY this exact JSON (no explanation, no markdown):
   "learning_potential_score": <0-100 integer>,
   "behavioral_score": <0-100 integer>,
   "fluency_score": <0-100 integer>,
+  "plagiarism_score": <0-100 integer>,
+  "plagiarism_reasoning": "<1 sentence explaining why this plagiarism score was given>",
   "eq_feedback": "<2-3 sentence evaluation or conversational response. DO NOT PUT THE NEXT QUESTION HERE.>",
   "strengths": ["<strength 1>", "<strength 2>"],
   "weaknesses": ["<weakness 1>", "<weakness 2>"],

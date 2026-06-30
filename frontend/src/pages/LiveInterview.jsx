@@ -15,8 +15,9 @@ const Editor = lazyWithReload(
 import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png';
 import { formatISTTime } from '../utils/istTime';
-// Lazy-load Avatar3D so @react-three/* is in its own async chunk (prevents circular init with Monaco)
-const Avatar3D = lazyWithReload(() => import('../components/Avatar3D'), 'avatar3d');
+// Lazy-load ParticleWaveform3D
+const ParticleWaveform3D = lazyWithReload(() => import('../components/interview/ParticleWaveform3D'), 'particleWaveform3D');
+import { Canvas } from '@react-three/fiber';
 import PreFlightCheck from '../components/PreFlightCheck';
 
 import AvatarStage from '../components/interview/AvatarStage';
@@ -147,6 +148,11 @@ export default function LiveInterview() {
   const onVisionSignal = useCallback((signalKey, meta) => {
     // All vision signals feed integrity engine SILENTLY — never shown to candidate
     recordIntegritySignal(signalKey, meta);
+    
+    // Strict Proctoring: Immediately terminate if multiple people detected >10s
+    if (signalKey === 'multiple_people_critical') {
+      doEndInterview('Multiple people detected in frame for an extended period.');
+    }
   }, [recordIntegritySignal]);
 
   // [STRICT] Candidate-facing posture/gaze hint — phrased as ergonomic guidance, NOT proctoring
@@ -471,6 +477,15 @@ export default function LiveInterview() {
     } catch (e) {
       console.warn("Fullscreen request failed", e);
     }
+    
+    // Unlock Speech Synthesis in the direct user gesture context
+    try {
+      const unlockSpeech = new SpeechSynthesisUtterance('');
+      unlockSpeech.volume = 0;
+      window.speechSynthesis.speak(unlockSpeech);
+    } catch (e) {
+      console.warn("Speech unlock failed", e);
+    }
 
     setPhase('initializing');
     console.debug('[State] Transition: Ready -> Initializing');
@@ -542,6 +557,19 @@ export default function LiveInterview() {
     if (isRecording) {
       audioBlob = await stopRecording();
     }
+    
+    // Sprint 5: AI Voice Detection API on first question
+    if (qIndex === 0 && audioBlob) {
+       console.debug("[Integrity Engine] Capturing first answer for AI Voice Authenticity check.");
+       apiClient.analyzeAudioAuthenticity(audioBlob)
+         .then(res => {
+            if (res && res.is_synthetic) {
+               recordIntegritySignal('voice_authenticity_failed', { note: 'Synthetic voice detected by Hive/Resemble AI.' });
+               // We could also terminate, but for now we just log it heavily per requirements
+            }
+         })
+         .catch(err => console.error("Audio authenticity check failed", err));
+    }
 
     try {
       const timeoutPromise = new Promise((_, reject) => {
@@ -605,9 +633,10 @@ export default function LiveInterview() {
           roleScore: res.role_alignment_score || 0,
           profScore: res.professionalism_score || 0,
           learnScore: res.learning_potential_score || 0,
-          // Fix #6: Store fluency_score separately so doEndInterview uses the right metric
           fluencyScore: res.fluency_score || 0,
-          wpm: clampedWpm,  // Fix #9 / #16: persist wpm per answer
+          plagiarism_score: res.plagiarism_score || 0,
+          plagiarism_reasoning: res.plagiarism_reasoning || "Original thought.",
+          wpm: clampedWpm,
           code: getCode()
         }];
         setHistory(nextHistory);
@@ -779,7 +808,9 @@ export default function LiveInterview() {
       }
       // Proctoring termination — admin demo goes to report, candidate to goodbye
       const role = sessionStorage.getItem('role');
-      navigate(role === 'candidate' ? '/interview-goodbye' : '/report');
+      navigate(role === 'candidate' ? '/interview-goodbye' : '/report', { 
+        state: { terminationReason } 
+      });
       return;
     }
 
@@ -800,6 +831,14 @@ export default function LiveInterview() {
         totalFillerWords: 0, // Filler word tracking is per-answer; 0 here = conservative
         totalAnswers: h.length,
       });
+
+      // Compute AI plagiarism
+      const allPlagScores = h.map(ans => ans.plagiarism_score).filter(s => typeof s === 'number');
+      const avgPlag = allPlagScores.length > 0 ? Math.round(allPlagScores.reduce((a, b) => a + b, 0) / allPlagScores.length) : 0;
+      let plagReason = "Analysis complete. Syntax and structural cadence indicate original thought.";
+      if (avgPlag > 50) plagReason = "Moderate AI similarity detected across answers.";
+      if (avgPlag > 80) plagReason = "Critical Alert. Verbatim LLM structure detected. Extreme probability of generated content.";
+
       const integrityReport = computeIntegrityFinal();
       const payload = {
         candidate_id: candidateId,
@@ -820,6 +859,8 @@ export default function LiveInterview() {
         weaknesses: aiReport.optimization_areas || [],
         proctoring_warnings: warnings,
         proctoring_logs: proctoringLogsRef.current,
+        plagiarism_score: avgPlag,
+        plagiarism_reasoning: plagReason,
         // Sprint 3: Integrity Engine fields
         integrity_score: integrityReport.integrity_score,
         integrity_data: integrityReport,
@@ -862,15 +903,12 @@ export default function LiveInterview() {
           <div className="flex flex-col items-center gap-4">
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200"
               style={{ width: '280px', height: '340px', background: 'linear-gradient(160deg, #f8f9fa 0%, #e8edf2 60%, #dce3eb 100%)' }}>
-              <React.Suspense fallback={<div style={{width:'280px',height:'340px',display:'flex',alignItems:'center',justifyContent:'center',color:'#94a3b8',fontSize:'12px'}}>Loading Avatar...</div>}>
-                <Avatar3D
-                  isSpeaking={false}
-                  isListening={false}
-                  isLoading={phase === 'initializing'}
-                  phase={phase}
-                  qIndex={0}
-                  warnings={0}
-                />
+              <React.Suspense fallback={<div style={{width:'280px',height:'340px',display:'flex',alignItems:'center',justifyContent:'center',color:'#94a3b8',fontSize:'12px'}}>Loading Waveform...</div>}>
+                <Canvas camera={{ position: [0, 0, 10], fov: 45 }} dpr={[1, 1.5]}>
+                  <ParticleWaveform3D
+                    isSpeaking={false}
+                  />
+                </Canvas>
               </React.Suspense>
             </div>
             <div className="text-center">
@@ -1073,6 +1111,7 @@ export default function LiveInterview() {
           interimTranscript={interimTranscript}
           theme={theme}
           isCodeOpen={isCodeOpen}
+          getAudioFrequency={getAudioFrequency}
         />
 
         <WorkspaceDrawer

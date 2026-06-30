@@ -375,7 +375,7 @@ export default function Report() {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Star },
-    { id: 'kyc', label: 'Identity & Security', icon: Fingerprint },
+    { id: 'integrity', label: 'AI Integrity & Video', icon: ShieldAlert },
     { id: 'resume', label: 'Resume Intelligence', icon: FileText },
     { id: 'transcript', label: 'Interview Transcript', icon: MessageSquare },
     { id: 'audit', label: 'Audit Trail', icon: Clock },
@@ -476,24 +476,33 @@ export default function Report() {
                   </div>
                 </div>
                 {/* Identity Banner */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-8 shadow-sm flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 text-slate-400 overflow-hidden">
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                  <div className="flex items-center gap-6 w-full md:w-auto">
+                    <div className="w-24 h-32 bg-slate-100 rounded-xl flex items-center justify-center border border-slate-200 text-slate-400 overflow-hidden shrink-0 shadow-sm">
                       {c.selfie_url ? <img src={c.selfie_url} alt="Profile" className="w-full h-full object-cover" /> : <Smile size={32} />}
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">{c.name}</h2>
-                      <p className="text-sm text-slate-500 font-medium">{c.email} &bull; Attempt #{iv.attempt_number || 1}</p>
+                    <div className="flex-1">
+                      <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-1">{c.name}</h2>
+                      <p className="text-sm text-slate-500 font-medium mb-4">{c.email} &bull; Attempt #{iv.attempt_number || 1}</p>
+                      
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm text-slate-600">
+                        {c.phone && <div><strong>Phone:</strong> {c.phone}</div>}
+                        {c.expected_salary && <div><strong>Salary Expectation:</strong> {c.expected_salary}</div>}
+                        {c.work_mode && <div><strong>Work Mode:</strong> {c.work_mode}</div>}
+                        {c.experience_level && <div><strong>Experience:</strong> {c.experience_level}</div>}
+                        {c.linkedin && <div><strong>LinkedIn:</strong> <a href={c.linkedin.startsWith('http') ? c.linkedin : `https://${c.linkedin}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View Profile</a></div>}
+                        {c.github && <div><strong>GitHub:</strong> <a href={c.github.startsWith('http') ? c.github : `https://${c.github}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View Profile</a></div>}
+                        {c.portfolio && <div><strong>Portfolio:</strong> <a href={c.portfolio.startsWith('http') ? c.portfolio : `https://${c.portfolio}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View Site</a></div>}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-center">
-                    <div className="w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-sm bg-white" style={{ borderColor: gradeColor }}>
-                      <span className="text-3xl font-black tracking-tighter" style={{ color: gradeColor }}>{grade}</span>
+                  <div className="text-center shrink-0 w-full md:w-auto flex md:flex-col justify-center items-center gap-4 md:gap-0 mt-4 md:mt-0">
+                    <div className="w-24 h-24 rounded-full border-4 flex items-center justify-center shadow-sm bg-white" style={{ borderColor: gradeColor }}>
+                      <span className="text-4xl font-black tracking-tighter" style={{ color: gradeColor }}>{grade}</span>
                     </div>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-3">Rank</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-0 md:mt-3">Rank</p>
                   </div>
                 </div>
-
                 {/* Score Rings & Radar */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
                   <div className="col-span-2 bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
@@ -561,9 +570,9 @@ export default function Report() {
               </motion.div>
             )}
 
-            {/* 2. IDENTITY & SECURITY TAB */}
-            {(isExporting || activeTab === 'kyc') && (
-              <motion.div key="kyc" id="export-tab-kyc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            {/* 2. AI INTEGRITY & VIDEO TAB */}
+            {(isExporting || activeTab === 'integrity') && (
+              <motion.div key="integrity" id="export-tab-integrity" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 {iv.hiring_decision === 'PROCTORING_ACT' && (
                   <div className="mb-8 bg-red-600 rounded-xl p-4 flex items-center gap-4 text-white shadow-lg border border-red-700">
                     <ShieldAlert size={32} className="shrink-0" />
@@ -576,65 +585,50 @@ export default function Report() {
 
                 <div className="bg-white border border-slate-200 rounded-2xl p-8 mb-8 shadow-sm">
                   <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest">
-                    <Fingerprint size={16} className="text-red-600 mr-3" /> Identity & Security Dossier
+                    <SparklesIcon size={16} className="text-red-600 mr-3" /> AI Integrity Analysis
                   </h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Selfie */}
-                    <div className="flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
-                      <div className="p-4 bg-slate-800 text-white flex justify-between items-center">
-                        <span className="text-xs font-bold uppercase tracking-widest">Candidate Selfie</span>
-                        {c.kyc_verified ? (
-                          <span className="flex items-center gap-1 text-xs text-green-400 font-bold bg-green-400/10 px-2 py-0.5 rounded">
-                            <CheckCircle size={12} /> Verified
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-xs text-amber-400 font-bold bg-amber-400/10 px-2 py-0.5 rounded">
-                            <AlertCircle size={12} /> Unverified
-                          </span>
-                        )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    {/* Plagiarism AI */}
+                    <div className="flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 p-6 relative">
+                      <div className="absolute top-4 right-4">
+                        <div className="w-16 h-16 rounded-full flex items-center justify-center border-4" style={{ borderColor: iv.plagiarism_score > 80 ? '#ef4444' : iv.plagiarism_score > 50 ? '#f59e0b' : '#10b981' }}>
+                          <span className="text-xl font-black">{iv.plagiarism_score || 0}</span>
+                        </div>
                       </div>
-                      <div className="aspect-square bg-slate-200 relative overflow-hidden">
-                        {c.selfie_url ? (
-                          <img src={c.selfie_url} alt="Selfie" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-400 italic">No Selfie</div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">OCR Name Match</p>
-                        <p className="text-sm font-bold text-slate-900">{c.aadhar_name || 'N/A'}</p>
-                      </div>
+                      <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-2">Syntactic Plagiarism Score</h4>
+                      <p className="text-sm text-slate-600 pr-20 italic">
+                        {iv.plagiarism_reasoning || "Analysis complete. Syntax and structural cadence indicate original thought."}
+                      </p>
                     </div>
 
-                    {/* Aadhar */}
-                    <div className="flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
-                      <div className="p-4 bg-slate-800 text-white">
-                        <span className="text-xs font-bold uppercase tracking-widest">Govt ID (Aadhar)</span>
-                      </div>
-                      <div className="aspect-[1.58/1] bg-slate-200 relative overflow-hidden flex-1">
-                        {c.aadhar_image_url ? (
-                          <img src={c.aadhar_image_url} alt="Aadhar" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-400 italic">No ID Provided</div>
-                        )}
-                      </div>
-                      <div className="p-4 bg-white border-t border-slate-200">
-                        <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">Extracted ID</p>
-                        <p className="text-sm font-bold text-slate-900 tracking-widest">{c.aadhar_number_masked || 'XXXX XXXX 0000'}</p>
-                      </div>
-                    </div>
-
-                    {/* Interview Recording — full video with native controls (play/seek/fullscreen) */}
-                    <div className="flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 md:col-span-1">
-                      <div className="p-4 bg-slate-800 text-white flex justify-between items-center">
-                        <span className="text-xs font-bold uppercase tracking-widest">Interview Recording</span>
-                        <span className="text-xs text-slate-300 flex items-center gap-1"><Camera size={12}/> Proctored</span>
-                      </div>
-                      <RecordingCard recordingUrl={iv.recording_url} durationSeconds={iv.duration_seconds} />
+                    {/* AI Voice Detection */}
+                    <div className="flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 p-6">
+                      <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-2">Voice Authenticity (Deepfake Check)</h4>
+                      {iv.integrity_data?.voice_authenticity_flagged ? (
+                        <div className="flex items-center gap-3 text-red-600 font-bold mt-2 bg-red-100 p-3 rounded-lg border border-red-200">
+                          <AlertCircle size={20} />
+                          <span>Failed (Synthetic Audio Detected)</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3 text-emerald-600 font-bold mt-2 bg-emerald-100 p-3 rounded-lg border border-emerald-200">
+                          <CheckCircle size={20} />
+                          <span>Passed (Human Voice)</span>
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  <h3 className="text-sm font-bold mb-6 text-slate-900 flex items-center uppercase tracking-widest">
+                    <Camera size={16} className="text-red-600 mr-3" /> Proctored Video Recording
+                  </h3>
+                  {/* Interview Recording — full video with native controls (play/seek/fullscreen) */}
+                  <div className="w-full rounded-xl overflow-hidden bg-black aspect-video relative">
+                    <RecordingCard recordingUrl={iv.recording_url} durationSeconds={iv.duration_seconds} />
+                  </div>
                 </div>
+                  
+
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Integrity Triage Matrix */}
@@ -832,6 +826,19 @@ export default function Report() {
                             </div>
                           )}
                         </div>
+                        {qa.plagiarism_score !== undefined && (
+                          <div className={`mt-4 p-3 rounded-lg border text-xs font-medium ${
+                            qa.plagiarism_score > 80 ? 'bg-red-50 border-red-200 text-red-800' :
+                            qa.plagiarism_score > 50 ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                            'bg-slate-50 border-slate-200 text-slate-600'
+                          }`}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold uppercase tracking-widest text-[10px]">AI Plagiarism Score</span>
+                              <span className="font-black">{qa.plagiarism_score}%</span>
+                            </div>
+                            <p>{qa.plagiarism_reasoning || 'No syntactic AI signatures detected.'}</p>
+                          </div>
+                        )}
                       </div>
                     )) : (
                       <p className="text-slate-500 italic">No transcript data available for this session.</p>
