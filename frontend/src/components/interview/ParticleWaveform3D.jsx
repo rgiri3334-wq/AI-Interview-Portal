@@ -33,7 +33,6 @@ const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency }) => {
   }, [count]);
 
   const color = new THREE.Color();
-  const colorArray = useMemo(() => new Float32Array(count * 3), [count]);
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
@@ -82,7 +81,7 @@ const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency }) => {
       } else {
         color.set('#FFFFFF'); // White
       }
-      color.toArray(colorArray, i * 3);
+      meshRef.current.setColorAt(i, color);
     });
 
     // Rotate the entire cloud slowly
@@ -90,7 +89,9 @@ const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency }) => {
     meshRef.current.rotation.z = time * 0.1;
 
     meshRef.current.instanceMatrix.needsUpdate = true;
-    meshRef.current.geometry.attributes.color.needsUpdate = true;
+    if (meshRef.current.instanceColor) {
+      meshRef.current.instanceColor.needsUpdate = true;
+    }
   });
 
   return (
@@ -99,10 +100,8 @@ const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency }) => {
       <pointLight position={[10, 10, 10]} intensity={1} />
       
       <instancedMesh ref={meshRef} args={[null, null, count]}>
-        <sphereGeometry args={[0.05, 8, 8]}>
-          <instancedBufferAttribute attach="attributes-color" args={[colorArray, 3]} />
-        </sphereGeometry>
-        <meshBasicMaterial vertexColors toneMapped={false} />
+        <sphereGeometry args={[0.05, 8, 8]} />
+        <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
 
       <EffectComposer disableNormalPass>
