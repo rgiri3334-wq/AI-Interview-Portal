@@ -34,6 +34,9 @@ const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency }) => {
 
   const color = new THREE.Color();
 
+  const geometry = useMemo(() => new THREE.SphereGeometry(0.05, 8, 8), []);
+  const material = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), []);
+
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
     if (!meshRef.current) return;
@@ -99,10 +102,7 @@ const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency }) => {
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} intensity={1} />
       
-      <instancedMesh ref={meshRef} args={[null, null, count]}>
-        <sphereGeometry args={[0.05, 8, 8]} />
-        <meshBasicMaterial toneMapped={false} />
-      </instancedMesh>
+      <instancedMesh ref={meshRef} args={[geometry, material, count]} />
 
       <EffectComposer disableNormalPass>
         <Bloom luminanceThreshold={0.2} mipmapBlur intensity={2.0} />
