@@ -1,7 +1,7 @@
 FROM python:3.12-slim
 
 # Install system dependencies for OpenCV, Tesseract OCR, and FFmpeg
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     libtesseract-dev \
     ffmpeg \
@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Set working directory
 WORKDIR /app
