@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 
-const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency }) => {
+const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency, theme = 'dark' }) => {
   const meshRef = useRef();
   const count = 3000;
   
@@ -76,13 +76,12 @@ const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency }) => {
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
 
-      // Colors: Sterling Red (#DC2626) and White
-      // If speaking and pushed far out, turn Red. Otherwise White/Pinkish.
+      // Colors: Sterling Red (#DC2626) and White/Slate depending on theme
       const dist = Math.sqrt(p.x*p.x + p.y*p.y + p.z*p.z);
       if (dist > 3.0 && isSpeaking) {
         color.set('#DC2626'); // Sterling Red
       } else {
-        color.set('#FFFFFF'); // White
+        color.set(theme === 'dark' ? '#FFFFFF' : '#475569'); // White for dark theme, Slate-600 for light theme
       }
       meshRef.current.setColorAt(i, color);
     });

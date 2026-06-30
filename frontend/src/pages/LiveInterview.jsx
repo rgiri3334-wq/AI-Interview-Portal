@@ -907,6 +907,7 @@ export default function LiveInterview() {
                 <Canvas camera={{ position: [0, 0, 10], fov: 45 }} dpr={[1, 1.5]}>
                   <ParticleWaveform3D
                     isSpeaking={false}
+                    theme="light"
                   />
                 </Canvas>
               </React.Suspense>
