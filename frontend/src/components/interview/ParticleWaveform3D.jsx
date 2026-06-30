@@ -97,12 +97,16 @@ const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency }) => {
     }
   });
 
+  const colorArray = useMemo(() => new Float32Array(count * 3).fill(1), []);
+
   return (
     <>
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} intensity={1} />
       
-      <instancedMesh ref={meshRef} args={[geometry, material, count]} />
+      <instancedMesh ref={meshRef} args={[geometry, material, count]}>
+        <instancedBufferAttribute attach="instanceColor" args={[colorArray, 3]} />
+      </instancedMesh>
 
       <EffectComposer disableNormalPass>
         <Bloom luminanceThreshold={0.2} mipmapBlur intensity={2.0} />
