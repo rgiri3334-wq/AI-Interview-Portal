@@ -15,8 +15,7 @@ const Editor = lazyWithReload(
 import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png';
 import { formatISTTime } from '../utils/istTime';
-// Lazy-load ParticleWaveform3D
-import CSSWaveform from '../components/interview/CSSWaveform';
+import Waveform2D from '../components/interview/Waveform2D';
 import PreFlightCheck from '../components/PreFlightCheck';
 
 import AvatarStage from '../components/interview/AvatarStage';
@@ -902,7 +901,7 @@ export default function LiveInterview() {
           <div className="flex flex-col items-center gap-4">
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200 flex items-center justify-center"
               style={{ width: '280px', height: '340px', background: 'linear-gradient(160deg, #f8f9fa 0%, #e8edf2 60%, #dce3eb 100%)' }}>
-              <CSSWaveform
+              <Waveform2D
                 isSpeaking={false}
                 theme="light"
               />

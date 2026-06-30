@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import CSSWaveform from './CSSWaveform';
+import Waveform2D from './Waveform2D';
 import Background from './Background';
 import CaptionsOverlay from './CaptionsOverlay';
 
@@ -49,7 +49,7 @@ export default function AvatarStage({
         }}
         transition={{ type: 'spring', damping: 30, stiffness: 200 }}
       >
-        <CSSWaveform isSpeaking={isSpeaking} getAudioFrequency={getAudioFrequency} theme={theme} />
+        <Waveform2D isSpeaking={isSpeaking} getAudioFrequency={getAudioFrequency} theme={theme} />
       </motion.div>
 
       {/* Dual-panel captions overlay the entire screen at the bottom */}
