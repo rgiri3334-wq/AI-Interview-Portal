@@ -215,20 +215,7 @@ export default function LiveInterview() {
 
   const lastCueWordCount = useRef(0);
 
-  // Waveform bars — reads mic frequency data.
-  // NOTE: must be declared AFTER useWebSocketSTT() so `isListening` exists when
-  // this effect's dependency array is evaluated during render. Declaring it
-  // earlier put `isListening` in the temporal dead zone and crashed the page
-  // with "Cannot access 'isListening' before initialization".
-  const [waveBars, setWaveBars] = useState([4, 4, 4, 4, 4, 4, 4]);
-  useEffect(() => {
-    if (phase !== 'interviewing') return;
-    const id = setInterval(() => {
-      const freq = typeof getAudioFrequency === 'function' ? getAudioFrequency() : 0;
-      setWaveBars(prev => prev.map(() => isListening ? 4 + Math.random() * freq * 28 : 4));
-    }, 80);
-    return () => clearInterval(id);
-  }, [phase, getAudioFrequency, isListening]);
+  // (Legacy waveBars removed to eliminate extreme React re-render lag)
 
   // SPRINT 4: Audio & VAD Improvements (Interruption & Active Listening)
   useEffect(() => {
