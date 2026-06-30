@@ -5,7 +5,8 @@ import * as THREE from 'three';
 
 const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency, theme = 'dark' }) => {
   const meshRef = useRef();
-  const count = 3000;
+  // Drastically reduced count from 3000 to 800 for 60fps performance during Live Interview
+  const count = 800; 
   
   // Setup instanced mesh matrix and colors
   const dummy = useMemo(() => new THREE.Object3D(), []);
@@ -32,9 +33,11 @@ const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency, theme = 'dark' }) =
     return temp;
   }, [count]);
 
-  const color = new THREE.Color();
+  const color = useMemo(() => new THREE.Color(), []);
+  const colorRed = useMemo(() => new THREE.Color('#DC2626'), []);
+  const colorTheme = useMemo(() => new THREE.Color(theme === 'dark' ? '#FFFFFF' : '#475569'), [theme]);
 
-  const geometry = useMemo(() => new THREE.SphereGeometry(0.05, 8, 8), []);
+  const geometry = useMemo(() => new THREE.SphereGeometry(0.06, 8, 8), []); // Slightly larger to compensate for lower count
   const material = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), []);
 
   useFrame((state) => {
@@ -43,7 +46,6 @@ const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency, theme = 'dark' }) =
     
     // Get real audio frequency if available, fallback to 0
     const rawFreq = (typeof getAudioFrequency === 'function' && isSpeaking) ? getAudioFrequency() : 0;
-    // Normalize frequency somewhat (0.0 to 1.0 roughly, depends on implementation)
     const audioIntensity = Math.min(rawFreq * 1.5, 1.5);
     
     // Animate each particle
@@ -70,18 +72,19 @@ const ParticleWaveform3D = ({ isSpeaking, getAudioFrequency, theme = 'dark' }) =
 
       dummy.position.set(p.x, p.y, p.z);
       
-      const scale = isSpeaking ? 1.0 + Math.random() * 0.5 : 1.0;
+      // Avoid Math.random() in the frame loop, use phase instead
+      const scale = isSpeaking ? 1.0 + (Math.sin(time * 20 + p.phase) * 0.5 + 0.5) * 0.5 : 1.0;
       dummy.scale.set(scale, scale, scale);
       
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
 
-      // Colors: Sterling Red (#DC2626) and White/Slate depending on theme
-      const dist = Math.sqrt(p.x*p.x + p.y*p.y + p.z*p.z);
-      if (dist > 3.0 && isSpeaking) {
-        color.set('#DC2626'); // Sterling Red
+      // Colors: Fast distance squared check
+      const distSq = p.x*p.x + p.y*p.y + p.z*p.z;
+      if (distSq > 9.0 && isSpeaking) { // 3.0 squared = 9.0
+        color.copy(colorRed);
       } else {
-        color.set(theme === 'dark' ? '#FFFFFF' : '#475569'); // White for dark theme, Slate-600 for light theme
+        color.copy(colorTheme);
       }
       meshRef.current.setColorAt(i, color);
     });
