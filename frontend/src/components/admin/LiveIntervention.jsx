@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Radio, Mic, Skull, AlertTriangle, Send, Video, Maximize, Activity,
   ArrowLeft, User, Clock, Zap, Brain, MessageCircle, Shield, RefreshCw,
-  ChevronRight, Briefcase, Sparkles, Signal
+  ChevronRight, Briefcase, Sparkles, Signal, Radar
 } from 'lucide-react';
 import { apiClient } from '../../api/apiClient';
 import { API_BASE, customFetch } from '../../config/api';
