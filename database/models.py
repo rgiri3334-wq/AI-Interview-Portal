@@ -121,6 +121,7 @@ class InterviewSession(Base):
     recommendation = Column(String, nullable=True)
     proctoring_warnings = Column(Integer, default=0)
     proctoring_logs = Column(Text, default="[]")
+    admin_termination_reason = Column(String, nullable=True)
 
     candidate = relationship("Candidate", back_populates="interviews")
     role = relationship("JobRole", back_populates="interviews")

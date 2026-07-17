@@ -66,6 +66,7 @@ export default function LiveInterview() {
   const [loadingStatus, setLoadingStatus] = useState('Computing...');
   const [warnings, setWarnings] = useState(0);
   const [textFallback, setTextFallback] = useState('');
+  const [adminKillReason, setAdminKillReason] = useState(null);
 
   const proctoringLogsRef = useRef([]);
   const [fullscreenLock, setFullscreenLock] = useState(false);
@@ -246,6 +247,42 @@ export default function LiveInterview() {
     videoRef.current = el;
     if (el && streamRef.current) el.srcObject = streamRef.current;
   }, []);
+
+  // ── Admin Kill Switch Polling ────────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'interviewing') return;
+    
+    const interviewId = sessionStorage.getItem('interview_id');
+    if (!interviewId) return;
+
+    const checkKill = async () => {
+      try {
+        const res = await apiClient.checkInterviewKill(interviewId);
+        if (res && res.killed) {
+          console.warn("[Admin Kill] Interview forcefully terminated by administrator.");
+          
+          // Force stop all hardware immediately
+          stopVoice();
+          stopHuman();
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+          }
+          if (videoRef.current) videoRef.current.srcObject = null;
+          stopListening(false);
+          shutdownSTT();
+          
+          setAdminKillReason(res.reason || "Interview terminated by administrator.");
+          // We DO NOT call doEndInterview because the backend already handled the termination
+        }
+      } catch (err) {
+        // Silently ignore polling errors
+      }
+    };
+
+    const intervalId = setInterval(checkKill, 5000);
+    return () => clearInterval(intervalId);
+  }, [phase, stopListening, stopVoice]);
 
   useEffect(() => {
     if (phase === 'interviewing') {
@@ -1233,6 +1270,39 @@ export default function LiveInterview() {
                   I Understand
                 </button>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Admin Termination Overlay Modal */}
+      <AnimatePresence>
+        {adminKillReason && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center border-t-8 border-red-600"
+            >
+              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <ShieldAlert size={40} className="text-red-600" />
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">Interview Terminated by Administrator</h2>
+              <p className="text-red-600 font-bold mb-6 text-lg">{adminKillReason}</p>
+              
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm text-slate-600 mb-8 font-medium">
+                Your interview has been forcefully ended by the administrative team. This incident has been logged. 
+                Any recorded footage prior to termination has been saved.
+              </div>
+
+              <button
+                onClick={() => navigate('/candidate-home')}
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-wider py-4 px-6 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_0_rgb(220,38,38,0.39)] hover:shadow-[0_6px_20px_rgba(220,38,38,0.23)]"
+              >
+                Return to Dashboard
+              </button>
             </motion.div>
           </motion.div>
         )}

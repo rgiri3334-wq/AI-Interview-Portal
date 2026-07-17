@@ -238,6 +238,11 @@ export const apiClient = {
   createSlot: (data) => withRetry(() => api.post('/api/admin/slots', data)),
   getAllSlots: () => api.get('/api/admin/slots'),
   deleteSlot: (slotId) => api.delete(`/api/admin/slots/${slotId}`),
+
+  // ── Live Interview Monitor (Sprint 5) ──────────────────────────────────
+  getLiveSessions: () => api.get('/api/admin/live-sessions'),
+  adminKillInterview: (data) => withRetry(() => api.post('/api/admin/kill-interview', data)),
+  checkInterviewKill: (interviewId) => api.get(`/api/interviews/${interviewId}/check-kill`),
 };
 
 // ── WebSocket Factory ──────────────────────────────────────────────────────

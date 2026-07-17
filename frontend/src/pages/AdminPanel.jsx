@@ -248,13 +248,13 @@ export default function AdminPanel() {
   };
 
   const TABS = [
-    { id: 'pipeline', label: 'Candidate Pipeline', icon: <LayoutDashboard size={18} /> },
-    { id: 'slots', label: 'Interview Scheduling', icon: <CalendarDays size={18} /> },
-    { id: 'analytics', label: 'Global Analytics', icon: <Activity size={18} /> },
-    { id: 'live', label: 'Live Interview Monitor', icon: <Radar size={18} /> },
-    { id: 'context', label: 'Global Context', icon: <Globe size={18} /> },
-    { id: 'architecture', label: 'Dept & Role Configuration', icon: <Layers size={18} /> },
-    { id: 'questions', label: 'Rubric Engine', icon: <Database size={18} /> },
+    { id: 'pipeline', label: 'Pipeline', icon: <LayoutDashboard size={16} /> },
+    { id: 'slots', label: 'Scheduling', icon: <CalendarDays size={16} /> },
+    { id: 'analytics', label: 'Analytics', icon: <Activity size={16} /> },
+    { id: 'live', label: 'Live Monitor', icon: <Radar size={16} /> },
+    { id: 'context', label: 'Context', icon: <Globe size={16} /> },
+    { id: 'architecture', label: 'Dept & Roles', icon: <Layers size={16} /> },
+    { id: 'questions', label: 'Rubric', icon: <Database size={16} /> },
   ];
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans relative overflow-hidden text-slate-900">
@@ -286,32 +286,34 @@ export default function AdminPanel() {
       </AnimatePresence>
 
       {/* Admin Header Navbar */}
-      <div className="relative z-40 px-6 pt-6 mb-2">
-        <div className="max-w-[1600px] mx-auto bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-sm rounded-3xl p-4 flex items-center justify-between">
-          <div className="flex items-center gap-4 pl-2">
-            <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/20 text-white">
-              <Settings size={20} />
+      <div className="relative z-40 px-4 pt-5 mb-2">
+        <div className="max-w-[1600px] mx-auto bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-sm rounded-2xl p-3 flex items-center gap-4">
+          <div className="flex items-center gap-3 pl-2 shrink-0">
+            <div className="w-9 h-9 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/20 text-white">
+              <Settings size={18} />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tight text-slate-900 leading-none">Admin Dashboard</h1>
-              <span className="text-[10px] font-black uppercase tracking-widest text-red-600">Enterprise Edition</span>
+              <h1 className="text-lg font-black tracking-tight text-slate-900 leading-none">Admin</h1>
+              <span className="text-[9px] font-black uppercase tracking-widest text-red-600">Enterprise</span>
             </div>
           </div>
           
-          <div className="hidden lg:flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-red-100 shadow-sm">
-            {TABS.map(t => (
-              <button
-                key={t.id}
-                onClick={() => setActiveTab(t.id)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
-                  activeTab === t.id 
-                    ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-[0_4px_14px_0_rgb(220,38,38,0.39)]' 
-                    : 'text-slate-500 hover:text-red-600 hover:bg-red-50'
-                }`}
-              >
-                <span className="relative z-10 flex items-center gap-2">{t.icon} {t.label}</span>
-              </button>
-            ))}
+          <div className="flex-1 min-w-0 hidden lg:block">
+            <div className="flex items-center gap-1 bg-slate-50/80 p-1 rounded-xl border border-slate-100 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {TABS.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTab(t.id)}
+                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all duration-300 whitespace-nowrap shrink-0 ${
+                    activeTab === t.id 
+                      ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-[0_4px_14px_0_rgb(220,38,38,0.39)]' 
+                      : 'text-slate-500 hover:text-red-600 hover:bg-white'
+                  }`}
+                >
+                  {t.icon} {t.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

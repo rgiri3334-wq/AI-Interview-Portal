@@ -1972,6 +1972,181 @@ async def set_role_config(req: RoleConfigSet, db: Session = Depends(get_db)):
         db.commit()
     return {"status": "success"}
 
+# ── Live Session Monitor (Sprint 5) ─────────────────────────────────────────
+# Returns all currently active in-memory interview sessions with candidate
+# details for the admin live monitoring panel.
+
+@app.get("/api/admin/live-sessions", tags=["Admin"])
+async def get_live_sessions(db: Session = Depends(get_db)):
+    """Returns all candidates with active in-memory interview sessions."""
+    from services.interview_memory import _sessions, _lock
+
+    results = []
+    with _lock:
+        active_ids = list(_sessions.keys())
+
+    for cid in active_ids:
+        session = get_session(cid)
+        if not session:
+            continue
+
+        # Get candidate details from DB
+        cand = db.query(Candidate).filter_by(candidate_id=cid).first()
+        if not cand:
+            continue
+
+        # Get latest interview session
+        iv = db.query(InterviewSession).filter_by(
+            candidate_id=cid
+        ).order_by(InterviewSession.started_at.desc()).first()
+
+        # Calculate duration
+        duration_str = "00:00"
+        if iv and iv.started_at:
+            try:
+                from datetime import datetime
+                started = datetime.fromisoformat(iv.started_at.replace("Z", "+00:00"))
+                now = datetime.now(timezone.utc)
+                # Handle IST timestamps
+                if started.tzinfo is None:
+                    started = started.replace(tzinfo=IST)
+                    now = datetime.now(IST)
+                elapsed = int((now - started).total_seconds())
+                mins, secs = divmod(max(0, elapsed), 60)
+                duration_str = f"{mins:02d}:{secs:02d}"
+            except Exception:
+                duration_str = "00:00"
+
+        # Determine current phase name
+        stage_map = {1: "Warm-up", 2: "Resume Deep Dive", 3: "Technical", 4: "System Design", 5: "Behavioral/HR"}
+        current_phase = stage_map.get(session.current_stage, "Unknown")
+
+        results.append({
+            "candidate_id": cid,
+            "name": cand.name,
+            "email": cand.email,
+            "selfie_url": cand.selfie_url,
+            "job_role": session.job_role or (iv.role.role_name if (iv and iv.role) else ""),
+            "experience": cand.experience_level or session.experience or "",
+            "key_skills": cand.key_skills or session.skills or "",
+            "interview_id": iv.interview_id if iv else None,
+            "started_at": iv.started_at if iv else None,
+            "duration": duration_str,
+            "question_index": session.question_index,
+            "current_stage": session.current_stage,
+            "current_phase": current_phase,
+            "difficulty_index": session.difficulty_index,
+            "avg_technical": session.avg_technical,
+            "avg_communication": session.avg_communication,
+            "avg_confidence": session.avg_confidence,
+            "pulse_rate": "Active" if session.question_index > 0 else "Initializing",
+        })
+
+    return results
+
+class AdminKillRequest(BaseModel):
+    candidate_id: str
+    interview_id: str = Field(default="")
+    reason: str = Field(default="Interview terminated by administrator")
+
+@app.post("/api/admin/kill-interview", tags=["Admin"])
+async def admin_kill_interview(req: AdminKillRequest, db: Session = Depends(get_db)):
+    """Admin forcefully terminates an interview."""
+    ts = ist_isoformat()
+
+    c = db.query(Candidate).filter_by(candidate_id=req.candidate_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    iv = None
+    if req.interview_id:
+        iv = db.query(InterviewSession).filter_by(interview_id=req.interview_id).first()
+    if not iv:
+        iv = db.query(InterviewSession).filter_by(candidate_id=req.candidate_id).order_by(
+            InterviewSession.started_at.desc()
+        ).first()
+
+    if not iv:
+        raise HTTPException(status_code=404, detail="No active interview session found")
+
+    # Mark as terminated by admin
+    iv.status_id = 500  # type: ignore
+    iv.completed_at = ts  # type: ignore
+    iv.overall_score = 0.0  # type: ignore
+    iv.admin_termination_reason = req.reason  # type: ignore
+
+    admin_act_signals = json.dumps([
+        {
+            "signal": "admin_termination",
+            "note": req.reason,
+            "deduction": 100,
+            "timestamp": ts,
+            "category": "admin"
+        }
+    ])
+
+    existing_report = db.query(FinalReport).filter_by(interview_id=iv.interview_id).first()
+    if existing_report:
+        existing_report.grade = "F"  # type: ignore
+        existing_report.overall_score = 0.0  # type: ignore
+        existing_report.hiring_decision = "ADMIN_TERMINATED"  # type: ignore
+        existing_report.integrity_score = 0  # type: ignore
+        existing_report.integrity_verdict = "HIGH_RISK"  # type: ignore
+        existing_report.integrity_signals = admin_act_signals  # type: ignore
+        existing_report.summary = f"Interview terminated by administrator. Reason: {req.reason}"  # type: ignore
+        existing_report.strengths = json.dumps([])  # type: ignore
+        existing_report.weaknesses = json.dumps([req.reason])  # type: ignore
+    else:
+        new_report = FinalReport(
+            report_id=generate_enterprise_id(db, "REP"),
+            candidate_id=req.candidate_id,
+            interview_id=iv.interview_id,
+            overall_score=0.0,
+            grade="F",
+            recommendation="ADMIN_TERMINATED",
+            strengths=json.dumps([]),
+            weaknesses=json.dumps([req.reason]),
+            summary=f"Interview terminated by administrator. Reason: {req.reason}",
+            hiring_decision="ADMIN_TERMINATED",
+            integrity_score=0,
+            integrity_verdict="HIGH_RISK",
+            integrity_signals=admin_act_signals,
+            posture_score=0.0,
+            movement_score=0.0,
+            eye_tracking_score=0.0,
+            authenticity_score=0.0,
+            environment_score=0.0,
+        )
+        db.add(new_report)
+
+    try:
+        db.commit()
+        logger.info(f"[Admin] Interview {iv.interview_id} manually terminated. Reason: {req.reason}")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save admin termination: {str(e)}")
+
+    from services.interview_memory import clear_session
+    clear_session(req.candidate_id)
+
+    return {
+        "status": "terminated",
+        "interview_id": iv.interview_id,
+        "reason": req.reason,
+    }
+
+@app.get("/api/interviews/{interview_id}/check-kill", tags=["Data"])
+async def check_interview_kill(interview_id: str, db: Session = Depends(get_db)):
+    """Lightweight endpoint for candidate to poll if admin killed their interview."""
+    iv = db.query(InterviewSession).filter_by(interview_id=interview_id).first()
+    if not iv:
+        raise HTTPException(status_code=404, detail="Interview not found")
+    
+    if iv.admin_termination_reason:
+        return {"killed": True, "reason": iv.admin_termination_reason}
+    return {"killed": False}
+
+
 @app.get("/api/admin/pipeline", tags=["Admin"])
 async def get_candidate_pipeline(db: Session = Depends(get_db)):
     """Returns all candidates joined with their interview scores for the HR Dashboard."""

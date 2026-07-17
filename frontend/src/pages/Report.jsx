@@ -308,6 +308,7 @@ export default function Report() {
   // ── Feature 3: consolidated red flags (real data, no fabrication) ─────────
   const redFlags = [];
   if (iv.termination_reason === 'PROCTORING_ACT') redFlags.push('Interview terminated by proctoring');
+  if (iv.hiring_decision === 'ADMIN_TERMINATED') redFlags.push('Interview terminated by administrator');
   if ((iv.proctoring_warnings || 0) > 0) redFlags.push(`${iv.proctoring_warnings} proctoring warning(s)`);
   if ((iv.integrity_score ?? 100) < 70) redFlags.push(`Integrity ${iv.integrity_score ?? 100}/100 (${iv.integrity_verdict || 'FLAGGED'})`);
   if (Array.isArray(iv.integrity_signals) && iv.integrity_signals.length > 0) redFlags.push(`${iv.integrity_signals.length} integrity signal(s)`);
@@ -579,6 +580,15 @@ export default function Report() {
                     <div>
                       <h4 className="font-bold text-lg">PROCTORING TERMINATION</h4>
                       <p className="text-red-100 text-sm">Session was terminated early due to severe integrity violations.</p>
+                    </div>
+                  </div>
+                )}
+                {iv.hiring_decision === 'ADMIN_TERMINATED' && (
+                  <div className="mb-8 bg-red-950 rounded-xl p-4 flex items-center gap-4 text-white shadow-lg border border-red-800">
+                    <ShieldAlert size={32} className="shrink-0 text-red-500" />
+                    <div>
+                      <h4 className="font-bold text-lg text-red-400">ADMIN TERMINATION</h4>
+                      <p className="text-red-200 text-sm">{iv.summary || 'Session was forcefully terminated by an administrator.'}</p>
                     </div>
                   </div>
                 )}
