@@ -248,13 +248,13 @@ export default function AdminPanel() {
   };
 
   const TABS = [
-    { id: 'pipeline', label: 'Pipeline', icon: <LayoutDashboard size={16} /> },
-    { id: 'slots', label: 'Scheduling', icon: <CalendarDays size={16} /> },
-    { id: 'analytics', label: 'Analytics', icon: <Activity size={16} /> },
-    { id: 'live', label: 'Live Monitor', icon: <Radar size={16} /> },
-    { id: 'context', label: 'Context', icon: <Globe size={16} /> },
-    { id: 'architecture', label: 'Dept & Roles', icon: <Layers size={16} /> },
-    { id: 'questions', label: 'Rubric', icon: <Database size={16} /> },
+    { id: 'pipeline', label: 'Candidate Pipeline', icon: <LayoutDashboard size={16} /> },
+    { id: 'slots', label: 'Interview Scheduling', icon: <CalendarDays size={16} /> },
+    { id: 'analytics', label: 'Global Analytics', icon: <Activity size={16} /> },
+    { id: 'live', label: 'Live Interview Monitor', icon: <Radar size={16} /> },
+    { id: 'context', label: 'Global Context', icon: <Globe size={16} /> },
+    { id: 'architecture', label: 'Dept & Role Configuration', icon: <Layers size={16} /> },
+    { id: 'questions', label: 'Rubric Engine', icon: <Database size={16} /> },
   ];
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans relative overflow-hidden text-slate-900">
@@ -285,34 +285,67 @@ export default function AdminPanel() {
         )}
       </AnimatePresence>
 
-      {/* Admin Header Navbar */}
+      {/* Admin Header Navbar — Two-section layout */}
       <div className="relative z-40 px-4 pt-5 mb-2">
-        <div className="max-w-[1600px] mx-auto bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-sm rounded-2xl p-3 flex items-center gap-4">
-          <div className="flex items-center gap-3 pl-2 shrink-0">
-            <div className="w-9 h-9 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/20 text-white">
-              <Settings size={18} />
+        <div className="max-w-[1600px] mx-auto">
+          {/* Top Row: Branding */}
+          <div className="bg-white/90 backdrop-blur-xl border border-slate-200/60 border-b-0 shadow-sm rounded-t-2xl px-5 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/20 text-white">
+                <Settings size={19} />
+              </div>
+              <div>
+                <h1 className="text-lg font-black tracking-tight text-slate-900 leading-none">Admin Command Center</h1>
+                <span className="text-[10px] font-black uppercase tracking-widest text-red-600/80">Enterprise Control Panel</span>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-black tracking-tight text-slate-900 leading-none">Admin</h1>
-              <span className="text-[9px] font-black uppercase tracking-widest text-red-600">Enterprise</span>
+
+            {/* Mobile tab selector — visible below lg */}
+            <div className="lg:hidden relative">
+              <select
+                value={activeTab}
+                onChange={(e) => setActiveTab(e.target.value)}
+                className="appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 pr-8 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 cursor-pointer"
+              >
+                {TABS.map(t => (
+                  <option key={t.id} value={t.id}>{t.label}</option>
+                ))}
+              </select>
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
             </div>
           </div>
-          
-          <div className="flex-1 min-w-0 hidden lg:block">
-            <div className="flex items-center gap-1 bg-slate-50/80 p-1 rounded-xl border border-slate-100 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {TABS.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveTab(t.id)}
-                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all duration-300 whitespace-nowrap shrink-0 ${
-                    activeTab === t.id 
-                      ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-[0_4px_14px_0_rgb(220,38,38,0.39)]' 
-                      : 'text-slate-500 hover:text-red-600 hover:bg-white'
-                  }`}
-                >
-                  {t.icon} {t.label}
-                </button>
-              ))}
+
+          {/* Bottom Row: Full-width tab bar — hidden on mobile, visible on lg+ */}
+          <div className="hidden lg:block bg-white/80 backdrop-blur-xl border border-slate-200/60 border-t border-t-slate-100 shadow-sm rounded-b-2xl px-3 py-2">
+            <div
+              className="flex items-center gap-1.5 overflow-x-auto"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              <style>{`.admin-tabs::-webkit-scrollbar { display: none; }`}</style>
+              {TABS.map(t => {
+                const isActive = activeTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setActiveTab(t.id)}
+                    className={`
+                      relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-bold
+                      transition-all duration-300 whitespace-nowrap shrink-0
+                      ${isActive
+                        ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-[0_4px_16px_0_rgb(220,38,38,0.35)]'
+                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/80'
+                      }
+                    `}
+                  >
+                    <span className={`transition-colors duration-300 ${isActive ? 'text-white/90' : 'text-slate-400'}`}>
+                      {t.icon}
+                    </span>
+                    {t.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
