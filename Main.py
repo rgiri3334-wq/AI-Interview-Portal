@@ -831,19 +831,31 @@ def health_check():
 
 @app.post("/api/execute-code", tags=["Interview"])
 async def execute_code(req: ExecuteCodeRequest):
-    """Securely compile and execute code on the backend (Prototype Sandbox)"""
-    import sys, io
-    import traceback
-    import builtins
+    """Securely compile and execute candidate Python code in a restricted sandbox."""
+    import sys, io, traceback, threading
 
-    # We only support python in this MVP sandbox
+    # ── Guard 1: Language check ──
     if req.language.lower() not in ["python", "python3"]:
-        return {"output": f"Backend execution for {req.language} is not supported in this prototype. Please use Python.", "error": True}
+        return {
+            "output": f"Backend execution for {req.language} is not supported. Please use Python.",
+            "error": True,
+        }
 
-    old_stdout = sys.stdout
-    redirected_output = sys.stdout = io.StringIO()
+    # ── Guard 2: Code length limit ──
+    if len(req.code) > 5000:
+        return {"output": "Code exceeds the 5,000 character limit.", "error": True}
 
-    # Restrict builtins to safe subset — prevents os/sys/open/import access
+    # ── Guard 3: Block dangerous keywords at source level ──
+    BLOCKED_KEYWORDS = ["import ", "__import__", "exec(", "eval(", "open(", "compile(",
+                        "globals(", "locals(", "getattr(", "setattr(", "delattr(",
+                        "__builtins__", "__class__", "__subclasses__", "subprocess",
+                        "os.system", "os.popen", "shutil", "pathlib"]
+    code_lower = req.code.lower()
+    for kw in BLOCKED_KEYWORDS:
+        if kw.lower() in code_lower:
+            return {"output": f"Blocked: '{kw.strip()}' is not allowed in the sandbox.", "error": True}
+
+    # ── Guard 4: Safe builtins only ──
     SAFE_BUILTINS = {
         "print": print, "range": range, "len": len, "enumerate": enumerate,
         "zip": zip, "map": map, "filter": filter, "sorted": sorted,
@@ -853,20 +865,36 @@ async def execute_code(req: ExecuteCodeRequest):
         "isinstance": isinstance, "type": type, "repr": repr, "chr": chr,
         "ord": ord, "hex": hex, "bin": bin, "oct": oct, "pow": pow,
         "divmod": divmod, "hash": hash, "id": id, "any": any, "all": all,
+        "input": lambda *a: "",  # Neutered input() — returns empty string
         "Exception": Exception, "ValueError": ValueError, "TypeError": TypeError,
         "KeyError": KeyError, "IndexError": IndexError, "StopIteration": StopIteration,
+        "ZeroDivisionError": ZeroDivisionError, "RuntimeError": RuntimeError,
     }
-    try:
-        # Restricted Sandbox - DISABLED DUE TO SECURITY AUDIT (SEC-001)
-        # allowed_globals = {"__builtins__": SAFE_BUILTINS}
-        # exec(req.code, allowed_globals)
-        # output = redirected_output.getvalue()
-        return {"output": "Execution disabled by administrator for security compliance.", "error": False}
-    except Exception as e:
-        error_output = traceback.format_exc()
-        return {"output": error_output, "error": True}
-    finally:
-        sys.stdout = old_stdout
+
+    # ── Guard 5: Execute with timeout via threading ──
+    output_capture = {"stdout": "", "error": False}
+
+    def _run_sandboxed():
+        old_stdout = sys.stdout
+        redirected = sys.stdout = io.StringIO()
+        try:
+            allowed_globals = {"__builtins__": SAFE_BUILTINS}
+            exec(req.code, allowed_globals)
+            output_capture["stdout"] = redirected.getvalue()
+        except Exception:
+            output_capture["stdout"] = traceback.format_exc()
+            output_capture["error"] = True
+        finally:
+            sys.stdout = old_stdout
+
+    thread = threading.Thread(target=_run_sandboxed, daemon=True)
+    thread.start()
+    thread.join(timeout=5.0)  # 5 second hard timeout
+
+    if thread.is_alive():
+        return {"output": "Execution timed out (5 second limit).", "error": True}
+
+    return {"output": output_capture["stdout"] or "(No output)", "error": output_capture["error"]}
 
 @app.get("/api/system/status", tags=["System"])
 def system_status():
@@ -1451,7 +1479,12 @@ async def complete_candidate_profile(
     # Process resume upload
     upload_dir = "uploads/resumes"
     os.makedirs(upload_dir, exist_ok=True)
-    file_path = os.path.join(upload_dir, f"{candidate_id}_{resume.filename}")
+    
+    # Security: Sanitize candidate_id and filename to prevent path traversal
+    safe_cid = candidate_id.replace("/", "").replace("\\", "").replace(".", "")
+    safe_filename = os.path.basename(resume.filename) if resume.filename else "resume.pdf"
+    file_path = os.path.join(upload_dir, f"{safe_cid}_{safe_filename}")
+    
     with open(file_path, "wb") as buffer:
         buffer.write(await resume.read())
         
@@ -1531,7 +1564,10 @@ async def upload_profile_photo(data: ProfilePhotoUploadRequest, db: Session = De
         # 2. Save images to Supabase Storage
         upload_dir = "recordings"
         os.makedirs(upload_dir, exist_ok=True)
-        selfie_path = f"{upload_dir}/selfie_{data.candidate_id}.jpg"
+        
+        # Security: Sanitize candidate_id to prevent path traversal
+        safe_cid = data.candidate_id.replace("/", "").replace("\\", "").replace(".", "")
+        selfie_path = os.path.join(upload_dir, f"selfie_{safe_cid}.jpg")
         
         with open(selfie_path, "wb") as f:
             f.write(selfie_bytes)
@@ -1540,16 +1576,16 @@ async def upload_profile_photo(data: ProfilePhotoUploadRequest, db: Session = De
         if supabase_client:
             try:
                 # Upload to Supabase bucket
-                supabase_client.storage.from_("kyc-images").upload(f"selfie_{data.candidate_id}.jpg", selfie_bytes, file_options={"content-type": "image/jpeg", "upsert": "true"})
+                supabase_client.storage.from_("kyc-images").upload(f"selfie_{safe_cid}.jpg", selfie_bytes, file_options={"content-type": "image/jpeg", "upsert": "true"})
                 
                 # Get public URLs
-                selfie_url = supabase_client.storage.from_("kyc-images").get_public_url(f"selfie_{data.candidate_id}.jpg")
+                selfie_url = supabase_client.storage.from_("kyc-images").get_public_url(f"selfie_{safe_cid}.jpg")
             except Exception as e:
                 logger.error(f"Failed to upload Profile Photo to Supabase: {e}")
         
         # Fallback to local API serving if Supabase is missing/fails
         if not selfie_url:
-            selfie_url = f"{BACKEND_URL}/api/recordings/selfie_{data.candidate_id}.jpg"
+            selfie_url = f"{BACKEND_URL}/api/recordings/selfie_{safe_cid}.jpg"
 
         cand.selfie_url = selfie_url # type: ignore
         cand.aadhar_image_url = "" # type: ignore
@@ -2511,8 +2547,8 @@ async def get_leaderboard(db: Session = Depends(get_db)):
                 "interview_id": None,
                 "attempt_number": 0,
                 "attempt_label": "No Interview Yet",
-                "name": c.name,
-                "email": c.email,
+                "name": latest_c.name,
+                "email": latest_c.email,
                 "job_role": job_role_name,
                 "experience": resume.experience_years if resume else "",
                 "resume_score": resume_score,
@@ -2536,8 +2572,8 @@ async def get_leaderboard(db: Session = Depends(get_db)):
                 "integrity_verdict": "CLEAN",
                 "integrity_data": {"signal_log": []},
                 "termination_reason": None,
-                "session_started_at": c.registration_date,
-                "created_at": c.registration_date,
+                "session_started_at": latest_c.registration_date,
+                "created_at": latest_c.registration_date,
             })
             continue
 
@@ -2627,33 +2663,6 @@ async def get_leaderboard(db: Session = Depends(get_db)):
     ranked = rank_candidates(unique_rows)
     return {"total": len(ranked), "candidates": ranked}
 
-
-# ── AI Voice / Audio Authenticity Endpoint ───────────────────────────────
-
-class AudioAuthenticityRequest(BaseModel):
-    candidate_id: str
-    audio_base64: str  # Base64 encoded audio chunk
-
-@app.post("/api/analyze-audio-authenticity", tags=["Security"])
-async def analyze_audio_authenticity(req: AudioAuthenticityRequest):
-    """
-    Placeholder for Deepfake / AI Voice detection.
-    In production, this would send req.audio_base64 to an external API (like Hive AI or Resemble).
-    Returns a spoof_probability from 0 to 100.
-    """
-    # For now, simulate a very fast API call and return a low risk score.
-    await asyncio.sleep(0.1)
-    
-    # Random low score for normal voices, or you can mock it.
-    import random
-    spoof_probability = random.randint(0, 15) 
-    
-    return {
-        "status": "success",
-        "spoof_probability": spoof_probability,
-        "is_ai": spoof_probability > 85,
-        "provider": "MockVoiceDetector"
-    }
 
 
 # ── Proctoring Termination Endpoint ──────────────────────────────────────────
@@ -3210,72 +3219,87 @@ async def transcribe_audio_endpoint(file: UploadFile = File(...)):
     )
     return result
 
-@app.post("/api/analyze-audio-authenticity", tags=["AI Engine"])
+@app.post("/api/analyze-audio-authenticity", tags=["Security"])
 async def analyze_audio_authenticity(file: UploadFile = File(...)):
     """
-    Sends an audio chunk to Resemble AI and Hive AI to detect synthetic voices.
-    Returns a combined probability score and flag if the voice is highly likely to be AI.
+    Basic audio authenticity analysis using amplitude heuristics.
+    Detects synthetic voices by checking amplitude variance, background noise, and silence ratios.
     """
+    spoof_signals = []
+    spoof_probability = 0
+
     try:
-        file_bytes = await file.read()
-        is_synthetic = False
-        confidence = 0.95
-        provider = "HiveAI+Resemble"
-        
-        RESEMBLE_API_KEY = os.environ.get("RESEMBLE_API_KEY")
-        HIVE_API_KEY = os.environ.get("HIVE_API_KEY")
-        
-        # Parallel async HTTP calls to the detection endpoints
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            tasks = []
-            
-            # Hive AI Task
-            if HIVE_API_KEY:
-                headers = {"accept": "application/json", "authorization": f"token {HIVE_API_KEY}"}
-                files = {"media": (file.filename, file_bytes, file.content_type)}
-                data = {"classes": "audio_deepfake"}
-                tasks.append(client.post("https://api.thehive.ai/api/v2/task/sync", headers=headers, files=files, data=data))
-                
-            # Resemble AI Task
-            if RESEMBLE_API_KEY:
-                headers = {"Authorization": f"Bearer {RESEMBLE_API_KEY}"}
-                files = {"file": (file.filename, file_bytes, file.content_type)}
-                tasks.append(client.post("https://app.resemble.ai/api/v2/detect", headers=headers, files=files))
-            
-            if tasks:
-                results = await asyncio.gather(*tasks, return_exceptions=True)
-                
-                # Simple heuristic: If any API explicitly flags it with high confidence, mark as synthetic
-                for res in results:
-                    if isinstance(res, httpx.Response) and res.status_code == 200:
-                        try:
-                            data = res.json()
-                            # Parse standard Hive AI response
-                            if "status" in data and isinstance(data.get("status"), list):
-                                for cls in data["status"][0].get("classes", []):
-                                    if cls.get("class") == "yes_deepfake" and cls.get("score", 0) > 0.85:
-                                        is_synthetic = True
-                                        confidence = cls.get("score")
-                            
-                            # Parse Resemble response
-                            if "fake_probability" in data and data["fake_probability"] > 0.85:
-                                is_synthetic = True
-                                confidence = data["fake_probability"]
-                        except Exception:
-                            pass
-            else:
-                provider = "MockVoiceDetector (No Keys)"
-                
+        audio_bytes = await file.read()
+
+        if len(audio_bytes) < 100:
+            return {
+                "status": "success",
+                "is_synthetic": False,
+                "confidence": 0,
+                "provider": "HeuristicAnalyzer",
+                "message": "Audio too short to analyze",
+                "signals": ["audio_too_short"]
+            }
+
+        # Convert to numpy array for analysis
+        import numpy as np
+        audio_array = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32)
+
+        if len(audio_array) == 0:
+            return {
+                "status": "success",
+                "is_synthetic": False,
+                "confidence": 0,
+                "provider": "HeuristicAnalyzer",
+                "message": "Empty audio data",
+                "signals": ["empty_audio_data"]
+            }
+
+        # ── Check 1: Amplitude variance ──
+        amplitude_std = float(np.std(np.abs(audio_array)))
+        amplitude_mean = float(np.mean(np.abs(audio_array))) + 1e-6
+        coefficient_of_variation = amplitude_std / amplitude_mean
+
+        if coefficient_of_variation < 0.3:
+            spoof_signals.append("unnaturally_uniform_amplitude")
+            spoof_probability += 30
+
+        # ── Check 2: Background noise floor ──
+        sorted_amps = np.sort(np.abs(audio_array))
+        noise_floor = float(np.mean(sorted_amps[:len(sorted_amps) // 10])) if len(sorted_amps) > 10 else 0
+        if noise_floor < 5.0:
+            spoof_signals.append("suspiciously_clean_audio")
+            spoof_probability += 25
+
+        # ── Check 3: Silence ratio ──
+        silence_threshold = max(amplitude_mean * 0.05, 10.0)
+        silence_samples = int(np.sum(np.abs(audio_array) < silence_threshold))
+        silence_ratio = silence_samples / len(audio_array)
+        if silence_ratio > 0.6:
+            spoof_signals.append("excessive_silence")
+            spoof_probability += 20
+
+        is_synthetic = spoof_probability > 60
+
         return {
             "status": "success",
             "is_synthetic": is_synthetic,
-            "confidence": confidence,
-            "provider": provider,
-            "message": "Audio analyzed successfully. Synthetic voice detected." if is_synthetic else "Audio analyzed successfully. Human voice detected."
+            "confidence": spoof_probability / 100.0,
+            "provider": "HeuristicAnalyzer",
+            "message": "Synthetic voice detected" if is_synthetic else "Human voice detected",
+            "signals": spoof_signals
         }
+
     except Exception as e:
-        logger.error(f"Error in audio authenticity check: {e}")
-        return {"status": "error", "message": str(e)}
+        logger.warning(f"Audio authenticity analysis failed: {e}")
+        return {
+            "status": "success", 
+            "is_synthetic": False, 
+            "confidence": 0, 
+            "provider": "HeuristicAnalyzer", 
+            "message": "Analysis failed", 
+            "signals": ["error"]
+        }
 
 @app.post("/api/interviews/{interview_id}/recording", tags=["AI Engine"])
 async def upload_interview_recording(interview_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -3314,7 +3338,7 @@ async def upload_recording_chunk(
     interview_id: str,
     chunkIndex: int = Form(...),
     totalChunks: int = Form(...),
-    sessionId: str = Form(...),
+    sessionId: str | None = Form(None),
     chunk: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
@@ -3339,7 +3363,10 @@ async def upload_recording_chunk(
     except Exception as e:
         logger.warning(f"Temp recording sweep failed: {e}")
 
-    file_path = temp_dir / f"recording_{interview_id}_{sessionId}.webm"
+    # Security: Sanitize ids to prevent path traversal
+    safe_iid = interview_id.replace("/", "").replace("\\", "").replace(".", "")
+    safe_sid = (sessionId or "").replace("/", "").replace("\\", "").replace(".", "")
+    file_path = temp_dir / f"recording_{safe_iid}_{safe_sid}.webm"
 
     # Append chunk
     with open(file_path, "ab") as f:

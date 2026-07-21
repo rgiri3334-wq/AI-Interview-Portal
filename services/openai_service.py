@@ -1,5 +1,18 @@
 """
 services/openai_service.py
+
+!!! DEPRECATED — DO NOT USE !!!
+
+This module is NOT imported by Main.py. The active AI service is:
+  → services/gemini_service.py (routed through services/ai_orchestrator.py)
+
+This file is retained as a reference implementation only.
+The OpenAI SDK IS used by:
+  → services/whisper_service.py (for audio transcription fallback)
+  → services/ai_orchestrator.py (as DeepSeek/OpenAI fallback model)
+
+Last active: never (was always a parallel implementation, not the production path)
+
 Enterprise ChatGPT service layer — async, retry-safe, context-aware.
 Author: Aditya Singh
 """

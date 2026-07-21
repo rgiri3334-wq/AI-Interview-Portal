@@ -26,8 +26,12 @@ async def generate_tts_stream(text: str):
     100% permanently free with highly realistic prosody.
     """
     if not EDGE_TTS_AVAILABLE:
-        logger.warning("edge-tts missing. Emitting fallback mock audio response.")
-        return StreamingResponse(iter([b"mock_audio_fallback"]), media_type="audio/mpeg")
+        logger.warning("edge-tts missing. Returning 503 so frontend falls back to browser SpeechSynthesis.")
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=503,
+            content={"error": "TTS service unavailable", "fallback": "browser_speech_synthesis"}
+        )
 
     async def stream_generator():
         try:

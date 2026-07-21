@@ -1,5 +1,13 @@
 """
 services/communication_analysis.py
+
+── UNUSED MODULE ──
+This module is never imported by Main.py or any other service.
+Communication scoring (grammar, clarity, professionalism) is handled
+by the Gemini assessment prompt via services/gemini_service.py.
+Note: grammar_score was hardcoded to 95 and professionalism to 90.
+Retained for reference only.
+
 NLP-based communication maturity and grammar analysis.
 Author: Aditya Singh
 """

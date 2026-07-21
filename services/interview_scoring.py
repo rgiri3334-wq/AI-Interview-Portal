@@ -4,35 +4,34 @@ Advanced multi-dimensional weighted scoring system.
 Author: Aditya Singh
 """
 
-import sqlite3
-import os
 import logging
 
 logger = logging.getLogger("InterviewScoring")
 
 def get_role_weights(job_role: str) -> dict:
-    DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "database.db")
+    """Fetch role-specific scoring weights from the job_roles table via SQLAlchemy."""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        row = conn.execute("SELECT tech_weight, comm_weight, eq_weight, conf_weight FROM role_config WHERE job_role=?", (job_role,)).fetchone()
-        conn.close()
-        
-        if row:
-            # We assume db weights are out of 100, we convert them to floats for calculation
-            # For backward compatibility, facial and fluency get 0 if not defined in UI (or small defaults)
-            return {
-                "tech": row["tech_weight"] / 100.0,
-                "comm": row["comm_weight"] / 100.0,
-                "behav": row["eq_weight"] / 100.0,
-                "conf": row["conf_weight"] / 100.0,
-                "facial": 0.0, # Deprecated in favor of core 4
-                "fluency": 0.0
-            }
+        from database.database import SessionLocal
+        from database.models import JobRole
+
+        db = SessionLocal()
+        try:
+            row = db.query(JobRole).filter(JobRole.role_name == job_role).first()
+            if row:
+                return {
+                    "tech": (row.tech_weight or 40) / 100.0,
+                    "comm": (row.comm_weight or 20) / 100.0,
+                    "behav": (row.eq_weight or 20) / 100.0,
+                    "conf": (row.conf_weight or 20) / 100.0,
+                    "facial": 0.0,
+                    "fluency": 0.0,
+                }
+        finally:
+            db.close()
     except Exception as e:
         logger.error(f"Failed to fetch role weights: {e}")
 
-    # Fallback default
+    # Fallback default weights
     return {"tech": 0.40, "comm": 0.20, "conf": 0.20, "behav": 0.20, "facial": 0.0, "fluency": 0.0}
 
 def calculate_final_score(job_role: str, metrics: dict) -> float:

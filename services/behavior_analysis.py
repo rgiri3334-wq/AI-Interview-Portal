@@ -1,5 +1,12 @@
 """
 services/behavior_analysis.py
+
+── UNUSED MODULE ──
+This module is never imported by Main.py or any other service.
+Stress response analysis is handled by the Gemini assessment prompt.
+Soft skill extraction is handled by the AI report generation.
+Retained for reference only.
+
 Analyzes stress response, calmness under pressure, and behavioral maturity.
 Author: Aditya Singh
 """
