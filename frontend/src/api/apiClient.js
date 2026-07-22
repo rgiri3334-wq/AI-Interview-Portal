@@ -21,6 +21,7 @@ const api = axios.create({
   baseURL: BASE_URL,
   timeout: 120000,
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,  // Send HttpOnly cookies automatically (XSS-immune auth)
 });
 
 // ── Request Interceptor: Inject request ID for tracing ────────────────────

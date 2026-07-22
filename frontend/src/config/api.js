@@ -11,7 +11,7 @@ export const customFetch = async (url, options = {}) => {
   
   if (token) headers['Authorization'] = `Bearer ${token}`;
   
-  const response = await fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers, credentials: 'include' });
   
   if (response.status === 401) {
     sessionStorage.removeItem('adminToken');

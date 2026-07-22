@@ -23,6 +23,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 import pytz # type: ignore
 from utils.ist_time import ist_now, ist_isoformat, IST
+from typing import Literal
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form, BackgroundTasks, Request, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
@@ -94,6 +95,14 @@ if not os.environ.get("JWT_SECRET"):
         "JWT_SECRET is not set — using an ephemeral secret. Set JWT_SECRET in the "
         "environment for stable, secure tokens (all sessions reset on restart otherwise)."
     )
+
+# ── Cookie Configuration ─────────────────────────────────────────────────
+# HttpOnly cookies are invisible to JavaScript (immune to XSS token theft).
+# In production (HTTPS), Secure=True prevents transmission over plain HTTP.
+_IS_PROD = os.environ.get("RENDER", "") or os.environ.get("VERCEL", "") or os.environ.get("NODE_ENV") == "production"
+COOKIE_SECURE: bool = bool(_IS_PROD)
+COOKIE_SAMESITE: Literal["none", "lax"] = "none" if COOKIE_SECURE else "lax"
+COOKIE_DOMAIN: str | None = os.environ.get("COOKIE_DOMAIN", None)  # e.g. ".sterling-emobility.com"
 
 # ── Database ──────────────────────────────────────────────────────────────
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
@@ -497,10 +506,13 @@ async def verify_admin_jwt(request: Request, call_next):
         if request.url.path == "/api/admin/config/global/company_structure" and request.method == "GET":
             return await call_next(request)
 
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return _cors_401("Missing or invalid Authorization header")
-        token = auth_header.split(" ")[1]
+        # Try HttpOnly cookie first, then fall back to Bearer header
+        token = request.cookies.get("session_token")
+        if not token:
+            auth_header = request.headers.get("Authorization")
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return _cors_401("Missing or invalid Authorization header")
+            token = auth_header.split(" ")[1]
         try:
             jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         except Exception as e:
@@ -551,7 +563,17 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Admin tokens carry sub="admin"; candidate tokens carry role="candidate" and
 # sub=<candidate_id> (see admin_login / verify_otp).
 
-def _decode_bearer(authorization: str | None) -> dict:
+def _decode_bearer(authorization: str | None, request: Request | None = None) -> dict:
+    """Decode JWT from HttpOnly cookie first, then fall back to Bearer header."""
+    # Priority 1: HttpOnly cookie (XSS-immune)
+    if request:
+        cookie_token = request.cookies.get("session_token")
+        if cookie_token:
+            try:
+                return jwt.decode(cookie_token, JWT_SECRET, algorithms=["HS256"])
+            except Exception:
+                pass  # Fall through to Bearer header
+    # Priority 2: Authorization header (backward compat)
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Authentication required")
     token = authorization.split(" ", 1)[1].strip()
@@ -560,16 +582,16 @@ def _decode_bearer(authorization: str | None) -> dict:
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-def require_admin(authorization: str | None = Header(default=None)) -> dict:
+def require_admin(request: Request, authorization: str | None = Header(default=None)) -> dict:
     """Require a valid admin JWT."""
-    payload = _decode_bearer(authorization)
+    payload = _decode_bearer(authorization, request)
     if payload.get("sub") != "admin" and payload.get("role") not in ("master_admin", "sub_admin", "admin"):
         raise HTTPException(status_code=403, detail="Admin privileges required")
     return payload
 
-def require_candidate_or_admin(candidate_id: str, authorization: str | None = Header(default=None)) -> dict:
+def require_candidate_or_admin(candidate_id: str, request: Request, authorization: str | None = Header(default=None)) -> dict:
     """Allow an admin, or the candidate who owns `candidate_id`, to access a resource."""
-    payload = _decode_bearer(authorization)
+    payload = _decode_bearer(authorization, request)
     is_admin = payload.get("sub") == "admin" or payload.get("role") in ("master_admin", "sub_admin", "admin")
     if is_admin:
         return payload
@@ -981,7 +1003,20 @@ async def admin_login(data: CandidateLogin, db: Session = Depends(get_db)):
         
         db.add(AdminActivityLog(admin_email=admin.email, action_type="LOGIN", target="Admin Portal"))
         db.commit()
-        return {"status": "success", "token": token, "email": admin.email, "role": admin.role}
+
+        # Set HttpOnly Secure cookie (invisible to JavaScript / XSS-immune)
+        response = JSONResponse(content={"status": "success", "token": token, "email": admin.email, "role": admin.role})
+        response.set_cookie(
+            key="session_token",
+            value=token,
+            httponly=True,
+            secure=COOKIE_SECURE,
+            samesite=COOKIE_SAMESITE,
+            max_age=7200,  # 2 hours
+            path="/",
+            domain=COOKIE_DOMAIN,
+        )
+        return response
         
     db.add(SecurityEventLog(event_type="FAILED_LOGIN", target_email=data.email))
     db.commit()
@@ -1293,13 +1328,25 @@ def verify_candidate_otp(
 
     logger.info(f"[OTP Auth] Candidate {candidate.candidate_id} authenticated via OTP ({purpose}).")
 
-    return {
+    # Set HttpOnly Secure cookie (invisible to JavaScript / XSS-immune)
+    response = JSONResponse(content={
         "status": "success",
         "candidate_id": candidate.candidate_id,
         "name": candidate.name,
         "email": candidate.email,
-        "token": token
-    }
+        "token": token  # Still returned for backward compat during migration
+    })
+    response.set_cookie(
+        key="session_token",
+        value=token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        max_age=604800,  # 7 days
+        path="/",
+        domain=COOKIE_DOMAIN,
+    )
+    return response
 
 
 

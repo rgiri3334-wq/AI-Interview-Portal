@@ -4,7 +4,8 @@
  *
  * Features:
  *   - Automatic reconnection with exponential backoff (max 30s)
- *   - Heartbeat ping every 25s to prevent proxy/load-balancer timeout
+ *   - Strict heartbeat: ping every 5s, if pong not received within 3s → force reconnect
+ *   - Exposes `reconnecting` state for UI overlay
  *   - Clean ref-based architecture (no stale closures)
  *   - Dispatches typed events: analysis, assessment_complete, assessment_error, pong
  *   - Never leaks connections on unmount
@@ -21,13 +22,15 @@ const WS_URL = (candidateId) => {
     : defaultWs;
 };
 
-const PING_INTERVAL_MS  = 25_000;
+const PING_INTERVAL_MS  = 5_000;   // Send a ping every 5 seconds
+const PONG_TIMEOUT_MS   = 3_000;   // If pong not received in 3s, connection is dead
 const MAX_BACKOFF_MS    = 30_000;
 const BASE_BACKOFF_MS   = 1_000;
 
 export function useInterviewWebSocket(candidateId, { onAnalysis, onAssessment, onAssessing, onError } = {}) {
   const wsRef             = useRef(null);
   const pingTimerRef      = useRef(null);
+  const pongTimeoutRef    = useRef(null);  // Strict pong deadline
   const reconnectTimerRef = useRef(null);
   const attemptRef        = useRef(0);
   const mountedRef        = useRef(true);
@@ -43,9 +46,11 @@ export function useInterviewWebSocket(candidateId, { onAnalysis, onAssessment, o
   useEffect(() => { onErrorRef.current      = onError;      }, [onError]);
 
   const [connected, setConnected] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
 
   const clearTimers = () => {
     if (pingTimerRef.current)      clearInterval(pingTimerRef.current);
+    if (pongTimeoutRef.current)    clearTimeout(pongTimeoutRef.current);
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
   };
 
@@ -60,12 +65,18 @@ export function useInterviewWebSocket(candidateId, { onAnalysis, onAssessment, o
       if (!mountedRef.current) { ws.close(); return; }
       attemptRef.current = 0;
       setConnected(true);
+      setReconnecting(false);
       console.log('%c[WS] Connected to interview engine', 'color:#00ff88;font-weight:bold');
 
-      // Heartbeat to keep connection alive through proxies
+      // Strict heartbeat: ping every 5s, expect pong within 3s
       pingTimerRef.current = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'ping' }));
+          // Start a strict pong deadline
+          pongTimeoutRef.current = setTimeout(() => {
+            console.warn('[WS] Pong timeout — connection is dead. Force-closing.');
+            ws.close(4000, 'Pong timeout');
+          }, PONG_TIMEOUT_MS);
         }
       }, PING_INTERVAL_MS);
     };
@@ -87,7 +98,11 @@ export function useInterviewWebSocket(candidateId, { onAnalysis, onAssessment, o
             onErrorRef.current?.(msg.detail || 'Assessment failed');
             break;
           case 'pong':
-            // Heartbeat acknowledged, connection is alive
+            // Heartbeat acknowledged — cancel the pong deadline timer
+            if (pongTimeoutRef.current) {
+              clearTimeout(pongTimeoutRef.current);
+              pongTimeoutRef.current = null;
+            }
             break;
           case 'error':
             console.warn('[WS] Server error:', msg.detail);
@@ -101,16 +116,17 @@ export function useInterviewWebSocket(candidateId, { onAnalysis, onAssessment, o
     };
 
     ws.onclose = (event) => {
-      clearInterval(pingTimerRef.current);
+      clearTimers();
       setConnected(false);
       if (!mountedRef.current) return;
 
-      if (event.wasClean) {
+      if (event.wasClean && event.code !== 4000) {
         console.log('[WS] Connection closed cleanly');
         return;
       }
 
       // Exponential backoff reconnect
+      setReconnecting(true);
       const delay = Math.min(BASE_BACKOFF_MS * 2 ** attemptRef.current, MAX_BACKOFF_MS);
       attemptRef.current += 1;
       console.warn(`[WS] Disconnected. Reconnecting in ${delay}ms (attempt ${attemptRef.current})…`);
@@ -166,5 +182,5 @@ export function useInterviewWebSocket(candidateId, { onAnalysis, onAssessment, o
     setConnected(false);
   }, []);
 
-  return { connected, sendTranscript, submitAnswerViaWS, disconnect };
+  return { connected, reconnecting, sendTranscript, submitAnswerViaWS, disconnect };
 }

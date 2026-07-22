@@ -17,19 +17,7 @@
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
-
-// Suppress MediaPipe's WASM stderr logging which shows up as red console errors
-const originalConsoleError = console.error;
-console.error = function (...args) {
-  if (typeof args[0] === 'string' && (
-      args[0].includes('TensorFlow Lite XNNPACK delegate') ||
-      args[0].includes('Graph successfully started running')
-  )) {
-    return; // Ignore harmless WASM INFO logs
-  }
-  originalConsoleError.apply(console, args);
-};
+// FaceLandmarker moved to visionWorker.js to unblock main thread
 
 export function useHumanBehavior(
   videoRef,
@@ -39,9 +27,8 @@ export function useHumanBehavior(
 ) {
   const [status, setStatus] = useState('idle');
   const mountedRef = useRef(false);
-  const landmarkerRef = useRef(null);
+  const workerRef = useRef(null);
   const rafId = useRef(null);
-  const lastVideoTime = useRef(-1);
   const lastCheckTime = useRef(0);
 
   // Streak trackers
@@ -82,43 +69,175 @@ export function useHumanBehavior(
     onVisionSignal && onVisionSignal(key, meta);
   }, [onVisionSignal, _canFire]);
 
+  const processResults = useCallback((results) => {
+    const faces = results.faceLandmarks || [];
+
+    // ── NO FACE DETECTED ──────────────────────────────────────────────────
+    if (faces.length === 0) {
+      noFaceStreak.current += 1;
+      metricsRef.current.face_detected = false;
+
+      // [STRICT-8] Fires at 2s instead of 3s
+      if (noFaceStreak.current === 2) {
+        _fireSignal('movement_warning', { note: 'Candidate not visible in frame.' });
+        // Gentle nudge to candidate — no proctoring language
+        onPostureHint && onPostureHint('nudge', 'Please ensure your face is clearly visible in the camera.');
+      }
+      if (noFaceStreak.current === 6) {
+        _fireSignal('seat_abandonment', { note: 'Candidate missing for 6+ seconds.' });
+      }
+    } else {
+      // Face back in frame — reset
+      metricsRef.current.face_detected = true;
+      noFaceStreak.current = 0;
+
+      // ── MULTIPLE PEOPLE ─────────────────────────────────────────────────
+      if (faces.length > 1) {
+        multiplePeopleStreak.current += 1;
+        if (multiplePeopleStreak.current === 1) {
+          _fireSignal('multiple_people', { note: 'Multiple faces detected in frame!' });
+        }
+        if (multiplePeopleStreak.current >= 10) {
+          _fireSignal('multiple_people_critical', { note: 'Multiple faces present for >10 seconds. Terminating.' });
+        }
+      } else {
+        multiplePeopleStreak.current = 0;
+      }
+
+      // ── EYE TRACKING (BLENDSHAPES) ──────────────────────────────────────
+      if (results.faceBlendshapes?.length > 0) {
+        const shapes = results.faceBlendshapes[0].categories;
+        const get = (name) => shapes.find(s => s.categoryName === name)?.score || 0;
+
+        // All 8 directional gaze components — both eyes, all directions
+        const lookOutLeft   = get('eyeLookOutLeft');   // left eye → left
+        const lookOutRight  = get('eyeLookOutRight');  // right eye → right
+        const lookInLeft    = get('eyeLookInLeft');    // left eye → right (nose side)
+        const lookInRight   = get('eyeLookInRight');   // right eye → left (nose side)
+        const lookUp        = get('eyeLookUpLeft');
+        const lookDown      = (get('eyeLookDownLeft') + get('eyeLookDownRight')) / 2;
+
+        // [STRICT-3] Tightened thresholds
+        const gazedOff =
+          lookOutLeft  > 0.50 ||
+          lookOutRight > 0.50 ||
+          lookInLeft   > 0.48 ||
+          lookInRight  > 0.48 ||
+          lookUp       > 0.55 ||
+          lookDown     > 0.65;
+
+        if (gazedOff) {
+          offScreenStreak.current += 1;
+          if (offScreenStreak.current === 2) {
+            _fireSignal('off_screen_gaze', { note: 'Off-screen gaze detected.' });
+            metricsRef.current.look_away_count += 1;
+            onPostureHint && onPostureHint('gaze', 'Please keep your eyes on the screen during the interview.');
+          }
+          if (offScreenStreak.current === 5) {
+            _fireSignal('continuous_off_screen', { note: 'Sustained off-screen gaze.' });
+            onPostureHint && onPostureHint('gaze_critical', 'Please maintain focus on the interview screen.');
+          }
+        } else {
+          offScreenStreak.current = Math.max(0, offScreenStreak.current - 1);
+        }
+      }
+
+      // ── POSTURE TRACKING (TRANSFORMATION MATRIX) ─────────────────────────
+      if (results.facialTransformationMatrixes?.length > 0) {
+        const matrix = results.facialTransformationMatrixes[0].data;
+        const yaw   = Math.atan2(matrix[8],  matrix[0])  * (180 / Math.PI);
+        const pitch = Math.atan2(-matrix[9], matrix[10]) * (180 / Math.PI);
+
+        framesProcessed.current += 1;
+        if (baselineYaw.current === null) {
+          baselineYaw.current   = yaw;
+          baselinePitch.current = pitch;
+        } else {
+          baselineYaw.current   = EMA_ALPHA * yaw   + (1 - EMA_ALPHA) * baselineYaw.current;
+          baselinePitch.current = EMA_ALPHA * pitch + (1 - EMA_ALPHA) * baselinePitch.current;
+        }
+
+        if (framesProcessed.current >= 5) {
+          const yawDiff   = Math.abs(yaw   - baselineYaw.current);
+          const pitchDiff = pitch - baselinePitch.current;
+
+          // Yaw
+          if (yawDiff > 20) {
+            postureYawStreak.current += 1;
+            if (postureYawStreak.current === 2) {
+              _fireSignal('posture_warning', { note: `Head turned ${yawDiff.toFixed(0)}° sideways.`, yaw_diff: yawDiff });
+              onPostureHint && onPostureHint('posture', 'Please face forward and maintain a comfortable, straight posture.');
+            }
+            if (postureYawStreak.current === 5) {
+              _fireSignal('posture_critical', { note: `Sustained head rotation ${yawDiff.toFixed(0)}°.` });
+              onPostureHint && onPostureHint('posture_critical', 'Please look directly at the screen to continue your interview.');
+            }
+          } else {
+            postureYawStreak.current = Math.max(0, postureYawStreak.current - 1);
+          }
+
+          // Pitch
+          if (pitchDiff > 25) {
+            posturePitchStreak.current += 1;
+            if (posturePitchStreak.current === 2) {
+              _fireSignal('posture_warning', { note: `Head tilted down ${pitchDiff.toFixed(0)}°.`, pitch_diff: pitchDiff });
+              onPostureHint && onPostureHint('posture', 'Please sit upright and keep your head level for the camera.');
+            }
+            if (posturePitchStreak.current === 5) {
+              _fireSignal('posture_critical', { note: `Sustained downward head tilt ${pitchDiff.toFixed(0)}°.` });
+              onPostureHint && onPostureHint('posture_critical', 'Please keep your eyes on the screen and maintain good posture.');
+            }
+          } else {
+            posturePitchStreak.current = Math.max(0, posturePitchStreak.current - 1);
+          }
+        }
+      }
+    }
+  }, [onVisionSignal, onPostureHint, _fireSignal]);
+
   const initModel = useCallback(async () => {
     try {
       setStatus('loading');
-      console.log('%c[Vision Engine] Initializing MediaPipe FaceLandmarker...', 'color:#00D1FF;font-weight:bold');
-      const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.12/wasm"
-      );
-      landmarkerRef.current = await FaceLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
-          delegate: "GPU"
-        },
-        outputFaceBlendshapes: true,
-        outputFacialTransformationMatrixes: true,
-        runningMode: "VIDEO",
-        numFaces: 2
-      });
-      console.log('%c[Vision Engine] Ready. Strict mode active.', 'color:#00D1FF;font-weight:bold');
-      setStatus('active');
+      console.log('%c[Vision Engine] Starting Web Worker for MediaPipe...', 'color:#00D1FF;font-weight:bold');
+      
+      const worker = new Worker(new URL('../workers/visionWorker.js', import.meta.url), { type: 'module' });
+      workerRef.current = worker;
+
+      worker.onmessage = (e) => {
+        const { type, results, error } = e.data;
+        if (type === 'INIT_SUCCESS') {
+          console.log('%c[Vision Engine] Worker Ready. Strict mode active.', 'color:#00D1FF;font-weight:bold');
+          setStatus('active');
+        } else if (type === 'INIT_ERROR') {
+          console.error("[Vision Engine] Worker init failed", error);
+          setStatus('error');
+        } else if (type === 'FRAME_RESULTS') {
+          processResults(results);
+        } else if (type === 'FRAME_ERROR') {
+          console.warn("[Vision Engine] Frame processing error:", error);
+        }
+      };
+
+      worker.postMessage({ type: 'INIT' });
+
     } catch (e) {
-      console.error("[Vision Engine] Init failed", e);
+      console.error("[Vision Engine] Failed to start worker", e);
       setStatus('error');
     }
-  }, []);
+  }, [processResults]);
 
   const stop = useCallback(() => {
     mountedRef.current = false;
     if (rafId.current) cancelAnimationFrame(rafId.current);
-    if (landmarkerRef.current) {
-      landmarkerRef.current.close();
-      landmarkerRef.current = null;
+    if (workerRef.current) {
+      workerRef.current.postMessage({ type: 'CLOSE' });
+      workerRef.current = null;
     }
     setStatus('idle');
   }, []);
 
-  const detectFrame = useCallback(() => {
-    if (!mountedRef.current || !videoRef.current || !landmarkerRef.current) return;
+  const detectFrame = useCallback(async () => {
+    if (!mountedRef.current || !videoRef.current || !workerRef.current) return;
 
     // Strict 1 FPS Throttle
     const now = performance.now();
@@ -129,167 +248,25 @@ export function useHumanBehavior(
     lastCheckTime.current = now;
 
     const video = videoRef.current;
-    if (video.readyState >= 2 && video.currentTime !== lastVideoTime.current) {
-      lastVideoTime.current = video.currentTime;
-      const results = landmarkerRef.current.detectForVideo(video, now);
-      const faces = results.faceLandmarks || [];
-
-      // ── NO FACE DETECTED ──────────────────────────────────────────────────
-      if (faces.length === 0) {
-        noFaceStreak.current += 1;
-        metricsRef.current.face_detected = false;
-
-        // [STRICT-8] Fires at 2s instead of 3s
-        if (noFaceStreak.current === 2) {
-          _fireSignal('movement_warning', { note: 'Candidate not visible in frame.' });
-          // Gentle nudge to candidate — no proctoring language
-          onPostureHint && onPostureHint('nudge', 'Please ensure your face is clearly visible in the camera.');
-        }
-        if (noFaceStreak.current === 6) {
-          _fireSignal('seat_abandonment', { note: 'Candidate missing for 6+ seconds.' });
-        }
-      } else {
-        // Face back in frame — reset
-        metricsRef.current.face_detected = true;
-        noFaceStreak.current = 0;
-
-        // ── MULTIPLE PEOPLE ─────────────────────────────────────────────────
-        if (faces.length > 1) {
-          multiplePeopleStreak.current += 1;
-          if (multiplePeopleStreak.current === 1) {
-            _fireSignal('multiple_people', { note: 'Multiple faces detected in frame!' });
-          }
-          if (multiplePeopleStreak.current >= 10) {
-            _fireSignal('multiple_people_critical', { note: 'Multiple faces present for >10 seconds. Terminating.' });
-          }
-        } else {
-          multiplePeopleStreak.current = 0;
-        }
-
-        // ── EYE TRACKING (BLENDSHAPES) ──────────────────────────────────────
-        if (results.faceBlendshapes?.length > 0) {
-          const shapes = results.faceBlendshapes[0].categories;
-          const get = (name) => shapes.find(s => s.categoryName === name)?.score || 0;
-
-          // All 8 directional gaze components — both eyes, all directions
-          const lookOutLeft   = get('eyeLookOutLeft');   // left eye → left
-          const lookOutRight  = get('eyeLookOutRight');  // right eye → right
-          const lookInLeft    = get('eyeLookInLeft');    // left eye → right (nose side)
-          const lookInRight   = get('eyeLookInRight');   // right eye → left (nose side)
-          const lookUp        = get('eyeLookUpLeft');
-          const lookDown      = (get('eyeLookDownLeft') + get('eyeLookDownRight')) / 2;
-
-          // [STRICT-3] Tightened thresholds: 0.65 → 0.50 for horizontal, 0.55 for up, 0.60 for down
-          // Down is higher because downward gaze happens naturally when thinking
-          const gazedOff =
-            lookOutLeft  > 0.50 ||   // looking hard left
-            lookOutRight > 0.50 ||   // looking hard right
-            lookInLeft   > 0.48 ||   // inward left eye (eyes right)
-            lookInRight  > 0.48 ||   // inward right eye (eyes left)
-            lookUp       > 0.55 ||   // looking up
-            lookDown     > 0.65;     // looking down (raised threshold — normal thinking)
-
-          if (gazedOff) {
-            offScreenStreak.current += 1;
-
-            // [STRICT-5] Fire gentle nudge at 2 frames
-            if (offScreenStreak.current === 2) {
-              _fireSignal('off_screen_gaze', { note: 'Off-screen gaze detected.' });
-              metricsRef.current.look_away_count += 1;
-              // Gentle candidate hint — phrased as ergonomics, not surveillance
-              onPostureHint && onPostureHint('gaze', 'Please keep your eyes on the screen during the interview.');
-            }
-            // [STRICT-6] Continuous fires at 5 frames (was 6)
-            if (offScreenStreak.current === 5) {
-              _fireSignal('continuous_off_screen', { note: 'Sustained off-screen gaze.' });
-              onPostureHint && onPostureHint('gaze_critical', 'Please maintain focus on the interview screen.');
-            }
-          } else {
-            // Decay: −1 per clean frame
-            offScreenStreak.current = Math.max(0, offScreenStreak.current - 1);
-          }
-        }
-
-        // ── POSTURE TRACKING (TRANSFORMATION MATRIX) ─────────────────────────
-        if (results.facialTransformationMatrixes?.length > 0) {
-          const matrix = results.facialTransformationMatrixes[0].data;
-
-          // Column-major 4×4 matrix extraction:
-          // Yaw   (left/right head turn): atan2(m[8],  m[0])
-          // Pitch (up/down nod):          atan2(-m[9], m[10])   ← [STRICT-9] ADDED
-          const yaw   = Math.atan2(matrix[8],  matrix[0])  * (180 / Math.PI);
-          const pitch = Math.atan2(-matrix[9], matrix[10]) * (180 / Math.PI);
-
-          framesProcessed.current += 1;
-
-          // EMA baseline seed
-          if (baselineYaw.current === null) {
-            baselineYaw.current   = yaw;
-            baselinePitch.current = pitch;
-          } else {
-            baselineYaw.current   = EMA_ALPHA * yaw   + (1 - EMA_ALPHA) * baselineYaw.current;
-            baselinePitch.current = EMA_ALPHA * pitch + (1 - EMA_ALPHA) * baselinePitch.current;
-          }
-
-          // Only flag after 5s warm-up
-          if (framesProcessed.current >= 5) {
-            const yawDiff   = Math.abs(yaw   - baselineYaw.current);
-            const pitchDiff = pitch - baselinePitch.current; // signed: positive = tilting down
-
-            // ── YAW: Looking sideways (side phone, extra monitor) ──────────
-            // [STRICT-1] Threshold: 35° → 20°
-            if (yawDiff > 20) {
-              postureYawStreak.current += 1;
-              // [STRICT-4] Fire at 2 frames (was 3)
-              if (postureYawStreak.current === 2) {
-                _fireSignal('posture_warning', {
-                  note: `Head turned ${yawDiff.toFixed(0)}° sideways — possible side device.`,
-                  yaw_diff: yawDiff,
-                });
-                // Friendly ergonomics-framed hint — NO mention of proctoring
-                onPostureHint && onPostureHint('posture', 'Please face forward and maintain a comfortable, straight posture.');
-              }
-              if (postureYawStreak.current === 5) {
-                _fireSignal('posture_critical', {
-                  note: `Sustained head rotation ${yawDiff.toFixed(0)}° — continued side-viewing.`,
-                });
-                onPostureHint && onPostureHint('posture_critical', 'Please look directly at the screen to continue your interview.');
-              }
-            } else {
-              postureYawStreak.current = Math.max(0, postureYawStreak.current - 1);
-            }
-
-            // ── PITCH: Looking DOWN (phone on lap) ──────────────────────────
-            // [STRICT-9] NEW: pitchDiff > 25° = head tilted down substantially
-            if (pitchDiff > 25) {
-              posturePitchStreak.current += 1;
-              if (posturePitchStreak.current === 2) {
-                _fireSignal('posture_warning', {
-                  note: `Head tilted down ${pitchDiff.toFixed(0)}° — possible phone on lap.`,
-                  pitch_diff: pitchDiff,
-                });
-                onPostureHint && onPostureHint('posture', 'Please sit upright and keep your head level for the camera.');
-              }
-              if (posturePitchStreak.current === 5) {
-                _fireSignal('posture_critical', {
-                  note: `Sustained downward head tilt ${pitchDiff.toFixed(0)}°.`,
-                });
-                onPostureHint && onPostureHint('posture_critical', 'Please keep your eyes on the screen and maintain good posture.');
-              }
-            } else {
-              posturePitchStreak.current = Math.max(0, posturePitchStreak.current - 1);
-            }
-          }
-        }
+    if (video.readyState >= 2) {
+      try {
+        // Grab a frame and transfer it to the worker
+        const imageBitmap = await createImageBitmap(video);
+        workerRef.current.postMessage(
+          { type: 'PROCESS_FRAME', imageBitmap, timestamp: now },
+          [imageBitmap] // Transfer ownership to worker (zero-copy)
+        );
+      } catch (err) {
+        console.warn("[Vision Engine] Failed to grab frame:", err);
       }
     }
     rafId.current = requestAnimationFrame(detectFrame);
-  }, [onVisionSignal, onPostureHint, _fireSignal]);
+  }, []);
 
   const start = useCallback(async () => {
     mountedRef.current = true;
     if (status === 'idle') await initModel();
-    if (landmarkerRef.current) {
+    if (workerRef.current) {
       rafId.current = requestAnimationFrame(detectFrame);
     }
   }, [status, initModel, detectFrame]);

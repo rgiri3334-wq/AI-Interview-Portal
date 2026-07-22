@@ -23,6 +23,7 @@ import BottomControlBar from '../components/interview/BottomControlBar';
 import WorkspaceDrawer from '../components/interview/WorkspaceDrawer';
 
 import { useWebSocketSTT } from '../hooks/useWebSocketSTT';
+import { useInterviewStore } from '../store/useInterviewStore';
 import { useAudioStream } from '../hooks/useAudioStream';
 import { useHumanBehavior } from '../hooks/useHumanBehavior';
 import { useCodeWorkspace, SUPPORTED_LANGUAGES } from '../hooks/useCodeWorkspace';
@@ -48,6 +49,38 @@ function useTypewriter(text, speed = 30) {
   }, [text, speed]);
   return displayedText;
 }
+
+// ── Lightweight Sub-Components (Phase 3) ────────────────────────────────────
+// These components subscribe to the Zustand store independently.
+// This prevents the heavy LiveInterview parent from re-rendering at 60fps.
+const AudioWaveformBars = () => {
+  const volumeLevel = useInterviewStore(s => s.volumeLevel);
+  
+  // Procedurally generate 5 bars based on the current volume level
+  const bars = [
+    volumeLevel * 0.5,
+    volumeLevel * 0.8,
+    volumeLevel,
+    volumeLevel * 0.7,
+    volumeLevel * 0.4
+  ];
+
+  return (
+    <>
+      {bars.map((vol, i) => {
+        // Map 0-1 volume to 4-32px height
+        const h = Math.max(4, vol * 32);
+        return (
+          <div 
+            key={i} 
+            className="w-1 bg-red-400 rounded-full transition-all duration-75" 
+            style={{ height: `${h}px` }} 
+          />
+        );
+      })}
+    </>
+  );
+};
 
 export default function LiveInterview() {
   const navigate = useNavigate();
@@ -1175,9 +1208,7 @@ export default function LiveInterview() {
           {/* ── Audio Waveform (Phase 3) ── */}
           {phase === 'interviewing' && isListening && (
             <div className="flex items-center gap-[3px] px-3 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10">
-              {waveBars.map((h, i) => (
-                <div key={i} className="w-1 bg-red-400 rounded-full transition-all duration-75" style={{ height: `${Math.min(h, 32)}px` }} />
-              ))}
+              <AudioWaveformBars />
             </div>
           )}
         </div>
