@@ -5,16 +5,35 @@
 @tailwind utilities;
 
 :root {
-  --sterling-bg: #FFFFFF;
-  --sterling-surface: #F9FAFB;
-  --sterling-border: #E5E7EB;
-  --sterling-red: #C1272D;
-  --sterling-darkRed: #9A1F24;
-  --sterling-text: #1F2937;
+  /* ── Legacy Fallbacks ── */
+  --sterling-bg: #050508;
+  --sterling-surface: #0b0c12;
+  --sterling-border: rgba(255, 255, 255, 0.08);
+  --sterling-red: #e11d48;
+  --sterling-darkRed: #9f1239;
+  --sterling-text: #f8fafc;
   --sterling-nav: #000000;
   
   --font-main: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+
+  /* ── Cyber-Industrial Sterling System Tokens ── */
+  --bg-deep-space: #050508;
+  --bg-panel-slate: #0b0c12;
+  --color-sterling-red: #e11d48;
+  --color-red-glow: rgba(225, 29, 72, 0.4);
+  --color-neon-blue: #00d1ff;
+  --color-neon-green: #10b981;
+  --color-neon-amber: #f59e0b;
+  
+  /* ── Glassmorphism Formulas ── */
+  --glass-bg: rgba(11, 12, 18, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  --glass-blur: blur(16px);
+
+  /* ── Transitions ── */
+  --transition-cinematic: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 *,

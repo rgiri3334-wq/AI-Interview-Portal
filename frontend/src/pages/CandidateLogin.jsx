@@ -1,13 +1,13 @@
 /**
  * CandidateLogin.jsx
- * Passwordless candidate login via OTP.
- * Completely separate from admin Login.jsx which remains untouched.
+ * Passwordless candidate login via OTP with Cyber-Industrial Dark Glassmorphic styling.
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiClient } from '../api/apiClient';
 import logoUrl from '../assets/sterling_logo.png';
+import PageWrapper from '../components/Layout/PageWrapper';
 
 const OTP_LENGTH = 6;
 const OTP_EXPIRY_SECONDS = 600;
@@ -145,26 +145,30 @@ export default function CandidateLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center">
-          <div className="w-20 h-20 bg-black rounded-3xl shadow-[0_0_30px_rgba(239,68,68,0.2)] border border-slate-800 flex items-center justify-center p-3">
-            <img src={logoUrl} alt="Sterling Logo" className="w-14 h-14 object-contain mix-blend-screen"
+    <PageWrapper className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      {/* Background Cyber Glow */}
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex justify-center">
+          <div className="w-20 h-20 bg-slate-950/80 rounded-3xl shadow-[0_0_40px_rgba(225,29,72,0.25)] border border-red-500/20 flex items-center justify-center p-3 backdrop-blur-xl">
+            <img src={logoUrl} alt="Sterling Logo" className="w-12 h-12 object-contain mix-blend-screen"
               onError={(e) => { e.target.style.display = 'none'; }} />
           </div>
         </motion.div>
         <motion.h2 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-          className="mt-5 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
-          Spark-<span className="text-[#EF4444]">Hire</span>
+          className="mt-5 text-center text-3xl font-extrabold text-white tracking-tight">
+          Spark-<span className="text-red-500 drop-shadow-[0_0_12px_rgba(225,29,72,0.5)]">Hire</span>
         </motion.h2>
-        <p className="mt-1 text-center text-xs text-slate-500 font-mono tracking-[0.2em] uppercase">
-          Candidate Login
+        <p className="mt-1 text-center text-xs text-slate-400 font-mono tracking-[0.25em] uppercase">
+          Autonomous Candidate Portal
         </p>
       </div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-        className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-10 px-6 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100">
+        className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <div className="bg-slate-950/75 backdrop-blur-2xl py-10 px-6 shadow-2xl sm:rounded-3xl sm:px-10 border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)]">
           <AnimatePresence mode="wait">
 
             {/* STEP 1: EMAIL INPUT */}
@@ -172,25 +176,22 @@ export default function CandidateLogin() {
               <motion.form key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }} onSubmit={handleSendOtp} className="space-y-5">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-2 tracking-tight">Welcome Back</h3>
-                  <p className="text-sm text-slate-500">Enter your registered Email.</p>
+                  <h3 className="text-xl font-bold text-slate-100 mb-1 tracking-tight">Candidate Entry</h3>
+                  <p className="text-xs text-slate-400">Enter your registered email address to receive your OTP code.</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Email Address</label>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Email Address</label>
                   <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EF4444]/50 focus:border-[#EF4444] transition-all sm:text-sm font-medium text-slate-900" />
+                    placeholder="name@example.com"
+                    className="w-full px-4 py-3.5 bg-slate-900/90 border border-white/10 rounded-xl shadow-inner placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all text-sm font-medium text-white" />
                 </div>
                 {error && (
-                  <div className="text-sm text-[#EF4444] bg-red-50 p-3 rounded-xl border border-red-100 font-medium">{error}</div>
+                  <div className="text-xs text-red-400 bg-red-950/40 p-3 rounded-xl border border-red-500/30 font-medium">{error}</div>
                 )}
                 <button type="submit" disabled={loading}
-                  className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-md shadow-red-500/20 text-sm font-bold text-white bg-[#EF4444] hover:bg-red-600 focus:outline-none transition-all disabled:opacity-50">
-                  {loading ? 'Sending Code...' : 'Send Verification Code →'}
+                  className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-lg shadow-red-600/30 text-sm font-bold text-white bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 focus:outline-none transition-all disabled:opacity-50 active:scale-[0.99]">
+                  {loading ? 'Transmitting Code...' : 'Send Verification Code →'}
                 </button>
-                <p className="text-center text-sm text-slate-500 mt-4">
-                  Trouble logging in? <span className="text-[#EF4444] font-semibold">Contact Admin</span>
-                </p>
               </motion.form>
             )}
 
@@ -199,9 +200,9 @@ export default function CandidateLogin() {
               <motion.form key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }} onSubmit={handleVerifyOtp} className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-1">Enter Your Code</h3>
-                  <p className="text-sm text-slate-500">
-                    A 6-digit code was sent to <span className="font-semibold text-slate-700">{email}</span>.
+                  <h3 className="text-lg font-bold text-slate-100 mb-1">Enter Verification Code</h3>
+                  <p className="text-xs text-slate-400">
+                    Enter the 6-digit code transmitted to <span className="font-semibold text-slate-200">{email}</span>.
                   </p>
                 </div>
 
@@ -211,33 +212,33 @@ export default function CandidateLogin() {
                       type="text" inputMode="numeric" maxLength={1} value={d}
                       onChange={(e) => handleOtpChange(idx, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                      className="w-12 h-14 text-center text-xl font-bold border-2 border-slate-300 rounded-xl focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/30 outline-none transition-all text-slate-900 bg-white" />
+                      className="w-12 h-14 text-center text-xl font-bold border border-white/10 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-500/40 outline-none transition-all text-white bg-slate-900/90 shadow-inner" />
                   ))}
                 </div>
 
                 <div className="text-center">
                   {countdown > 0 ? (
-                    <span className="text-sm text-slate-500">
-                      Expires in <span className={`font-bold ${countdown < 60 ? 'text-red-500' : 'text-slate-700'}`}>{formatTime(countdown)}</span>
+                    <span className="text-xs text-slate-400">
+                      Code expires in <span className={`font-bold font-mono ${countdown < 60 ? 'text-red-400' : 'text-slate-200'}`}>{formatTime(countdown)}</span>
                     </span>
                   ) : (
-                    <span className="text-sm text-red-500 font-semibold">Code expired. Please resend.</span>
+                    <span className="text-xs text-red-400 font-semibold">Code expired. Please request a new one.</span>
                   )}
                 </div>
 
-                {error && <div className="text-sm text-[#EF4444] bg-red-50 p-3 rounded-xl border border-red-100 font-medium">{error}</div>}
-                {successMsg && <div className="text-sm text-green-700 bg-green-50 p-3 rounded-xl border border-green-200 font-medium">✅ {successMsg}</div>}
+                {error && <div className="text-xs text-red-400 bg-red-950/40 p-3 rounded-xl border border-red-500/30 font-medium">{error}</div>}
+                {successMsg && <div className="text-xs text-emerald-400 bg-emerald-950/40 p-3 rounded-xl border border-emerald-500/30 font-medium">✅ {successMsg}</div>}
 
                 <button type="submit" disabled={loading || countdown <= 0}
-                  className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-md shadow-red-500/20 text-sm font-bold text-white bg-[#EF4444] hover:bg-red-600 focus:outline-none transition-all disabled:opacity-50">
-                  {loading ? 'Verifying...' : 'Verify & Login'}
+                  className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-lg shadow-red-600/30 text-sm font-bold text-white bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 focus:outline-none transition-all disabled:opacity-50 active:scale-[0.99]">
+                  {loading ? 'Authenticating...' : 'Verify & Launch Portal'}
                 </button>
 
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-xs">
                   <button type="button" onClick={() => { setStep(1); setError(''); }}
-                    className="text-slate-500 hover:text-slate-700 font-medium">← Change Email</button>
+                    className="text-slate-400 hover:text-slate-200 font-medium transition-colors">← Change Email</button>
                   <button type="button" onClick={handleResend} disabled={resendCooldown > 0 || loading}
-                    className={`font-semibold transition-colors ${resendCooldown > 0 ? 'text-slate-400 cursor-not-allowed' : 'text-[#EF4444] hover:underline'}`}>
+                    className={`font-semibold transition-colors ${resendCooldown > 0 ? 'text-slate-600 cursor-not-allowed' : 'text-red-400 hover:text-red-300 underline'}`}>
                     {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
                   </button>
                 </div>
@@ -246,6 +247,6 @@ export default function CandidateLogin() {
           </AnimatePresence>
         </div>
       </motion.div>
-    </div>
+    </PageWrapper>
   );
 }

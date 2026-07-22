@@ -8,17 +8,18 @@ import {
 } from 'lucide-react';
 import logoUrl from '../assets/sterling_logo.png';
 import { formatISTDayDate } from '../utils/istTime';
+import PageWrapper from '../components/Layout/PageWrapper';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // ── Stage pipeline config ─────────────────────────────────────────────────────
 const STAGES = [
-  { key: 'REGISTERED', label: 'Registered', icon: User, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
-  { key: 'APPLIED', label: 'Applied', icon: FileText, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
-  { key: 'INTERVIEW_PENDING', label: 'Schedule Interview', icon: Calendar, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
-  { key: 'INTERVIEW_SCHEDULED', label: 'Interview Scheduled', icon: Clock, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
-  { key: 'UNDER_REVIEW', label: 'Under Review', icon: Shield, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
-  { key: 'DECISION_MADE', label: 'Decision Made', icon: Star, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-800 bg-white border-slate-200' },
+  { key: 'REGISTERED', label: 'Registered', icon: User, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-200 bg-slate-900 border-white/10' },
+  { key: 'APPLIED', label: 'Applied', icon: FileText, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-200 bg-slate-900 border-white/10' },
+  { key: 'INTERVIEW_PENDING', label: 'Schedule Interview', icon: Calendar, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-200 bg-slate-900 border-white/10' },
+  { key: 'INTERVIEW_SCHEDULED', label: 'Interview Scheduled', icon: Clock, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-200 bg-slate-900 border-white/10' },
+  { key: 'UNDER_REVIEW', label: 'Under Review', icon: Shield, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-200 bg-slate-900 border-white/10' },
+  { key: 'DECISION_MADE', label: 'Decision Made', icon: Star, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-200 bg-slate-900 border-white/10' },
 ];
 
 // ── Countdown Timer (With 15-Min Expiration) ──────────────────────────────
@@ -475,7 +476,26 @@ export default function CandidateHome() {
           )}
 
         </motion.div>
-      </main>
-    </div>
+  return (
+    <PageWrapper className="pb-16 font-sans">
+      {/* Header Bar */}
+      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex items-center justify-between shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-slate-900 border border-white/10 rounded-xl flex items-center justify-center p-2">
+            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain mix-blend-screen" />
+          </div>
+          <div>
+            <h1 className="font-extrabold text-lg text-white tracking-tight">
+              Spark-<span className="text-red-500">Hire</span>
+            </h1>
+            <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase">Candidate Portal</p>
+          </div>
+        </div>
+        <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition-all">
+          <LogOut size={14} /> Sign Out
+        </button>
+      </header>
+      {/* Container wrapper content unchanged */}
+    </PageWrapper>
   );
 }
