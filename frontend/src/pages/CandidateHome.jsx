@@ -217,14 +217,14 @@ export default function CandidateHome() {
   const currentStageIdx = STAGES.findIndex(s => s.key === app.stage);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-red-600 selection:text-white pb-20">
+    <PageWrapper className="pb-20">
 
       {/* ── NAV ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-xl border-b border-white/20 px-6 py-4 flex items-center justify-between">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain" />
-          <span className="font-extrabold text-slate-900 text-lg tracking-tight">
-            Sterling<span className="text-red-600 font-light ml-1">E-Mobility</span>
+          <span className="font-extrabold text-white text-lg tracking-tight">
+            Sterling<span className="text-red-500 font-light ml-1">E-Mobility</span>
           </span>
         </div>
         <div className="flex items-center gap-4">
@@ -476,26 +476,7 @@ export default function CandidateHome() {
           )}
 
         </motion.div>
-  return (
-    <PageWrapper className="pb-16 font-sans">
-      {/* Header Bar */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex items-center justify-between shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-slate-900 border border-white/10 rounded-xl flex items-center justify-center p-2">
-            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain mix-blend-screen" />
-          </div>
-          <div>
-            <h1 className="font-extrabold text-lg text-white tracking-tight">
-              Spark-<span className="text-red-500">Hire</span>
-            </h1>
-            <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase">Candidate Portal</p>
-          </div>
-        </div>
-        <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition-all">
-          <LogOut size={14} /> Sign Out
-        </button>
-      </header>
-      {/* Container wrapper content unchanged */}
+      </main>
     </PageWrapper>
   );
 }
