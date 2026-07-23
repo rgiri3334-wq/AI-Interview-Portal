@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Database, UserPlus, FileText, Video,
-  Calendar, Activity, ShieldCheck, Globe, ChevronRight, User, LogOut
+  LayoutDashboard, Database, UserPlus, FileText,
+  Activity, ShieldCheck, ChevronRight, User, LogOut
 } from 'lucide-react';
 import logoUrl from '../../assets/sterling_logo.png';
 
@@ -17,18 +17,10 @@ const navSections = [
     ],
   },
   {
-    title: 'INTERVIEW & SCHEDULE',
-    items: [
-      { path: '/interview', label: 'Live Interview Room', icon: Video },
-      { path: '/schedule-interview', label: 'Schedule & Time Slots', icon: Calendar },
-    ],
-  },
-  {
     title: 'SYSTEM & CONTROLS',
     items: [
       { path: '/system-health', label: 'System Health HUD', icon: Activity },
       { path: '/admin-management', label: 'Security Access Matrix', icon: ShieldCheck },
-      { path: '/candidate-home', label: 'Candidate Portal View', icon: Globe },
     ],
   },
 ];
