@@ -7,54 +7,30 @@ import { motion, AnimatePresence } from 'framer-motion';
 import logoUrl from '../../assets/sterling_logo.png';
 
 // ============================================================================
-// PART 1: OPTIMIZED SHADERS (Red Glow)
+// PART 1: PERFECT PIXEL LOGO
 // ============================================================================
 
-const vertexShader = `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const fragmentShader = `
-  varying vec2 vUv;
-  uniform sampler2D uTexture;
-  uniform float uOpacity;
-
-  void main() {
-    vec4 texColor = texture2D(uTexture, vUv);
-    if(texColor.a < 0.1) discard;
-    // Base glow
-    vec3 tintedColor = texColor.rgb + vec3(0.15, 0.0, 0.0);
-    gl_FragColor = vec4(tintedColor, texColor.a * uOpacity);
-  }
-`;
-
-function HolographicLogo({ texture, opacity }) {
-  const materialRef = useRef();
-  useFrame(() => {
-    if (materialRef.current) materialRef.current.uniforms.uOpacity.value = opacity;
-  });
-  const uniforms = useMemo(() => ({
-    uTexture: { value: texture },
-    uOpacity: { value: opacity }
-  }), [texture, opacity]);
+function CleanLogo({ texture, opacity }) {
+  // Ensure the texture is crisp
+  useEffect(() => {
+    if (texture) {
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.needsUpdate = true;
+    }
+  }, [texture]);
 
   return (
     <Center>
-      <mesh scale={[5, 5, 1]} rotation={[0, 0, 0]}>
-        <planeGeometry args={[2, 2, 2, 2]} />
-        <shaderMaterial
-          ref={materialRef}
-          vertexShader={vertexShader}
-          fragmentShader={fragmentShader}
-          uniforms={uniforms}
-          transparent={true}
+      <mesh scale={[5, 5, 1]} position={[0, 0, 0]}>
+        <planeGeometry args={[2, 2]} />
+        <meshBasicMaterial 
+          map={texture} 
+          transparent={true} 
+          opacity={opacity} 
           side={THREE.DoubleSide}
           depthWrite={false}
-          blending={THREE.AdditiveBlending}
+          toneMapped={false}
         />
       </mesh>
     </Center>
@@ -233,13 +209,13 @@ function CameraDirector({ stage }) {
         camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, Math.sin(time * 0.5) * 0.1, delta * 2.0);
         break;
       case 'zoomIn':
-        // Hyperdrive push straight through
-        targetPos.current.set(0, 0, targetPos.current.z - 80 * delta); 
+        // Blast the camera completely through the logo (past Z=0 into negatives)
+        targetPos.current.set(0, 0, targetPos.current.z - 150 * delta); 
         targetLook.current.set(0, 0, -100); 
         camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, 0, delta * 5.0); // Level out
         break;
       case 'bg-out':
-        targetPos.current.set(0, 0, targetPos.current.z - 120 * delta);
+        targetPos.current.set(0, 0, targetPos.current.z - 200 * delta);
         break;
       default:
         break;
@@ -276,15 +252,17 @@ function CinematicScene({ stage }) {
     }
   });
 
+  // Keep logo opacity at 1 during zoomIn so the camera literally flies through it!
   let logoOpacity = 0;
-  if (stage === 'logo-in' || stage === 'logo-pause') logoOpacity = 1;
-  if (stage === 'zoomIn' || stage === 'bg-out') logoOpacity = 0;
+  if (stage === 'logo-in' || stage === 'logo-pause' || stage === 'zoomIn') {
+    logoOpacity = 1;
+  }
 
   return (
     <>
-      <color attach="background" args={['#020005']} /> {/* Very dark purple void */}
-      <fogExp2 attach="fog" args={['#020005', 0.05]} />
-      <ambientLight intensity={0.5} />
+      <color attach="background" args={['#000000']} /> {/* Pure Black */}
+      <fogExp2 attach="fog" args={['#000000', 0.05]} />
+      <ambientLight intensity={1.0} />
       
       {/* Dynamic Grid Floor (TRON style) - Extremely cheap to render but looks amazing */}
       <gridHelper args={[200, 100, '#ff003c', '#220011']} position={[0, -10, 0]} />
@@ -300,7 +278,7 @@ function CinematicScene({ stage }) {
       <OrbitalRings stage={stage} />
 
       <Float speed={1.5} rotationIntensity={0.4} floatIntensity={0.8}>
-        <HolographicLogo texture={logoTex} opacity={logoOpacity} />
+        <CleanLogo texture={logoTex} opacity={logoOpacity} />
       </Float>
 
       <CameraDirector stage={stage} />
@@ -352,7 +330,7 @@ export default function AppSplash({ onComplete }) {
           initial={{ opacity: 1 }}
           animate={{ opacity: stage === 'bg-out' ? 0 : 1 }}
           transition={{ duration: 1.0, ease: "easeInOut" }}
-          className="fixed inset-0 z-[99999] bg-[#020005] overflow-hidden pointer-events-none"
+          className="fixed inset-0 z-[99999] bg-[#000000] overflow-hidden pointer-events-none"
         >
           {/* Performance Optimized Canvas */}
           <Canvas 
