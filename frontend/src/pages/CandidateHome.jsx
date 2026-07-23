@@ -72,12 +72,11 @@ function CountdownTimer({ targetDate, targetTime, onStartReady, onMissed }) {
   }, [targetDate, targetTime, onStartReady, onMissed, hasFiredMissed]);
 
   if (!timeLeft) return null;
-
   const pad = n => String(n).padStart(2, '0');
 
   if (timeLeft.isGracePeriod) {
     return (
-      <div className="animate-pulse bg-red-50 p-4 rounded-2xl border border-red-100">
+      <div className="animate-pulse bg-red-50 p-4 rounded-2xl border border-red-100 flex flex-col items-center justify-center h-full">
         <div className="flex items-center justify-center gap-2 mb-1">
           <div className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
           <span className="text-red-600 font-bold uppercase tracking-widest text-xs">Interview is Live</span>
@@ -90,7 +89,7 @@ function CountdownTimer({ targetDate, targetTime, onStartReady, onMissed }) {
   }
 
   return (
-    <div className="flex items-center justify-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+    <div className="flex items-center justify-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 w-full h-full">
       {[{ v: timeLeft.h, u: 'hrs' }, { v: timeLeft.m, u: 'min' }, { v: timeLeft.s, u: 'sec' }].map(({ v, u }) => (
         <div key={u} className="text-center w-14">
           <div className="text-3xl font-black text-slate-800 tabular-nums leading-none tracking-tight">{pad(v)}</div>
@@ -118,10 +117,6 @@ function TierBadge({ tier }) {
   );
 }
 
-// ── Animations ────────────────────────────────────────────────────────────────
-const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
-const itemVariants = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: 'spring', bounce: 0.4 } } };
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function CandidateHome() {
   const navigate = useNavigate();
@@ -144,7 +139,6 @@ export default function CandidateHome() {
       });
       if (res.ok) {
         const data = await res.json();
-        // Removed automatic redirect to let user see dashboard first
         setPortal(data);
       }
     } catch (e) { console.error(e); }
@@ -217,247 +211,290 @@ export default function CandidateHome() {
   const currentStageIdx = STAGES.findIndex(s => s.key === app.stage);
 
   return (
-    <PageWrapper className="pb-20 bg-white">
+    <PageWrapper className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col lg:flex-row overflow-hidden">
+      
+      {/* ── LEFT SIDEBAR: THE VERTICAL JOURNEY ── */}
+      <aside className="w-full lg:w-96 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 lg:h-screen flex flex-col shrink-0 relative z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        
+        {/* Brand Header */}
+        <div className="p-8 pb-4 flex flex-col gap-8 border-b border-slate-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src={logoUrl} alt="Sterling Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
+              <span className="font-extrabold text-slate-900 text-xl tracking-tight hidden sm:block lg:block">
+                Sterling<span className="text-red-600 font-light ml-1">E-Mobility</span>
+              </span>
+            </div>
+            {/* Mobile-only logout */}
+            <button onClick={handleLogout} className="lg:hidden text-slate-400 hover:text-red-600 p-2">
+              <LogOut size={20} />
+            </button>
+          </div>
 
-      {/* ── NAV ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-2xl border-b border-red-50 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain" />
-          <span className="font-extrabold text-slate-900 text-lg tracking-tight">
-            Sterling<span className="text-red-600 font-light ml-1">E-Mobility</span>
-          </span>
+          <div>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-lg flex items-center gap-1">
+                <Hash size={10} /> {candidate.id || 'PENDING'}
+              </span>
+              {candidate.kyc_verified && (
+                <span className="px-2.5 py-1 bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest rounded-lg flex items-center gap-1">
+                  <Shield size={10} /> VERIFIED
+                </span>
+              )}
+            </div>
+            <h1 className="text-3xl font-black tracking-tighter text-slate-900 leading-tight">
+              {candidate.name || 'Candidate'}
+              <span className="text-red-600">.</span>
+            </h1>
+            <p className="text-slate-500 mt-2 font-medium text-sm">
+              {app.job_role ? `Pipeline active for ${app.job_role}` : 'Profile initiated. Prepare for assessment.'}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <button onClick={load} className="text-slate-400 hover:text-red-600 transition-colors bg-white p-2 rounded-full shadow-sm border border-slate-100 hover:border-red-100">
+
+        {/* Vertical Pipeline Timeline */}
+        <div className="flex-1 overflow-y-auto p-8 no-scrollbar relative hidden lg:block">
+          <div className="absolute top-8 bottom-8 left-[3.25rem] w-0.5 bg-slate-100 z-0" />
+          
+          <div className="flex flex-col gap-6 relative z-10">
+            {STAGES.map((stage, i) => {
+              const isActive = i === currentStageIdx;
+              const isDone = i < currentStageIdx;
+              const Icon = stage.icon;
+              
+              return (
+                <div key={stage.key} className={`flex items-start gap-4 transition-all duration-300 ${isActive ? 'opacity-100 scale-105 origin-left' : isDone ? 'opacity-70' : 'opacity-40'}`}>
+                  <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                    isDone ? stage.doneColor : isActive ? stage.activeColor : 'bg-slate-50 border border-slate-200 text-slate-400'
+                  } ${isDone || isActive ? 'border shadow-sm' : ''}`}>
+                    {isDone ? <CheckCircle size={16} /> : <Icon size={16} />}
+                  </div>
+                  <div className="pt-2">
+                    <span className={`text-xs font-black uppercase tracking-widest block leading-tight ${isActive ? 'text-red-600' : isDone ? 'text-slate-800' : 'text-slate-400'}`}>
+                      {stage.label}
+                    </span>
+                    {isActive && (
+                      <span className="text-[10px] font-bold text-slate-500 mt-1 block">
+                        Current Phase
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+      </aside>
+
+      {/* ── RIGHT MAIN AREA: BENTO BOX GRID ── */}
+      <main className="flex-1 lg:h-screen lg:overflow-y-auto bg-slate-50/50 relative">
+        
+        {/* Background ambient light */}
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-red-600 rounded-full mix-blend-multiply filter blur-[150px] opacity-[0.03] pointer-events-none" />
+
+        {/* Top Actions Nav (Desktop only) */}
+        <div className="hidden lg:flex sticky top-0 z-30 items-center justify-end gap-3 p-6 bg-slate-50/80 backdrop-blur-md">
+          <button onClick={load} className="text-slate-400 hover:text-red-600 transition-colors bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 hover:border-red-200">
             <RotateCcw size={16} />
           </button>
-          <button onClick={handleLogout} className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm text-red-600 hover:text-white hover:bg-red-600 font-bold text-sm transition-all border border-red-100">
-            <LogOut size={16} /> Sign Out
+          <button onClick={handleLogout} className="flex items-center gap-2 bg-white px-5 py-2.5 rounded-xl shadow-sm text-slate-600 hover:text-red-600 font-black uppercase tracking-widest text-[10px] transition-all border border-slate-200 hover:border-red-200">
+            <LogOut size={14} /> Sign Out
           </button>
         </div>
-      </nav>
 
-      {/* ── HERO HEADER (High-Tech Red/White Glass) ── */}
-      <div className="bg-white pt-32 pb-24 px-4 sm:px-8 relative overflow-hidden">
-        {/* Ambient Red Glows */}
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-red-500 rounded-full mix-blend-multiply filter blur-[150px] opacity-[0.08] animate-pulse pointer-events-none" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-red-600 rounded-full mix-blend-multiply filter blur-[120px] opacity-[0.05] pointer-events-none" />
-        
-        <div className="max-w-5xl mx-auto relative z-10">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="px-3 py-1 bg-red-50 border border-red-100 text-red-600 text-xs font-black uppercase tracking-widest rounded-xl flex items-center gap-2">
-                  <Hash size={12} /> {candidate.id || 'ID PENDING'}
-                </span>
-                {candidate.kyc_verified && (
-                  <span className="px-3 py-1 bg-red-50 border border-red-100 text-red-600 text-xs font-black uppercase tracking-widest rounded-xl flex items-center gap-1">
-                    <Shield size={12} /> VERIFIED
-                  </span>
-                )}
-              </div>
+        {/* Bento Grid */}
+        <div className="p-4 sm:p-6 lg:pt-0 max-w-5xl mx-auto space-y-6 pb-20">
+          
+          {/* Mobile-only pipeline quick view */}
+          <div className="lg:hidden bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm overflow-x-auto no-scrollbar flex items-center gap-2">
+            {STAGES.map((stage, i) => {
+              const isActive = i === currentStageIdx;
+              const isDone = i < currentStageIdx;
+              const Icon = stage.icon;
+              return (
+                 <div key={stage.key} className={`shrink-0 flex items-center gap-2 p-2 px-3 rounded-xl ${isActive ? 'bg-red-50 text-red-600 border border-red-100' : isDone ? 'text-slate-600' : 'text-slate-300'}`}>
+                    {isDone ? <CheckCircle size={14} /> : <Icon size={14} />}
+                    <span className="text-[10px] font-black uppercase tracking-widest">{stage.label}</span>
+                 </div>
+              );
+            })}
+          </div>
 
-              <h1 className="text-5xl sm:text-6xl font-black tracking-tighter text-slate-900 leading-tight drop-shadow-sm">
-                {candidate.name || 'Candidate'}
-                <span className="text-red-600">.</span>
-              </h1>
-              <p className="text-slate-500 mt-3 font-medium text-lg max-w-xl">
-                {app.job_role
-                  ? <>Pipeline active for <span className="text-slate-900 font-bold">{app.job_role}</span></>
-                  : <>Profile initiated. Prepare for assessment.</>
-                }
-              </p>
-            </div>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-            <div className="flex gap-3">
-              <button onClick={() => navigate('/candidate')} className="px-5 py-3 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-2xl text-red-600 text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm">
-                <Edit3 size={16} /> Update Profile
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
+            {/* MAIN ACTION TILE (Spans 2 cols on XL) */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+              className="xl:col-span-2 bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-6 sm:p-10 flex flex-col hover:border-red-100 transition-colors relative overflow-hidden group"
+            >
+              {/* Subtle hover gradient */}
+              <div className="absolute inset-0 bg-gradient-to-br from-red-50/0 via-red-50/0 to-red-50/0 group-hover:to-red-50/50 transition-all duration-700 pointer-events-none" />
 
-      <main className="px-4 sm:px-8 max-w-5xl mx-auto -mt-16 relative z-20">
-        <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
-
-          {/* ── APPLICATION STATUS PIPELINE ── */}
-          <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-8 flex items-center gap-2">
-              <TrendingUp size={16} className="text-red-600" /> Assessment Pipeline
-            </h2>
-            <div className="flex items-center gap-0">
-              {STAGES.map((stage, i) => {
-                const isActive = i === currentStageIdx;
-                const isDone = i < currentStageIdx;
-                const Icon = stage.icon;
-                return (
-                  <React.Fragment key={stage.key}>
-                    <div className="flex flex-col items-center flex-1 min-w-0">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-all ${isDone ? stage.doneColor :
-                          isActive ? stage.activeColor :
-                            'bg-slate-50 border border-slate-200 text-slate-400'
-                        } ${isDone || isActive ? 'border' : ''}`}>
-                        {isDone ? <CheckCircle size={20} /> : <Icon size={20} />}
-                      </div>
-                      <span className={`text-[10px] font-black uppercase tracking-widest text-center leading-tight hidden sm:block ${isActive ? 'text-red-600' : isDone ? 'text-slate-800' : 'text-slate-400'
-                        }`}>{stage.label}</span>
-                    </div>
-                    {i < STAGES.length - 1 && (
-                      <div className={`h-1 flex-1 mx-2 rounded-full transition-colors ${i < currentStageIdx ? 'bg-slate-800' : 'bg-slate-100'
-                        }`} />
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            {/* ── INTERVIEW ACTION CARD ── */}
-            <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col">
-              <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <Clock size={16} className="text-red-600" /> Action Required
+              <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2 relative z-10">
+                <Zap size={14} className="text-red-600" /> Action Center
               </h2>
 
               {booking ? (
-                <div className="flex flex-col flex-1">
-                  <div className="bg-slate-50 rounded-2xl border border-slate-100 p-6 mb-6">
-                    <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-                      <Calendar size={12} /> Scheduled Slot
-                    </p>
-                    <p className="text-2xl font-black text-slate-800 tracking-tight mb-1">
-                      {formatISTDayDate(booking.date)}
-                    </p>
-                    <p className="text-red-600 font-extrabold text-lg">{booking.start_time} – {booking.end_time}</p>
-                    <p className="text-xs text-slate-500 font-bold mt-2 flex items-center gap-1"><MapPin size={12} />{booking.timezone}</p>
+                <div className="flex flex-col flex-1 relative z-10">
+                  <div className="flex flex-col md:flex-row items-stretch justify-between gap-6 mb-6">
+                    <div className="flex-1 bg-slate-50 border border-slate-100 p-6 rounded-3xl flex flex-col justify-center">
+                      <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2 flex items-center gap-2">
+                        <Calendar size={12} /> Scheduled Slot
+                      </p>
+                      <p className="text-2xl font-black text-slate-800 tracking-tight mb-1">
+                        {formatISTDayDate(booking.date)}
+                      </p>
+                      <p className="text-red-600 font-extrabold text-lg">{booking.start_time} – {booking.end_time}</p>
+                      <p className="text-xs text-slate-500 font-bold mt-2 flex items-center gap-1"><MapPin size={12} />{booking.timezone}</p>
+                    </div>
+                    <div className="md:w-48 shrink-0 bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 text-center">Time Remaining</p>
+                      <CountdownTimer
+                        targetDate={booking.date}
+                        targetTime={booking.start_time}
+                        onStartReady={() => setIsInterviewReady(true)}
+                        onMissed={handleNoShow}
+                      />
+                    </div>
                   </div>
 
-                  <div className="mb-8">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 text-center">Time Remaining</p>
-                    <CountdownTimer
-                      targetDate={booking.date}
-                      targetTime={booking.start_time}
-                      onStartReady={() => setIsInterviewReady(true)}
-                      onMissed={handleNoShow}
-                    />
-                  </div>
-
-                  <div className="mt-auto">
+                  <div className="mt-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <button onClick={handleStartInterview} disabled={!isInterviewReady}
-                      className="w-full py-4 rounded-2xl bg-red-600 hover:bg-red-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black uppercase tracking-widest text-sm transition-all shadow-lg flex items-center justify-center gap-3">
+                      className="sm:col-span-2 py-4 rounded-2xl bg-red-600 hover:bg-red-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-3">
                       {isInterviewReady ? "START INTERVIEW" : "WAITING FOR SLOT"}
                       <ArrowRight size={18} />
                     </button>
-                    {isInterviewReady && (
-                      <p className="text-center text-xs font-bold text-red-600 mt-3 animate-pulse">
-                        ⚠️ You have 15 minutes to join!
-                      </p>
-                    )}
                     <button onClick={handleCancelSlot} disabled={isCancelling}
-                      className="w-full mt-3 py-3 rounded-2xl bg-white border border-slate-200 hover:border-red-300 hover:text-red-600 text-slate-500 font-black uppercase tracking-widest text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                      {isCancelling ? "Cancelling…" : "Cancel / Reschedule Slot"}
+                      className="py-4 rounded-2xl bg-white border border-slate-200 hover:border-red-300 hover:text-red-600 hover:bg-red-50 text-slate-500 font-black uppercase tracking-widest text-[10px] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isCancelling ? "Cancelling…" : "Reschedule"}
                     </button>
                   </div>
                 </div>
               ) : app.is_completed ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
-                  <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-6 border border-red-100">
-                    <CheckCircle size={40} />
+                <div className="flex-1 flex flex-col items-center justify-center text-center py-4 relative z-10">
+                  <div className="w-24 h-24 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center mb-6 border border-red-100 shadow-inner">
+                    <CheckCircle size={48} />
                   </div>
-                  <p className="font-black text-slate-800 text-xl uppercase tracking-tighter mb-2">Interview Completed</p>
-                  <p className="text-slate-500 text-sm font-medium mb-6">Your data has been transmitted securely for review.</p>
+                  <p className="font-black text-slate-800 text-2xl uppercase tracking-tighter mb-2">Interview Completed</p>
+                  <p className="text-slate-500 text-sm font-medium max-w-sm mb-6">Your data has been transmitted securely. The recruitment team is reviewing your profile.</p>
                   {app.score_tier && <TierBadge tier={app.score_tier} />}
                 </div>
               ) : (candidate.experience_level && app.job_role) ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
-                  <div className="w-20 h-20 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-6 border border-slate-100">
-                    <Calendar size={40} />
+                <div className="flex-1 flex flex-col items-center justify-center text-center py-4 relative z-10">
+                  <div className="w-24 h-24 bg-slate-50 text-slate-400 rounded-3xl flex items-center justify-center mb-6 border border-slate-100">
+                    <Calendar size={48} />
                   </div>
-                  <p className="font-black text-slate-800 text-xl uppercase tracking-tighter mb-2">No Active Slot</p>
+                  <p className="font-black text-slate-800 text-2xl uppercase tracking-tighter mb-2">No Active Slot</p>
                   <p className="text-slate-500 text-sm font-medium mb-8">Secure your preferred interview window immediately.</p>
                   <button onClick={() => navigate('/schedule-interview')}
-                    className="w-full py-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm transition-all shadow-lg">
+                    className="w-full sm:w-auto px-12 py-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-red-600/20">
                     SCHEDULE INTERVIEW
                   </button>
                 </div>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
-                  <div className="w-20 h-20 bg-red-50 text-red-400 rounded-full flex items-center justify-center mb-6 border border-red-100">
-                    <FileText size={40} />
+                <div className="flex-1 flex flex-col items-center justify-center text-center py-4 relative z-10">
+                  <div className="w-24 h-24 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center mb-6 border border-red-100">
+                    <FileText size={48} />
                   </div>
-                  <p className="font-black text-slate-800 text-xl uppercase tracking-tighter mb-2">Registration Pending</p>
+                  <p className="font-black text-slate-800 text-2xl uppercase tracking-tighter mb-2">Registration Pending</p>
                   <p className="text-slate-500 text-sm font-medium mb-8">Complete your application to unlock interview slots.</p>
                   <button onClick={() => navigate('/candidate')}
-                    className="w-full py-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm transition-all shadow-[0_4px_15px_rgba(220,38,38,0.3)]">
+                    className="w-full sm:w-auto px-12 py-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-red-600/20">
                     COMPLETE REGISTRATION
                   </button>
                 </div>
               )}
             </motion.div>
 
-            {/* ── METRICS & DETAILS CARD ── */}
-            <div className="space-y-6">
-              <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <User size={16} className="text-red-600" /> Technical Profile
+            {/* PROFILE TILE (Spans 1 col on XL) */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
+              className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-6 sm:p-8 flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <User size={14} className="text-slate-400" /> Identity
                 </h2>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center py-3 border-b border-slate-50">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Target Role</span>
-                    <span className="text-sm font-black text-slate-800 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">{app.job_role || 'UNASSIGNED'}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-slate-50">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Resume Status</span>
-                    {resume.uploaded
-                      ? <span className="text-[10px] font-black text-red-600 bg-red-50 border border-red-100 px-3 py-1.5 rounded-xl flex items-center gap-1 uppercase tracking-widest"><CheckCircle size={12} /> SECURED</span>
-                      : <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">MISSING</span>
-                    }
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-slate-50">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Contact Email</span>
-                    <span className="text-xs font-bold text-slate-600 truncate max-w-[150px] sm:max-w-[200px]">{candidate.email}</span>
-                  </div>
-                  {app.score_tier && (
-                    <div className="flex justify-between items-center py-3">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Rating</span>
-                      <TierBadge tier={app.score_tier} />
-                    </div>
-                  )}
-                </div>
-              </motion.div>
+                <button onClick={() => navigate('/candidate')} className="p-2 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-colors border border-slate-100 hover:border-red-100">
+                  <Edit3 size={14} />
+                </button>
+              </div>
 
-              {/* ── QUICK TOOLS ── */}
-              <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
-                <button onClick={() => navigate('/schedule-interview')} className="group p-6 bg-white/80 backdrop-blur-xl rounded-3xl border border-white hover:border-red-200 hover:shadow-lg transition-all flex flex-col items-center justify-center gap-3 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-red-50 transition-colors">
-                    <Calendar size={20} className="text-slate-600 group-hover:text-red-600 transition-colors" />
+              <div className="space-y-6 flex-1">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Target Role</span>
+                  <span className="text-sm font-black text-slate-800 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 inline-block">
+                    {app.job_role || 'UNASSIGNED'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Resume Status</span>
+                  {resume.uploaded
+                    ? <span className="text-[10px] font-black text-red-600 bg-red-50 border border-red-100 px-3 py-1.5 rounded-xl inline-flex items-center gap-1 uppercase tracking-widest"><CheckCircle size={12} /> SECURED</span>
+                    : <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl inline-block uppercase tracking-widest">MISSING</span>
+                  }
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Contact Email</span>
+                  <span className="text-xs font-bold text-slate-600 block truncate">{candidate.email}</span>
+                </div>
+                {app.score_tier && (
+                  <div className="pt-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Rating</span>
+                    <TierBadge tier={app.score_tier} />
                   </div>
-                  <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Manage Schedule</span>
-                </button>
-                <button onClick={() => navigate('/prep-kit')} className="group p-6 bg-white/80 backdrop-blur-xl rounded-3xl border border-white hover:border-red-200 hover:shadow-lg transition-all flex flex-col items-center justify-center gap-3 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                  <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
-                    <Video size={20} className="text-red-600" />
-                  </div>
-                  <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Launch Prep Kit</span>
-                </button>
-              </motion.div>
-            </div>
+                )}
+              </div>
+            </motion.div>
+            
           </div>
 
-          {/* ── ATTEMPT HISTORY ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+             {/* QUICK TOOLS TILES */}
+             <motion.button 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
+                onClick={() => navigate('/schedule-interview')} 
+                className="group p-6 sm:p-8 bg-white rounded-[2rem] border border-slate-100 hover:border-red-200 transition-all flex flex-row items-center justify-start gap-5 shadow-[0_8px_30px_rgb(0,0,0,0.03)] text-left hover:shadow-lg"
+              >
+                <div className="w-14 h-14 shrink-0 rounded-2xl bg-slate-50 flex items-center justify-center group-hover:bg-red-50 group-hover:scale-110 transition-all border border-transparent group-hover:border-red-100">
+                  <Calendar size={22} className="text-slate-400 group-hover:text-red-600 transition-colors" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-1">Manage Schedule</h3>
+                  <p className="text-xs font-medium text-slate-500">View or modify your current interview bookings.</p>
+                </div>
+              </motion.button>
+              
+              <motion.button 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
+                onClick={() => navigate('/prep-kit')} 
+                className="group p-6 sm:p-8 bg-white rounded-[2rem] border border-slate-100 hover:border-red-200 transition-all flex flex-row items-center justify-start gap-5 shadow-[0_8px_30px_rgb(0,0,0,0.03)] text-left hover:shadow-lg"
+              >
+                <div className="w-14 h-14 shrink-0 rounded-2xl bg-slate-50 flex items-center justify-center group-hover:bg-red-50 group-hover:scale-110 transition-all border border-transparent group-hover:border-red-100">
+                  <Video size={22} className="text-slate-400 group-hover:text-red-600 transition-colors" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-1">Interview Prep Kit</h3>
+                  <p className="text-xs font-medium text-slate-500">Test your equipment and view the guidelines.</p>
+                </div>
+              </motion.button>
+          </div>
+
+          {/* ATTEMPT HISTORY TILE */}
           {attempts.length > 0 && (
-            <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-              <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <RotateCcw size={16} className="text-red-600" /> Telemetry Logs
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}
+              className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-6 sm:p-8"
+            >
+              <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                <RotateCcw size={14} className="text-slate-400" /> Telemetry Logs
               </h2>
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {attempts.map((a) => (
-                  <div key={a.attempt_number} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
+                  <div key={a.attempt_number} className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black ${a.is_completed ? 'bg-red-600 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-200'
-                        }`}>
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-sm font-black ${a.is_completed ? 'bg-red-600 text-white shadow-md shadow-red-600/20' : 'bg-white text-slate-400 border border-slate-200'}`}>
                         #{a.attempt_number}
                       </div>
                       <div>
@@ -475,7 +512,7 @@ export default function CandidateHome() {
             </motion.div>
           )}
 
-        </motion.div>
+        </div>
       </main>
     </PageWrapper>
   );
