@@ -18,6 +18,15 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('admin'); // 'admin' | 'candidate'
+  const [isIntroComplete, setIsIntroComplete] = useState(false);
+
+  // Intro animation sequence
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsIntroComplete(true);
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Auto-redirect if already logged in (session only)
   useEffect(() => {
@@ -53,8 +62,55 @@ export default function Login() {
       {/* Dynamic Animated Background */}
       <LoginBackground />
 
+      {/* Intro Red Curtain Overlay */}
+      <AnimatePresence>
+        {!isIntroComplete && (
+          <motion.div
+            key="intro-overlay"
+            className="fixed inset-0 z-[100] flex pointer-events-none"
+          >
+            {[...Array(5)].map((_, i) => (
+              <motion.div
+                key={`col-${i}`}
+                className="h-full bg-red-600 flex-1 origin-top"
+                initial={{ scaleY: 1 }}
+                exit={{ scaleY: 0 }}
+                transition={{ 
+                  duration: 0.7, 
+                  ease: [0.77, 0, 0.175, 1],
+                  delay: i * 0.08
+                }}
+              />
+            ))}
+
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -50, scale: 0.9 }}
+              transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+            >
+              <div className="relative flex flex-col items-center">
+                <div className="bg-slate-950/90 border border-white/10 p-6 rounded-3xl shadow-2xl flex items-center justify-center">
+                  <img 
+                    src={logoUrl} 
+                    alt="Sterling Logo" 
+                    className="w-28 h-28 object-contain relative z-10"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* TOP HEADER BAR */}
-      <header className="relative z-20 w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200 pb-6">
+      <motion.header 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: isIntroComplete ? 1 : 0, y: isIntroComplete ? 0 : -20 }}
+        transition={{ delay: 0.4, duration: 0.8 }}
+        className="relative z-20 w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200 pb-6"
+      >
         
         {/* BRAND LOGO BADGE */}
         <div className="flex items-center gap-4 group cursor-pointer" onClick={() => navigate('/')}>
@@ -99,10 +155,15 @@ export default function Login() {
           </button>
         </div>
 
-      </header>
+      </motion.header>
 
       {/* MAIN DUAL LOGIN WORKSPACE */}
-      <main className="relative z-20 w-full max-w-5xl mx-auto my-auto py-8">
+      <motion.main 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: isIntroComplete ? 1 : 0, y: isIntroComplete ? 0 : 20 }}
+        transition={{ delay: 0.6, duration: 0.8 }}
+        className="relative z-20 w-full max-w-5xl mx-auto my-auto py-8"
+      >
         <AnimatePresence mode="wait">
           {activeTab === 'admin' ? (
             <motion.div
@@ -136,10 +197,15 @@ export default function Login() {
             </motion.div>
           )}
         </AnimatePresence>
-      </main>
+      </motion.main>
 
       {/* SECURITY & COMPLIANCE FOOTER */}
-      <footer className="relative z-20 w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 pt-6 text-[11px] font-mono text-slate-500">
+      <motion.footer 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isIntroComplete ? 1 : 0 }}
+        transition={{ delay: 0.8, duration: 0.8 }}
+        className="relative z-20 w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 pt-6 text-[11px] font-mono text-slate-500"
+      >
         <div className="flex items-center gap-2">
           <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
           <span>ISO 27001 Certified • End-to-End Encrypted Telemetry</span>
@@ -148,7 +214,7 @@ export default function Login() {
           <span className="flex items-center gap-1"><Cpu size={14} className="text-red-600" /> AI Engine v3.0</span>
           <span>EV Powertrains &amp; Embedded Systems</span>
         </div>
-      </footer>
+      </motion.footer>
 
     </PageWrapper>
   );
