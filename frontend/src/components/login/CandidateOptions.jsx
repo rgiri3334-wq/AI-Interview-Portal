@@ -36,7 +36,7 @@ export default function CandidateOptions({ navigate }) {
           <motion.button
             type="button"
             onClick={() => navigate('/candidate-login')}
-            className="w-full py-4 px-6 rounded-2xl font-bold uppercase tracking-wider text-xs text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all flex items-center justify-center gap-2 shadow-sm hover:border-red-300 active:scale-[0.99] group"
+            className="w-full py-4 px-6 rounded-2xl font-bold uppercase tracking-wider text-xs text-slate-900 bg-white hover:bg-slate-50 border border-red-100 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(220,38,38,0.15)] hover:shadow-[0_0_25px_rgba(220,38,38,0.25)] hover:border-red-300 active:scale-[0.99] group relative"
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
           >
