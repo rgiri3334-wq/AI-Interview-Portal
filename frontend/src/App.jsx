@@ -71,7 +71,6 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <AppSplash />
         <React.Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/" element={<Login />} />
