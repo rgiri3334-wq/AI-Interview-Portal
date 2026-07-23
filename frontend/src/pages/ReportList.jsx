@@ -1,5 +1,9 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageWrapper from '../components/Layout/PageWrapper';
-import { Award, Filter } from 'lucide-react';
+import { Award, Filter, Search, ShieldOff } from 'lucide-react';
+import Sidebar from '../components/Layout/Sidebar';
+import { apiClient } from '../api/apiClient';
 
 export default function ReportList() {
   const navigate = useNavigate();
