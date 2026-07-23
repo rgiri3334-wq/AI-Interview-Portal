@@ -1,0 +1,123 @@
+﻿import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import CandidateLogin from './pages/CandidateLogin';
+import VerifyInvitation from './pages/VerifyInvitation';
+import { lazyWithReload } from './utils/lazyWithReload';
+
+// ΓöÇΓöÇ Route-Level Code Splitting ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// Heavy pages are lazy-loaded so the initial login bundle stays tiny (~50KB).
+// Three.js, Recharts, Monaco Editor, etc. are only downloaded when needed.
+const Landing = React.lazy(() => import('./pages/Landing'));
+const CandidateDetails = React.lazy(() => import('./pages/CandidateDetails'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const LiveInterview = lazyWithReload(() => import('./pages/LiveInterview'), 'live-interview');
+const Report = React.lazy(() => import('./pages/Report'));
+const ReportList = React.lazy(() => import('./pages/ReportList'));
+const AdminPanel = React.lazy(() => import('./pages/AdminPanel'));
+const AdminCandidateRegistration = React.lazy(() => import('./pages/AdminCandidateRegistration'));
+const SystemHealth = React.lazy(() => import('./pages/SystemHealth'));
+const AdminManagement = React.lazy(() => import('./pages/AdminManagement'));
+const CandidateLanding = React.lazy(() => import('./pages/CandidateLanding'));
+const EquipmentTest = React.lazy(() => import('./pages/EquipmentTest'));
+const ProfilePhotoGuidelines = React.lazy(() => import('./pages/ProfilePhotoGuidelines'));
+const ProfilePhotoCapture = React.lazy(() => import('./pages/ProfilePhotoCapture'));
+// ΓöÇΓöÇ Phase 1+2: Candidate Portal Upgrade ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+const CandidateHome = React.lazy(() => import('./pages/CandidateHome'));
+const ScheduleInterview = React.lazy(() => import('./pages/ScheduleInterview'));
+const InterviewGoodbye = React.lazy(() => import('./pages/InterviewGoodbye'));
+const VideoIntroPage = React.lazy(() => import('./pages/VideoIntroPage'));
+const InterviewPrepKit = React.lazy(() => import('./pages/InterviewPrepKit'));
+const CandidateOnboarding = React.lazy(() => import('./pages/CandidateOnboarding'));
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error, info) { console.error("[ErrorBoundary]", error, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 text-center">
+          <h1 className="text-3xl font-black text-red-700 mb-4">A critical error occurred.</h1>
+          <p className="text-slate-600 mb-8">The application encountered an unexpected state. Please return to the homepage.</p>
+          <a href="/" className="px-6 py-3 bg-red-600 text-white font-bold rounded-lg shadow hover:bg-red-700 transition">Return Home</a>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
+  const role = sessionStorage.getItem('role') || 'admin';
+
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    if (role === 'candidate') return <Navigate to="/candidate-home" replace />;
+    return <Navigate to="/home" replace />;
+  }
+
+  return children;
+};
+
+export default function App() {
+  // Global fallback loader for all lazy-loaded routes
+  const GlobalLoader = (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center gap-4">
+      <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-slate-400 font-medium text-sm tracking-wider">Loading Sterling E-Mobility...</p>
+    </div>
+  );
+
+  return (
+    <ErrorBoundary>
+      <BrowserRouter>
+        <React.Suspense fallback={GlobalLoader}>
+          <Routes>
+            <Route path="/" element={<Login />} />
+
+            {/* ΓöÇΓöÇ Candidate OTP Auth Routes ΓöÇΓöÇ */}
+            <Route path="/candidate-login" element={<CandidateLogin />} />
+            <Route path="/verify-invitation" element={<VerifyInvitation />} />
+            <Route path="/candidate-onboarding" element={<ProtectedRoute allowedRoles={['candidate']}><CandidateOnboarding /></ProtectedRoute>} />
+
+            {/* ΓöÇΓöÇ Candidate Portal (Phase 1 Upgrade) ΓöÇΓöÇ */}
+            <Route path="/candidate-home" element={<ProtectedRoute allowedRoles={['candidate']}><CandidateHome /></ProtectedRoute>} />
+            <Route path="/schedule-interview" element={<ProtectedRoute allowedRoles={['candidate']}><ScheduleInterview /></ProtectedRoute>} />
+            <Route path="/interview-goodbye" element={<ProtectedRoute allowedRoles={['candidate']}><InterviewGoodbye /></ProtectedRoute>} />
+            <Route path="/video-intro" element={<ProtectedRoute allowedRoles={['candidate']}><VideoIntroPage /></ProtectedRoute>} />
+            <Route path="/prep-kit" element={<ProtectedRoute allowedRoles={['candidate']}><InterviewPrepKit /></ProtectedRoute>} />
+
+            {/* ΓöÇΓöÇ Candidate marketing landing (public-facing, unchanged) ΓöÇΓöÇ */}
+            <Route path="/candidate-landing" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateLanding /></ProtectedRoute>} />
+
+            {/* ΓöÇΓöÇ Existing Protected Routes (unchanged) ΓöÇΓöÇ */}
+            <Route path="/home" element={<ProtectedRoute allowedRoles={['admin']}><Landing /></ProtectedRoute>} />
+            <Route path="/candidate" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateDetails /></ProtectedRoute>} />
+
+            {/* ΓöÇΓöÇ KYC Pre-Flight Pipeline ΓöÇΓöÇ */}
+            <Route path="/equipment-test" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><EquipmentTest /></ProtectedRoute>} />
+            <Route path="/profile-photo-guidelines" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><ProfilePhotoGuidelines /></ProtectedRoute>} />
+            <Route path="/profile-photo-capture" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><ProfilePhotoCapture /></ProtectedRoute>} />
+
+            {/* ΓöÇΓöÇ Admin Routes ΓöÇΓöÇ */}
+            <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/admin-candidate-registration" element={<ProtectedRoute allowedRoles={['admin']}><AdminCandidateRegistration /></ProtectedRoute>} />
+            <Route path="/interview" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><LiveInterview /></ProtectedRoute>} />
+            <Route path="/report" element={<ProtectedRoute allowedRoles={['admin']}><ReportList /></ProtectedRoute>} />
+            <Route path="/report/:id" element={<ProtectedRoute allowedRoles={['admin']}><Report /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminPanel /></ProtectedRoute>} />
+            <Route path="/system-health" element={<ProtectedRoute allowedRoles={['admin']}><SystemHealth /></ProtectedRoute>} />
+            <Route path="/admin-management" element={<ProtectedRoute allowedRoles={['admin']}><AdminManagement /></ProtectedRoute>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </React.Suspense>
+      </BrowserRouter>
+    </ErrorBoundary>
+  );
+}
