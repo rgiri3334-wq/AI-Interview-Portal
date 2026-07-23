@@ -1,83 +1,59 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Mail, Lock, ShieldAlert, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function AdminLoginForm({ email, setEmail, password, setPassword, error, loading, handleLogin }) {
-  const inputVariants = {
-    initial: { borderBottomColor: '#E2E8F0', backgroundColor: '#FFFFFF' },
-    focus: { borderBottomColor: '#EF4444', backgroundColor: '#FEF2F2', transition: { duration: 0.3 } },
-  };
-
   return (
     <motion.div 
       className="w-full max-w-md mx-auto"
-      initial={{ opacity: 0, x: -50 }}
+      initial={{ opacity: 0, x: -30 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="relative z-10 p-8 sm:p-12 bg-white/80 backdrop-blur-2xl rounded-3xl border border-red-100 shadow-[0_20px_60px_-15px_rgba(239,68,68,0.3)]">
-        <div className="mb-10 text-center">
-          <motion.h3 
-            className="text-4xl font-black text-slate-900 tracking-tighter mb-3 relative inline-block"
-            whileHover={{ scale: 1.02 }}
-          >
-            Admin <span className="text-red-500">Portal</span>
-            <motion.div 
-              className="absolute -bottom-2 left-0 h-1 bg-red-500 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: '100%' }}
-              transition={{ delay: 0.6, duration: 0.8, ease: "circOut" }}
-            />
-          </motion.h3>
-          <p className="text-slate-500 font-medium">Securely access your dashboard.</p>
+      <div className="relative z-10 p-8 sm:p-10 bg-slate-950/85 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_25px_60px_rgba(0,0,0,0.8)] overflow-hidden">
+        
+        {/* Top Glow Ambient Accent */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 via-rose-500 to-red-400" />
+        
+        <div className="mb-8 text-left">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-mono font-bold uppercase tracking-widest mb-3">
+            <ShieldAlert size={12} /> Master Recruiter Portal
+          </div>
+          <h3 className="text-3xl font-extrabold text-white tracking-tight">
+            Administrator <span className="text-red-500">Login</span>
+          </h3>
+          <p className="text-slate-400 text-xs font-medium mt-1">Authenticate credentials for candidate evaluations.</p>
         </div>
 
-        <form className="space-y-8" onSubmit={handleLogin}>
+        <form className="space-y-6" onSubmit={handleLogin}>
           <div className="flex flex-col text-left group">
-            <label className="text-slate-500 font-bold text-sm mb-2 px-1 transition-colors group-focus-within:text-red-500">
-              Corporate Email
+            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Mail size={14} className="text-red-500" /> Corporate Email
             </label>
             <div className="relative">
-              <motion.input
+              <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-4 border-b-2 border-slate-200 bg-slate-50/50 text-slate-900 font-bold focus:outline-none"
-                placeholder="Enter your email"
-                variants={inputVariants}
-                initial="initial"
-                whileFocus="focus"
-              />
-              <motion.div 
-                className="absolute bottom-0 left-0 h-[2px] bg-red-500 origin-left"
-                initial={{ scaleX: 0 }}
-                transition={{ duration: 0.4 }}
-                whileHover={{ scaleX: 1 }}
+                className="w-full px-4 py-3.5 bg-slate-900/90 border border-white/10 rounded-2xl text-white font-medium placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all text-sm shadow-inner"
+                placeholder="admin@sterling.com"
               />
             </div>
           </div>
 
           <div className="flex flex-col text-left group">
-            <label className="text-slate-500 font-bold text-sm mb-2 px-1 transition-colors group-focus-within:text-red-500">
-              Password
+            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Lock size={14} className="text-red-500" /> Security Password
             </label>
             <div className="relative">
-              <motion.input
+              <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-4 border-b-2 border-slate-200 bg-slate-50/50 text-slate-900 font-bold focus:outline-none"
-                placeholder="Enter password"
-                variants={inputVariants}
-                initial="initial"
-                whileFocus="focus"
-              />
-              <motion.div 
-                className="absolute bottom-0 left-0 h-[2px] bg-red-500 origin-left"
-                initial={{ scaleX: 0 }}
-                transition={{ duration: 0.4 }}
-                whileHover={{ scaleX: 1 }}
+                className="w-full px-4 py-3.5 bg-slate-900/90 border border-white/10 rounded-2xl text-white font-medium placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all text-sm shadow-inner"
+                placeholder="••••••••••••"
               />
             </div>
           </div>
@@ -86,11 +62,9 @@ export default function AdminLoginForm({ email, setEmail, password, setPassword,
             <motion.div 
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              className="text-sm text-red-600 bg-red-50 p-4 rounded-xl border-l-4 border-red-500 font-bold flex items-center gap-3 shadow-inner"
+              className="text-xs text-red-400 bg-red-950/40 p-4 rounded-2xl border border-red-500/30 font-semibold flex items-center gap-3 shadow-inner"
             >
-              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
+              <ShieldAlert className="w-5 h-5 text-red-400 shrink-0" />
               {error}
             </motion.div>
           )}
@@ -98,19 +72,15 @@ export default function AdminLoginForm({ email, setEmail, password, setPassword,
           <motion.button
             type="submit"
             disabled={loading}
-            className="relative w-full group overflow-hidden py-4 px-6 rounded-xl font-bold text-lg text-white bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_30px_-10px_rgba(239,68,68,0.8)]"
-            whileHover={{ scale: 1.02 }}
+            className="w-full py-4 px-6 rounded-2xl font-bold uppercase tracking-wider text-xs text-white bg-gradient-to-r from-red-600 via-rose-600 to-red-500 hover:from-red-500 hover:to-rose-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_30px_rgba(220,38,38,0.4)] transition-all flex items-center justify-center gap-2 active:scale-[0.99]"
+            whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
           >
-            <span className="relative z-10 flex items-center justify-center gap-2">
-              {loading ? (
-                <svg className="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              ) : 'Authenticate Access'}
-            </span>
-            <div className="absolute inset-0 h-full w-0 bg-red-600 transition-all duration-300 ease-out group-hover:w-full z-0"></div>
+            {loading ? (
+              <><Loader2 className="animate-spin" size={16} /> Authenticating Access...</>
+            ) : (
+              <>Authenticate Access <ArrowRight size={16} /></>
+            )}
           </motion.button>
         </form>
       </div>

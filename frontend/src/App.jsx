@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import CandidateLogin from './pages/CandidateLogin';
 import VerifyInvitation from './pages/VerifyInvitation';
-import { lazyWithReload } from './utils/lazyWithReload';
+import LoadingScreen from './components/UI/LoadingScreen';
 
 // ── Route-Level Code Splitting ──────────────────────────────────────────────
 // Heavy pages are lazy-loaded so the initial login bundle stays tiny (~50KB).
@@ -66,18 +66,10 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 };
 
 export default function App() {
-  // Global fallback loader for all lazy-loaded routes
-  const GlobalLoader = (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center gap-4">
-      <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
-      <p className="text-slate-400 font-medium text-sm tracking-wider">Loading Sterling E-Mobility...</p>
-    </div>
-  );
-
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <React.Suspense fallback={GlobalLoader}>
+        <React.Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/" element={<Login />} />
 

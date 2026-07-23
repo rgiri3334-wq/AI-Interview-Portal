@@ -23,9 +23,9 @@ export default function Sidebar() {
     <aside className="w-64 bg-white border-r border-slate-200 h-screen sticky top-0 flex flex-col p-6 shadow-sm z-10 shrink-0">
       {/* Logo */}
       <div className="flex items-center gap-3 mb-10 cursor-pointer" onClick={() => navigate('/')}>
-        <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-black">
-          <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
-          <div className="hidden w-9 h-9 bg-red-600 text-white flex items-center justify-center font-bold text-sm">Sterling</div>
+        <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(220,38,38,0.3)] border border-slate-800 p-2 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none" />
+          <img src={logoUrl} alt="Sterling Logo" className="w-full h-full object-contain relative z-10" onError={(e) => { e.target.style.display = 'none'; }} />
         </div>
         <div>
           <div className="font-bold text-[15px] tracking-widest leading-tight text-slate-900 uppercase">

@@ -152,14 +152,14 @@ export default function CandidateLogin() {
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex justify-center">
-          <div className="w-20 h-20 bg-slate-950/80 rounded-3xl shadow-[0_0_40px_rgba(225,29,72,0.25)] border border-red-500/20 flex items-center justify-center p-3 backdrop-blur-xl">
-            <img src={logoUrl} alt="Sterling Logo" className="w-12 h-12 object-contain mix-blend-screen"
-              onError={(e) => { e.target.style.display = 'none'; }} />
+          <div className="w-20 h-20 bg-black rounded-3xl shadow-[0_0_35px_rgba(220,38,38,0.35)] border border-slate-800 flex items-center justify-center p-3.5 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none" />
+            <img src={logoUrl} alt="Sterling Logo" className="w-full h-full object-contain relative z-10" />
           </div>
         </motion.div>
         <motion.h2 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
           className="mt-5 text-center text-3xl font-extrabold text-white tracking-tight">
-          Spark-<span className="text-red-500 drop-shadow-[0_0_12px_rgba(225,29,72,0.5)]">Hire</span>
+          Spark-<span className="text-red-500 drop-shadow-[0_0_12px_rgba(220,38,38,0.6)]">Hire</span>
         </motion.h2>
         <p className="mt-1 text-center text-xs text-slate-400 font-mono tracking-[0.25em] uppercase">
           Autonomous Candidate Portal
