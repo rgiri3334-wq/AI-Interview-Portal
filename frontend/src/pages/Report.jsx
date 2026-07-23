@@ -11,6 +11,7 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
 import Sidebar from '../components/Layout/Sidebar';
+import PageWrapper from '../components/Layout/PageWrapper';
 import { apiClient } from '../api/apiClient';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -383,7 +384,7 @@ export default function Report() {
   ];
 
   return (
-    <div className={`flex ${isExporting ? 'h-auto overflow-visible' : 'h-screen overflow-hidden'} bg-slate-50`}>
+    <PageWrapper className={`flex ${isExporting ? 'h-auto overflow-visible' : 'h-screen overflow-hidden'} bg-slate-50`}>
       <Sidebar />
       <div className={`flex-1 flex flex-col ${isExporting ? 'h-auto overflow-visible' : 'h-screen overflow-y-auto'}`} ref={exportRef}>
         
@@ -896,7 +897,7 @@ export default function Report() {
           </AnimatePresence>
         </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 }
 

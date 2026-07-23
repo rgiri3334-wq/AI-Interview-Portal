@@ -15,9 +15,12 @@ const DEFAULT_STRUCTURE = {
   "Sales": ["Sales Executive", "Sales Manager"]
 };
 
+import PageWrapper from '../components/Layout/PageWrapper';
+import { Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
+
 export default function AdminCandidateRegistration() {
-  const [activeTab, setActiveTab] = useState('invite');
-  const [listFilter, setListFilter] = useState('Pending'); // 'Pending', 'Confirmed', 'Canceled', 'Auto-Canceled'
+  const [activeTab, setActiveTab] = useState('invite'); // 'invite', 'csv', 'list'
+  const [listFilter, setListFilter] = useState('Pending');
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
@@ -27,6 +30,11 @@ export default function AdminCandidateRegistration() {
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState('');
   const [role, setRole] = useState('');
+
+  // CSV Drag and Drop State
+  const [csvFile, setCsvFile] = useState(null);
+  const [csvRows, setCsvRows] = useState([]);
+  const [isBulkSending, setIsBulkSending] = useState(false);
 
   const availableRoles = department ? DEFAULT_STRUCTURE[department] || [] : [];
 
@@ -69,6 +77,69 @@ export default function AdminCandidateRegistration() {
     }
   };
 
+  // ── CSV File Parsing & Validation Logic ────────────────────────────────────
+  const parseAndValidateCsv = (file) => {
+    setCsvFile(file);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target.result;
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (lines.length <= 1) {
+        setCsvRows([]);
+        setToast({ type: 'error', message: 'CSV file is empty or missing data rows.' });
+        return;
+      }
+      // Skip header if header line exists
+      const dataLines = lines[0].toLowerCase().includes('name') ? lines.slice(1) : lines;
+      const parsed = dataLines.map((line, idx) => {
+        const parts = line.split(',').map(p => p.trim().replace(/^["']|["']$/g, ''));
+        const [cName, cEmail, cDept, cRole] = parts;
+        const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cEmail || '');
+        const isDeptValid = Boolean(cDept && DEFAULT_STRUCTURE[cDept]);
+        const isValid = Boolean(cName && isEmailValid && cDept && cRole);
+        return {
+          id: idx + 1,
+          name: cName || '',
+          email: cEmail || '',
+          department: cDept || 'Engineering',
+          role: cRole || 'Software Engineer',
+          isValid,
+          error: !cName ? 'Name missing' : !isEmailValid ? 'Invalid email format' : !cDept ? 'Dept missing' : !cRole ? 'Role missing' : null
+        };
+      });
+      setCsvRows(parsed);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleBulkSend = async () => {
+    const validRows = csvRows.filter(r => r.isValid);
+    if (!validRows.length) return;
+    setIsBulkSending(true);
+    let successCount = 0;
+
+    for (const r of validRows) {
+      try {
+        await apiClient.adminInviteCandidate({
+          name: r.name,
+          email: r.email,
+          department_id: r.department,
+          role_id: r.role
+        });
+        successCount += 1;
+      } catch (err) {
+        console.warn(`Failed bulk invite for ${r.email}:`, err);
+      }
+    }
+
+    setIsBulkSending(false);
+    setToast({ type: 'success', message: `Successfully invited ${successCount} candidates!` });
+    setCsvFile(null);
+    setCsvRows([]);
+    fetchCandidates();
+    setActiveTab('list');
+  };
+
   const handleResend = async (c_email, c_name, c_dept, c_role) => {
     setLoading(true);
     try {
@@ -102,7 +173,6 @@ export default function AdminCandidateRegistration() {
   };
 
   const pendingCount = candidates.filter(c => c.invitation_status === 'Pending').length;
-  
   const filteredCandidates = candidates.filter(c => c.invitation_status === listFilter);
 
   const formatDate = (isoString) => {
@@ -116,10 +186,10 @@ export default function AdminCandidateRegistration() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans">
+    <PageWrapper className="min-h-screen bg-slate-50 flex font-sans">
       <Sidebar />
       <div className="flex-1 relative flex flex-col min-h-screen">
-        {/* Red Gradient Banner - Fixed height & positioning to not cut off awkwardly */}
+        {/* Red Gradient Banner */}
         <div className="absolute top-0 left-0 w-full h-[320px] bg-gradient-to-br from-red-600 via-red-800 to-black z-0"></div>
         <div className="absolute top-0 left-0 w-full h-[320px] bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 z-0 mix-blend-overlay"></div>
 
@@ -133,13 +203,13 @@ export default function AdminCandidateRegistration() {
                   <UserPlus className="text-red-300" size={36} /> Candidate Registration
                 </h1>
                 <p className="text-red-100/80 font-medium mt-2 text-lg">
-                  Securely invite candidates and track registration status.
+                  Invite individual candidates or import bulk CSV rosters.
                 </p>
               </div>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
               <button 
                 onClick={() => setActiveTab('invite')}
                 className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${
@@ -148,7 +218,17 @@ export default function AdminCandidateRegistration() {
                     : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-md border border-white/10'
                 }`}
               >
-                <UserPlus size={18} /> Invite Candidate
+                <UserPlus size={18} /> Single Invite
+              </button>
+              <button 
+                onClick={() => setActiveTab('csv')}
+                className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${
+                  activeTab === 'csv' 
+                    ? 'bg-white text-red-600 shadow-xl scale-105' 
+                    : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-md border border-white/10'
+                }`}
+              >
+                <FileSpreadsheet size={18} /> Bulk CSV Import
               </button>
               <button 
                 onClick={() => setActiveTab('list')}
@@ -175,7 +255,6 @@ export default function AdminCandidateRegistration() {
                   initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                   className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-100/50 relative overflow-hidden"
                 >
-                  {/* Decorative element */}
                   <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-red-50 to-transparent rounded-bl-full z-0 opacity-50 pointer-events-none"></div>
 
                   <div className="relative z-10">
@@ -216,6 +295,88 @@ export default function AdminCandidateRegistration() {
                       </div>
                     </form>
                   </div>
+                </motion.div>
+              )}
+
+              {/* ── CSV BULK IMPORTER TAB ── */}
+              {activeTab === 'csv' && (
+                <motion.div 
+                  key="csv"
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                  className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-100/50"
+                >
+                  <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2">
+                    <FileSpreadsheet size={24} className="text-red-500" /> Drag-and-Drop Bulk CSV Importer
+                  </h2>
+                  <p className="text-sm text-slate-500 mb-6 font-medium">
+                    Upload a CSV file containing columns: <code className="bg-slate-100 px-2 py-0.5 rounded text-red-600 font-bold">Name, Email, Department, Job Role</code>.
+                  </p>
+
+                  <label className={`flex flex-col items-center justify-center p-10 border-2 border-dashed rounded-3xl cursor-pointer transition-all ${csvFile ? 'border-red-500 bg-red-50/50' : 'border-slate-300 hover:border-red-400 hover:bg-slate-50'}`}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={e => {
+                      e.preventDefault();
+                      if (e.dataTransfer.files[0]) parseAndValidateCsv(e.dataTransfer.files[0]);
+                    }}>
+                    <input type="file" accept=".csv" className="hidden" onChange={e => { if (e.target.files[0]) parseAndValidateCsv(e.target.files[0]); }} />
+                    <Upload size={40} className="text-red-500 mb-3" />
+                    <span className="font-extrabold text-slate-800 text-base">{csvFile ? csvFile.name : 'Drop CSV file here or click to browse'}</span>
+                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">UTF-8 Encoded CSV</span>
+                  </label>
+
+                  {csvRows.length > 0 && (
+                    <div className="mt-8 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                          Validation Preview ({csvRows.filter(r => r.isValid).length} Valid / {csvRows.filter(r => !r.isValid).length} Invalid)
+                        </h3>
+                        <button 
+                          onClick={handleBulkSend}
+                          disabled={isBulkSending || !csvRows.some(r => r.isValid)}
+                          className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isBulkSending ? 'Sending Invitations...' : `Dispatch ${csvRows.filter(r => r.isValid).length} Invitations`}
+                        </button>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                        <table className="w-full text-left border-collapse">
+                          <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            <tr>
+                              <th className="py-3 px-4">#</th>
+                              <th className="py-3 px-4">Name</th>
+                              <th className="py-3 px-4">Email</th>
+                              <th className="py-3 px-4">Department</th>
+                              <th className="py-3 px-4">Role</th>
+                              <th className="py-3 px-4">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-sm font-medium">
+                            {csvRows.map((r) => (
+                              <tr key={r.id} className={r.isValid ? 'hover:bg-slate-50' : 'bg-red-50/40'}>
+                                <td className="py-3 px-4 text-slate-400 font-bold">{r.id}</td>
+                                <td className="py-3 px-4 font-bold text-slate-800">{r.name}</td>
+                                <td className="py-3 px-4 text-slate-600">{r.email}</td>
+                                <td className="py-3 px-4 text-slate-600">{r.department}</td>
+                                <td className="py-3 px-4 text-slate-600">{r.role}</td>
+                                <td className="py-3 px-4">
+                                  {r.isValid ? (
+                                    <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                                      <CheckCircle size={12} /> Valid
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-xs font-black text-red-600 bg-red-100 border border-red-200 px-2.5 py-1 rounded-full">
+                                      <AlertCircle size={12} /> {r.error}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               )}
 
@@ -360,6 +521,6 @@ export default function AdminCandidateRegistration() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </PageWrapper>
   );
 }

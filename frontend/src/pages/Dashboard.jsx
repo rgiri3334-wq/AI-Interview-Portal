@@ -12,6 +12,7 @@ import {
   BarChart, Bar, Cell,
 } from 'recharts';
 import Sidebar from '../components/Layout/Sidebar';
+import PageWrapper from '../components/Layout/PageWrapper';
 import { apiClient } from '../api/apiClient';
 import { formatISTDate } from '../utils/istTime';
 
@@ -551,7 +552,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa] font-sans text-slate-900 relative overflow-hidden">
+    <PageWrapper className="flex min-h-screen bg-[#fafafa] font-sans text-slate-900 relative overflow-hidden">
       {/* Ambient Red/White Blurs */}
       <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-white to-transparent pointer-events-none" />
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-red-100 rounded-full blur-[100px] opacity-60 pointer-events-none" />
@@ -924,6 +925,6 @@ export default function Dashboard() {
         {triageCandidate && <IntegritySignalModal candidate={triageCandidate} onClose={() => setTriageCandidate(null)} />}
         {modalFilter && <CandidateListModal filter={modalFilter} leaderboard={leaderboard} onClose={() => setModalFilter(null)} onNavigate={navigate} onDecisionChange={handleDecisionChange} />}
       </AnimatePresence>
-    </div>
+    </PageWrapper>
   );
 }

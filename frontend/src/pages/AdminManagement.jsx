@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Layout/Sidebar';
+import PageWrapper from '../components/Layout/PageWrapper';
 import { Users, UserPlus, Lock, Mail, Activity, Trash2, Shield, Clock, CheckCircle, XCircle, Key, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatIST, formatISTDate } from '../utils/istTime';
@@ -282,69 +282,77 @@ export default function AdminManagement() {
     </motion.div>
   );
 
-  const renderPermissionsTab = () => (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="max-w-4xl mx-auto">
-      <div className="text-center mb-10">
-        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Role Capabilities</h2>
-        <p className="text-slate-500 mt-2 font-medium">Compare access levels across the platform tiers.</p>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-        {/* Sub-Admin Tier */}
-        <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden flex flex-col">
-          <div className="mb-8 relative z-10">
-            <span className="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1 rounded-full border border-slate-200">Standard Tier</span>
-            <h3 className="text-3xl font-black text-slate-900 mt-4">Sub-Admin</h3>
-            <p className="text-sm text-slate-500 mt-2 font-medium">Perfect for daily recruiters and interview reviewers.</p>
-          </div>
-          
-          <div className="space-y-4 flex-1 relative z-10">
-            {[
-              { cap: "View Dashboard & Metrics", has: true },
-              { cap: "View Candidate Reports", has: true },
-              { cap: "Create/Edit Job Roles & Questions", has: true },
-              { cap: "System Purge & Reset", has: true },
-              { cap: "Add/Remove Sub-Admins", has: true },
-              { cap: "Add/Remove Master Admins", has: false },
-            ].map((item, i) => (
-              <div key={i} className={`flex items-center gap-3 ${!item.has && 'opacity-50'}`}>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${item.has ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                  {item.has ? <CheckCircle size={14} /> : <XCircle size={14} />}
-                </div>
-                <span className={`text-sm font-bold ${item.has ? 'text-slate-700' : 'text-slate-400'}`}>{item.cap}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+  const [matrixState, setMatrixState] = useState({
+    "View Dashboard & Metrics": { sub_admin: true, master_admin: true },
+    "View Candidate Reports": { sub_admin: true, master_admin: true },
+    "Create/Edit Job Roles & Questions": { sub_admin: true, master_admin: true },
+    "System Purge & Reset": { sub_admin: true, master_admin: true },
+    "Add/Remove Sub-Admins": { sub_admin: true, master_admin: true },
+    "Add/Remove Master Admins": { sub_admin: false, master_admin: true },
+    "API Key Management": { sub_admin: false, master_admin: true },
+    "Export Raw Telemetry Logs": { sub_admin: false, master_admin: true },
+  });
 
-        {/* Master Admin Tier */}
-        <div className="bg-slate-900 rounded-[2rem] p-8 border border-slate-800 shadow-[0_20px_40px_rgb(0,0,0,0.2)] relative overflow-hidden flex flex-col transform md:-translate-y-4">
-          <div className="absolute top-0 right-0 p-32 bg-red-600/20 rounded-full blur-[80px]" />
-          
-          <div className="mb-8 relative z-10">
-            <span className="bg-red-500/20 text-red-400 text-xs font-bold px-3 py-1 rounded-full border border-red-500/20">God Mode</span>
-            <h3 className="text-3xl font-black text-white mt-4">Master Admin</h3>
-            <p className="text-sm text-slate-400 mt-2 font-medium">Full unhindered access to platform controls and security.</p>
-          </div>
-          
-          <div className="space-y-4 flex-1 relative z-10">
-            {[
-              { cap: "View Dashboard & Metrics", has: true },
-              { cap: "View Candidate Reports", has: true },
-              { cap: "Create/Edit Job Roles & Questions", has: true },
-              { cap: "System Purge & Reset", has: true },
-              { cap: "Add/Remove Sub-Admins", has: true },
-              { cap: "Add/Remove Master Admins", has: true },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-red-500/20 text-red-400">
-                  <CheckCircle size={14} />
-                </div>
-                <span className="text-sm font-bold text-slate-200">{item.cap}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+  const togglePermission = (cap, roleKey) => {
+    if (roleKey === 'master_admin') return; // Master Admin permissions locked on for security
+    setMatrixState(prev => ({
+      ...prev,
+      [cap]: {
+        ...prev[cap],
+        [roleKey]: !prev[cap][roleKey]
+      }
+    }));
+    setSuccess(`Permission '${cap}' updated for Sub-Admin!`);
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
+  const renderPermissionsTab = () => (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="max-w-5xl mx-auto space-y-10">
+      <div className="text-center">
+        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Interactive Access Matrix</h2>
+        <p className="text-slate-500 mt-2 font-medium">Configure and compare platform access controls across admin tiers.</p>
+      </div>
+
+      {/* Interactive Matrix Table */}
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-6">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-slate-200 text-xs font-black uppercase tracking-wider text-slate-500">
+              <th className="py-4 px-6">Capability</th>
+              <th className="py-4 px-6 text-center">Sub-Admin (Standard)</th>
+              <th className="py-4 px-6 text-center">Master Admin (God Mode)</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 font-bold text-sm">
+            {Object.keys(matrixState).map((cap) => {
+              const subHas = matrixState[cap].sub_admin;
+              const masterHas = matrixState[cap].master_admin;
+              return (
+                <tr key={cap} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="py-4 px-6 text-slate-800 flex items-center gap-2">
+                    <Shield size={16} className="text-red-500" /> {cap}
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <button 
+                      onClick={() => togglePermission(cap, 'sub_admin')}
+                      className={`px-4 py-1.5 rounded-full text-xs font-black transition-all inline-flex items-center gap-1.5 ${
+                        subHas ? 'bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200' : 'bg-slate-100 text-slate-400 border border-slate-200 hover:bg-slate-200'
+                      }`}
+                    >
+                      {subHas ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                      {subHas ? 'GRANTED' : 'DENIED'}
+                    </button>
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <span className="px-4 py-1.5 rounded-full text-xs font-black bg-red-100 text-red-700 border border-red-300 inline-flex items-center gap-1.5">
+                      <CheckCircle size={12} /> GRANTED
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </motion.div>
   );
@@ -431,7 +439,7 @@ export default function AdminManagement() {
   ];
 
   return (
-    <div className="flex h-screen bg-[#fafafa] font-sans relative overflow-hidden">
+    <PageWrapper className="flex h-screen bg-[#fafafa] font-sans relative overflow-hidden">
       {/* Absolute Ambient Background Gradients */}
       <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-slate-100/80 to-transparent pointer-events-none" />
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-red-100 rounded-full blur-[100px] opacity-60 pointer-events-none" />
@@ -490,6 +498,6 @@ export default function AdminManagement() {
 
         </div>
       </main>
-    </div>
+    </PageWrapper>
   );
 }

@@ -17,6 +17,7 @@ import LiveIntervention from '../components/admin/LiveIntervention';
 import SlotManager from '../components/admin/SlotManager';
 
 import Sidebar from '../components/Layout/Sidebar';
+import PageWrapper from '../components/Layout/PageWrapper';
 
 const DEFAULT_STRUCTURE = {
   "Customer Support": ["Customer Success Manager"],
@@ -257,7 +258,7 @@ export default function AdminPanel() {
     { id: 'questions', label: 'Rubric Engine', icon: <Database size={16} /> },
   ];
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans relative overflow-hidden text-slate-900">
+    <PageWrapper className="flex min-h-screen bg-slate-50 font-sans relative overflow-hidden text-slate-900">
       <Sidebar />
       <main className="flex-1 overflow-y-auto pb-20 relative">
         {/* Absolute Ambient Background Gradients */}
@@ -422,6 +423,6 @@ export default function AdminPanel() {
       </>
       )}
       </main>
-    </div>
+    </PageWrapper>
   );
 }

@@ -13,11 +13,13 @@ import InteractiveFAQ from '../components/landing/InteractiveFAQ';
 import CTASection from '../components/landing/CTASection';
 import DynamicFooter from '../components/landing/DynamicFooter';
 
+import PageWrapper from '../components/Layout/PageWrapper';
+
 export default function Landing() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 text-slate-900 overflow-x-hidden font-sans relative selection:bg-red-200 selection:text-red-900">
+    <PageWrapper className="min-h-screen w-full bg-slate-50 text-slate-900 overflow-x-hidden font-sans relative selection:bg-red-200 selection:text-red-900">
       
       {/* Dynamic 3D Background */}
       <InteractiveBrain3D />
@@ -56,6 +58,6 @@ export default function Landing() {
       <InteractiveFAQ />
       <CTASection />
       <DynamicFooter />
-    </div>
+    </PageWrapper>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../components/Layout/Sidebar";
+import PageWrapper from "../components/Layout/PageWrapper";
 import {
   Activity,
   Server,
@@ -129,7 +130,7 @@ export default function SystemHealth() {
   const aiData = healthData?.telemetry?.ai || [];
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa] font-sans relative overflow-hidden text-slate-900 selection:bg-red-200 selection:text-red-900">
+    <PageWrapper className="flex min-h-screen bg-[#fafafa] font-sans relative overflow-hidden text-slate-900 selection:bg-red-200 selection:text-red-900">
       {/* Revolutionary Ambient Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-100/40 rounded-full blur-[150px] mix-blend-multiply animate-blob" />
@@ -854,6 +855,6 @@ export default function SystemHealth() {
           )}
         </div>
       </main>
-    </div>
+    </PageWrapper>
   );
 }

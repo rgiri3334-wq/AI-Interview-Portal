@@ -1,10 +1,15 @@
+/**
+ * ProfilePhotoCapture.jsx
+ * KYC Face Capture page with Cyber-Industrial Dark Glassmorphic styling.
+ */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, CheckCircle, RefreshCcw, ShieldCheck, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiClient } from '../api/apiClient';
+import PageWrapper from '../components/Layout/PageWrapper';
 
-export default function KycCapture() {
+export default function ProfilePhotoCapture() {
   const navigate = useNavigate();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -53,10 +58,7 @@ export default function KycCapture() {
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     
-    // Draw the video frame to the canvas
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    // Return base64 JPEG
     return canvas.toDataURL('image/jpeg', 0.9);
   };
 
@@ -71,7 +73,6 @@ export default function KycCapture() {
   const uploadProfilePhoto = async (selfieBase64) => {
     setStep('uploading');
     try {
-      // API call to the backend
       const res = await apiClient.uploadProfilePhoto({
         candidate_id: sessionStorage.getItem('candidateId') || 'DEMO-001',
         selfie_image: selfieBase64
@@ -97,18 +98,16 @@ export default function KycCapture() {
   };
 
   const handleProceed = () => {
-    // Navigate to interview. 
-    // The LiveInterview component will check if KYC is completed via state/session or DB.
     navigate('/interview');
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 font-sans relative overflow-hidden">
+    <PageWrapper className="flex items-center justify-center p-6">
       
       {/* Hidden canvas for capturing */}
       <canvas ref={canvasRef} className="hidden" />
 
-      <div className="max-w-4xl w-full bg-slate-800 rounded-3xl shadow-2xl overflow-hidden border border-slate-700 flex flex-col md:flex-row relative z-10">
+      <div className="max-w-4xl w-full bg-slate-950/80 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] overflow-hidden flex flex-col md:flex-row relative z-10">
         
         {/* Left Side: Camera Feed */}
         <div className="md:w-[60%] relative bg-black flex items-center justify-center min-h-[400px]">
@@ -121,14 +120,11 @@ export default function KycCapture() {
             className={`w-full h-full object-cover ${(step === 'uploading' || step === 'success' || step === 'error') ? 'opacity-30 blur-sm' : ''}`}
           />
 
-          {/* Overlays */}
-
-
           {step === 'selfie' && (
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-8">
-              <div className="w-64 h-80 border-4 border-red-500/80 rounded-full relative">
-                <div className="absolute -top-10 left-0 w-full text-center text-white font-bold tracking-widest uppercase drop-shadow-md">
-                  Position Your Face
+              <div className="w-60 h-72 border-2 border-dashed border-red-500/80 rounded-full relative shadow-[0_0_30px_rgba(225,29,72,0.3)]">
+                <div className="absolute -top-10 left-0 w-full text-center text-white text-xs font-mono font-bold tracking-widest uppercase drop-shadow-md">
+                  Align Face Inside Ring
                 </div>
               </div>
             </div>
@@ -138,75 +134,75 @@ export default function KycCapture() {
           <AnimatePresence>
             {step === 'uploading' && (
               <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                <Loader2 size={64} className="animate-spin text-red-500 mb-4" />
-                <h3 className="text-2xl font-bold">Saving Profile Photo...</h3>
-                <p className="text-slate-400">Uploading securely.</p>
+                <Loader2 size={56} className="animate-spin text-red-500 mb-4" />
+                <h3 className="text-xl font-bold">Uploading Profile Photo...</h3>
+                <p className="text-slate-400 text-xs mt-1">Transmitting via encrypted connection.</p>
               </motion.div>
             )}
             {step === 'success' && (
               <motion.div initial={{opacity:0, scale: 0.9}} animate={{opacity:1, scale: 1}} className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                <ShieldCheck size={80} className="text-green-500 mb-4" />
-                <h3 className="text-3xl font-bold">Profile Photo Saved</h3>
-                <p className="text-slate-400">Photo successfully uploaded.</p>
+                <ShieldCheck size={72} className="text-emerald-400 mb-4" />
+                <h3 className="text-2xl font-bold">Verification Complete</h3>
+                <p className="text-slate-400 text-xs mt-1">Profile photo verified successfully.</p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Right Side: Instructions & Controls */}
-        <div className="md:w-[40%] p-8 flex flex-col bg-slate-800 text-white border-l border-slate-700">
+        {/* Right Side: Controls */}
+        <div className="md:w-[40%] p-8 flex flex-col bg-slate-950 text-white border-l border-white/10">
           
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-red-600/20 rounded-xl flex items-center justify-center border border-red-500/30">
-              <Camera size={20} className="text-red-400" />
+            <div className="w-9 h-9 bg-red-600/20 rounded-xl flex items-center justify-center border border-red-500/30">
+              <Camera size={18} className="text-red-400" />
             </div>
-            <span className="text-red-400 font-bold tracking-widest uppercase text-sm">Step 3 of 3</span>
+            <span className="text-red-400 font-bold tracking-widest uppercase text-xs">Step 3 of 3</span>
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 flex flex-col justify-center">
 
             {step === 'selfie' && (
               <motion.div initial={{opacity:0, x:20}} animate={{opacity:1, x:0}}>
-                <h2 className="text-2xl font-black mb-4">Live Selfie</h2>
-                <p className="text-slate-400 leading-relaxed mb-6">Look directly into the camera. Ensure you are in a well-lit environment.</p>
+                <h2 className="text-2xl font-black mb-3">Identity Capture</h2>
+                <p className="text-xs text-slate-400 leading-relaxed mb-6">Look directly into the camera. Ensure ambient lighting is clear and your face is centered.</p>
                 <button 
                   onClick={handleCaptureSelfie}
-                  className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all uppercase tracking-wide"
+                  className="w-full py-4 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all uppercase tracking-wider text-xs shadow-lg shadow-red-600/30 active:scale-[0.99]"
                 >
-                  <Camera size={20} /> Capture Face
+                  <Camera size={18} /> Capture Photo
                 </button>
               </motion.div>
             )}
 
             {step === 'uploading' && (
               <motion.div initial={{opacity:0, x:20}} animate={{opacity:1, x:0}}>
-                <h2 className="text-2xl font-black mb-4">Processing...</h2>
-                <p className="text-slate-400 leading-relaxed">Securely transmitting data. Please wait.</p>
+                <h2 className="text-xl font-bold mb-2">Processing Capture...</h2>
+                <p className="text-xs text-slate-400 leading-relaxed">Checking image parameters. Please hold position.</p>
               </motion.div>
             )}
 
             {step === 'error' && (
               <motion.div initial={{opacity:0, x:20}} animate={{opacity:1, x:0}}>
-                <h2 className="text-2xl font-black mb-4 text-red-400">Verification Failed</h2>
-                <p className="text-slate-400 leading-relaxed mb-6">{verificationError}</p>
+                <h2 className="text-xl font-bold mb-2 text-red-400">Capture Error</h2>
+                <p className="text-xs text-slate-400 leading-relaxed mb-6">{verificationError}</p>
                 <button 
                   onClick={handleRetry}
-                  className="w-full py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all uppercase tracking-wide"
+                  className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-white/10 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all uppercase tracking-wider text-xs"
                 >
-                  <RefreshCcw size={20} /> Try Again
+                  <RefreshCcw size={18} /> Try Again
                 </button>
               </motion.div>
             )}
 
             {step === 'success' && (
               <motion.div initial={{opacity:0, x:20}} animate={{opacity:1, x:0}}>
-                <h2 className="text-2xl font-black mb-4 text-green-400">All Set!</h2>
-                <p className="text-slate-400 leading-relaxed mb-6">Your profile photo has been saved. You may now enter the live interview environment.</p>
+                <h2 className="text-2xl font-black mb-2 text-emerald-400">Verification Passed</h2>
+                <p className="text-xs text-slate-400 leading-relaxed mb-6">Your identity photo is registered. You are ready to enter the autonomous assessment workspace.</p>
                 <button 
                   onClick={handleProceed}
-                  className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all uppercase tracking-wide shadow-lg shadow-green-600/20"
+                  className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all uppercase tracking-wider text-xs shadow-lg shadow-emerald-600/30 active:scale-[0.99]"
                 >
-                  <CheckCircle size={20} /> Enter Interview
+                  <CheckCircle size={18} /> Enter Interview Workspace →
                 </button>
               </motion.div>
             )}
@@ -214,6 +210,6 @@ export default function KycCapture() {
           
         </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 }

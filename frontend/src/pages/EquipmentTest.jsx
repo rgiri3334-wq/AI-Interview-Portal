@@ -1,7 +1,13 @@
+/**
+ * EquipmentTest.jsx
+ * System Hardware Calibration page.
+ * Cyber-Industrial Dark Glassmorphism.
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Video, Mic, Wifi, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import PageWrapper from '../components/Layout/PageWrapper';
 
 export default function EquipmentTest() {
   const navigate = useNavigate();
@@ -24,11 +30,10 @@ export default function EquipmentTest() {
         const timeoutId = setTimeout(() => controller.abort(), 5000);
         
         const t0 = performance.now();
-        // Use Google's incredibly fast/reliable 204 endpoint instead of httpbin
         await fetch('https://www.gstatic.com/generate_204', { 
           cache: 'no-store',
           signal: controller.signal,
-          mode: 'no-cors' // Use no-cors to avoid CORS blocking, we just want to know if it reaches
+          mode: 'no-cors'
         });
         clearTimeout(timeoutId);
         
@@ -71,7 +76,6 @@ export default function EquipmentTest() {
           const avg = sum / bufferLength;
           setMicVolume(avg);
           
-          // Lowered threshold so normal background noise/light speaking triggers it
           if (avg > 5) {
             setMicStatus('success');
           }
@@ -88,8 +92,6 @@ export default function EquipmentTest() {
       }
     };
 
-    // Run simultaneously! The previous bug ran them sequentially, 
-    // so if the network test hung, the camera never even tried to turn on!
     checkNetwork();
     checkMedia();
 
@@ -104,78 +106,78 @@ export default function EquipmentTest() {
   const allPassed = camStatus === 'success' && micStatus === 'success' && netStatus === 'success';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
-      <div className="max-w-4xl w-full bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row">
+    <PageWrapper className="flex items-center justify-center p-6">
+      <div className="max-w-4xl w-full bg-slate-950/80 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] overflow-hidden flex flex-col md:flex-row">
         
         {/* Left Side: Video Preview */}
-        <div className="md:w-1/2 bg-slate-900 p-6 flex flex-col relative">
-          <div className="absolute top-8 left-8 flex items-center gap-2 text-white/80 font-bold text-sm tracking-widest uppercase z-10">
-            <Shield size={16} className="text-red-500" /> System Check
+        <div className="md:w-1/2 bg-slate-950 p-6 flex flex-col relative border-r border-white/10">
+          <div className="absolute top-6 left-6 flex items-center gap-2 text-white/80 font-bold text-xs tracking-widest uppercase z-10">
+            <Shield size={14} className="text-red-500" /> Hardware Telemetry
           </div>
-          <div className="flex-1 flex items-center justify-center relative rounded-2xl overflow-hidden bg-black mt-12 border border-slate-700">
+          <div className="flex-1 flex items-center justify-center relative rounded-2xl overflow-hidden bg-black mt-10 border border-white/10 min-h-[260px]">
             <video 
               ref={videoRef} 
               autoPlay 
               playsInline 
               muted 
-              className={`absolute inset-0 w-full h-full object-contain transform scale-x-[-1] transition-opacity duration-500 ${camStatus === 'success' ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 w-full h-full object-cover transform scale-x-[-1] transition-opacity duration-500 ${camStatus === 'success' ? 'opacity-100' : 'opacity-0'}`}
             />
             {camStatus !== 'success' && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 bg-black">
-                <Video size={48} className="mb-4 opacity-50 animate-pulse" />
-                <p>Waiting for camera access...</p>
+                <Video size={40} className="mb-3 opacity-50 animate-pulse text-red-500" />
+                <p className="text-xs font-mono">Initializing Camera Feed...</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Right Side: Status Checklist */}
-        <div className="md:w-1/2 p-10 flex flex-col justify-center">
-          <h2 className="text-3xl font-black text-slate-900 mb-2">Hardware Check</h2>
-          <p className="text-slate-500 mb-8 font-medium">Please ensure your equipment is functioning correctly before proceeding.</p>
+        <div className="md:w-1/2 p-8 flex flex-col justify-center">
+          <h2 className="text-2xl font-black text-white tracking-tight mb-1">Hardware Calibration</h2>
+          <p className="text-xs text-slate-400 mb-6 font-medium">Verify video, microphone, and internet stability before launching.</p>
 
-          <div className="space-y-6 mb-10">
+          <div className="space-y-4 mb-8">
             {/* Camera */}
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <div className={`p-3 rounded-xl ${camStatus === 'success' ? 'bg-green-100 text-green-600' : camStatus === 'error' ? 'bg-red-100 text-red-600' : 'bg-slate-200 text-slate-400'}`}>
-                <Video size={24} />
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-900/80 border border-white/10">
+              <div className={`p-3 rounded-xl ${camStatus === 'success' ? 'bg-emerald-950/60 text-emerald-400' : camStatus === 'error' ? 'bg-red-950/60 text-red-400' : 'bg-slate-800 text-slate-400'}`}>
+                <Video size={20} />
               </div>
               <div className="flex-1">
-                <h4 className="font-bold text-slate-900">Webcam</h4>
-                <p className="text-sm text-slate-500">Video feed detected</p>
+                <h4 className="font-bold text-white text-sm">Webcam Stream</h4>
+                <p className="text-xs text-slate-400">Video feed status</p>
               </div>
-              {camStatus === 'success' && <CheckCircle className="text-green-500" size={24} />}
-              {camStatus === 'error' && <AlertCircle className="text-red-500" size={24} />}
+              {camStatus === 'success' && <CheckCircle className="text-emerald-400" size={20} />}
+              {camStatus === 'error' && <AlertCircle className="text-red-400" size={20} />}
             </div>
 
             {/* Mic */}
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <div className={`p-3 rounded-xl ${micStatus === 'success' ? 'bg-green-100 text-green-600' : micStatus === 'error' ? 'bg-red-100 text-red-600' : 'bg-slate-200 text-slate-400'}`}>
-                <Mic size={24} />
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-900/80 border border-white/10">
+              <div className={`p-3 rounded-xl ${micStatus === 'success' ? 'bg-emerald-950/60 text-emerald-400' : micStatus === 'error' ? 'bg-red-950/60 text-red-400' : 'bg-slate-800 text-slate-400'}`}>
+                <Mic size={20} />
               </div>
               <div className="flex-1">
-                <h4 className="font-bold text-slate-900">Microphone</h4>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 transition-all duration-75" style={{ width: `${Math.min(micVolume * 2, 100)}%` }}></div>
+                <h4 className="font-bold text-white text-sm">Microphone Input</h4>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-400 transition-all duration-75" style={{ width: `${Math.min(micVolume * 2.5, 100)}%` }}></div>
                   </div>
                 </div>
               </div>
-              {micStatus === 'success' && <CheckCircle className="text-green-500" size={24} />}
-              {micStatus === 'error' && <AlertCircle className="text-red-500" size={24} />}
+              {micStatus === 'success' && <CheckCircle className="text-emerald-400" size={20} />}
+              {micStatus === 'error' && <AlertCircle className="text-red-400" size={20} />}
             </div>
 
             {/* Network */}
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <div className={`p-3 rounded-xl ${netStatus === 'success' ? 'bg-green-100 text-green-600' : netStatus === 'error' ? 'bg-red-100 text-red-600' : 'bg-slate-200 text-slate-400'}`}>
-                <Wifi size={24} />
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-900/80 border border-white/10">
+              <div className={`p-3 rounded-xl ${netStatus === 'success' ? 'bg-emerald-950/60 text-emerald-400' : netStatus === 'error' ? 'bg-red-950/60 text-red-400' : 'bg-slate-800 text-slate-400'}`}>
+                <Wifi size={20} />
               </div>
               <div className="flex-1">
-                <h4 className="font-bold text-slate-900">Network Stability</h4>
-                <p className="text-sm text-slate-500">Checking latency</p>
+                <h4 className="font-bold text-white text-sm">Network Ping</h4>
+                <p className="text-xs text-slate-400">Verifying low latency</p>
               </div>
-              {netStatus === 'success' && <CheckCircle className="text-green-500" size={24} />}
-              {netStatus === 'error' && <AlertCircle className="text-red-500" size={24} />}
+              {netStatus === 'success' && <CheckCircle className="text-emerald-400" size={20} />}
+              {netStatus === 'error' && <AlertCircle className="text-red-400" size={20} />}
             </div>
           </div>
 
@@ -184,13 +186,13 @@ export default function EquipmentTest() {
             whileTap={{ scale: allPassed ? 0.98 : 1 }}
             disabled={!allPassed}
             onClick={() => navigate('/profile-photo-guidelines')}
-            className={`w-full py-4 px-6 rounded-xl font-bold uppercase tracking-widest transition-all ${allPassed ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+            className={`w-full py-4 px-6 rounded-2xl font-bold uppercase tracking-wider text-xs transition-all ${allPassed ? 'bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white shadow-lg shadow-red-600/30' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
           >
-            {allPassed ? 'Proceed to Guidelines' : 'Testing Equipment...'}
+            {allPassed ? 'Proceed to Identity Guidelines →' : 'Calibrating Equipment...'}
           </motion.button>
 
         </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 }

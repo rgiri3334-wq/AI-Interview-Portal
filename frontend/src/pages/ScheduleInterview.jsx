@@ -1,3 +1,8 @@
+/**
+ * ScheduleInterview.jsx
+ * Calendar time-slot booking page.
+ * Cyber-Industrial Dark Glassmorphism.
+ */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,12 +11,12 @@ import {
   CheckCircle, ArrowLeft, Zap, AlertCircle, X
 } from 'lucide-react';
 import { todayIST, formatISTDayDate } from '../utils/istTime';
+import PageWrapper from '../components/Layout/PageWrapper';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-// Generate 15-min time slots from 9:00 AM to 9:00 PM (last slot 21:00)
 const generateTimeSlots = () => {
   const slots = [];
   for (let mins = 9 * 60; mins <= 21 * 60; mins += 15) {
@@ -29,7 +34,7 @@ export default function ScheduleInterview() {
   const candidateId = sessionStorage.getItem('candidateId');
 
   const [loading, setLoading] = useState(true);
-  const [booking, setBooking] = useState(null); // existing booking
+  const [booking, setBooking] = useState(null);
   const [viewDate, setViewDate] = useState(new Date());
   
   const [selectedDate, setSelectedDate] = useState(null);
@@ -57,12 +62,11 @@ export default function ScheduleInterview() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Calendar helpers
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today = todayIST(); // IST-aware today's date
+  const today = todayIST();
 
   const prevMonth = () => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   const nextMonth = () => setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
@@ -72,7 +76,6 @@ export default function ScheduleInterview() {
     setConfirming(true);
     setError('');
     
-    // Convert 24h back to nice format for display if needed
     const [h, m] = selectedTime.split(':');
     let hh = parseInt(h);
     const ampm = hh >= 12 ? 'PM' : 'AM';
@@ -93,7 +96,7 @@ export default function ScheduleInterview() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Booking failed');
       setDone(true);
-      setTimeout(() => navigate('/candidate-home'), 3000);
+      setTimeout(() => navigate('/candidate-home'), 2500);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -113,32 +116,32 @@ export default function ScheduleInterview() {
   };
 
   if (done) return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white flex items-center justify-center p-6">
-      <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-sm">
+    <PageWrapper className="flex items-center justify-center p-6">
+      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-sm">
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: 'spring', bounce: 0.5 }}
-          className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_8px_30px_rgba(16,185,129,0.4)]">
-          <CheckCircle size={48} className="text-white" />
+          className="w-20 h-20 bg-emerald-500/20 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(16,185,129,0.3)]">
+          <CheckCircle size={40} className="text-emerald-400" />
         </motion.div>
-        <h1 className="text-3xl font-black text-slate-900 mb-3">Interview Scheduled!</h1>
-        <p className="text-slate-500 font-medium mb-2">
-          <span className="font-bold text-slate-700">{selectedDate}</span>
+        <h1 className="text-3xl font-extrabold text-white mb-2 tracking-tight">Interview Reserved</h1>
+        <p className="text-slate-300 font-medium mb-1 text-sm">
+          <span className="font-bold text-white">{selectedDate}</span>
         </p>
-        <p className="text-slate-400 text-sm mb-6">A confirmation has been sent to your email. Redirecting to your portal…</p>
-        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-slate-400 text-xs mb-6">Confirmation sent. Redirecting to your candidate portal…</p>
+        <div className="w-6 h-6 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin mx-auto" />
       </motion.div>
-    </div>
+    </PageWrapper>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-red-50 font-sans text-slate-900">
+    <PageWrapper className="font-sans">
       {/* NAV */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-6 py-4 flex items-center justify-between shadow-sm">
-        <button onClick={() => navigate('/candidate-home')} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-bold transition-colors text-sm">
-          <ArrowLeft size={18} /> Back to Portal
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex items-center justify-between">
+        <button onClick={() => navigate('/candidate-home')} className="flex items-center gap-2 text-slate-400 hover:text-white font-semibold transition-colors text-xs">
+          <ArrowLeft size={16} /> Back to Portal
         </button>
         <div className="flex items-center gap-2">
-          <Zap size={18} className="text-red-600" />
-          <span className="font-extrabold text-slate-900">Schedule <span className="text-red-600">Interview</span></span>
+          <Zap size={16} className="text-red-500" />
+          <span className="font-extrabold text-white text-sm">Schedule <span className="text-red-500">Interview</span></span>
         </div>
         <div className="w-24" />
       </nav>
@@ -148,16 +151,16 @@ export default function ScheduleInterview() {
         <AnimatePresence>
           {booking && (
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-              className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-center justify-between">
+              className="bg-amber-950/40 border border-amber-500/30 rounded-2xl p-4 mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Clock size={20} className="text-amber-600" />
+                <Clock size={18} className="text-amber-400" />
                 <div>
-                  <p className="font-bold text-amber-800 text-sm">You already have an interview scheduled</p>
-                  <p className="text-amber-600 text-xs font-medium">{booking.slot.date} at {booking.slot.start_time} ({booking.slot.timezone})</p>
+                  <p className="font-bold text-amber-200 text-xs">You already have an interview scheduled</p>
+                  <p className="text-amber-400 text-xs font-mono">{booking.slot.date} at {booking.slot.start_time} ({booking.slot.timezone})</p>
                 </div>
               </div>
               <button onClick={handleCancel} disabled={cancellingBooking}
-                className="px-4 py-2 bg-white border border-amber-300 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-50 transition-colors flex items-center gap-1 disabled:opacity-50">
+                className="px-3.5 py-1.5 bg-slate-900 border border-amber-500/30 text-amber-300 rounded-xl text-xs font-bold hover:bg-amber-950 transition-colors flex items-center gap-1">
                 <X size={12} /> {cancellingBooking ? 'Cancelling…' : 'Reschedule'}
               </button>
             </motion.div>
@@ -167,15 +170,15 @@ export default function ScheduleInterview() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
           {/* Calendar */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_4px_30px_rgb(0,0,0,0.04)]">
+            className="bg-slate-950/80 border border-white/10 rounded-3xl p-6 shadow-2xl backdrop-blur-2xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-extrabold text-slate-900">{MONTHS[month]} {year}</h2>
+              <h2 className="text-lg font-extrabold text-white">{MONTHS[month]} {year}</h2>
               <div className="flex gap-2">
-                <button onClick={prevMonth} className="w-9 h-9 rounded-xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center border border-slate-200 transition-colors">
-                  <ChevronLeft size={18} className="text-slate-600" />
+                <button onClick={prevMonth} className="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-800 flex items-center justify-center border border-white/10 transition-colors">
+                  <ChevronLeft size={16} className="text-slate-300" />
                 </button>
-                <button onClick={nextMonth} className="w-9 h-9 rounded-xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center border border-slate-200 transition-colors">
-                  <ChevronRight size={18} className="text-slate-600" />
+                <button onClick={nextMonth} className="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-800 flex items-center justify-center border border-white/10 transition-colors">
+                  <ChevronRight size={16} className="text-slate-300" />
                 </button>
               </div>
             </div>
@@ -183,12 +186,12 @@ export default function ScheduleInterview() {
             {/* Day labels */}
             <div className="grid grid-cols-7 mb-2">
               {DAYS.map(d => (
-                <div key={d} className="text-center text-[11px] font-black text-slate-400 uppercase tracking-wider py-2">{d}</div>
+                <div key={d} className="text-center text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider py-2">{d}</div>
               ))}
             </div>
 
             {/* Calendar grid */}
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-1.5">
               {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -209,10 +212,10 @@ export default function ScheduleInterview() {
                         setSelectedTime(null);
                       }
                     }}
-                    className={`aspect-square flex flex-col items-center justify-center rounded-xl text-sm font-bold transition-all relative ${
-                      isPast || isWeekend ? 'text-slate-200 cursor-not-allowed' :
-                      isSelected ? 'bg-red-600 text-white shadow-[0_4px_14px_rgba(220,38,38,0.4)]' :
-                      'text-slate-600 bg-slate-50 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 cursor-pointer'
+                    className={`aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-bold transition-all relative ${
+                      isPast || isWeekend ? 'text-slate-700 cursor-not-allowed bg-slate-950/40' :
+                      isSelected ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(225,29,72,0.5)] border border-red-500' :
+                      'text-slate-200 bg-slate-900/90 border border-white/10 hover:bg-red-950/40 hover:text-red-400 hover:border-red-500/40 cursor-pointer'
                     }`}
                   >
                     {day}
@@ -221,26 +224,25 @@ export default function ScheduleInterview() {
               })}
             </div>
 
-            <div className="mt-4 flex items-center gap-4 text-xs text-slate-400 font-medium pt-4 border-t border-slate-100">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-slate-50 border border-slate-200" />Available</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-600" />Selected</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-white" />Unavailable (Weekends/Past)</span>
+            <div className="mt-6 flex items-center gap-4 text-[10px] font-mono text-slate-400 pt-4 border-t border-white/10">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-900 border border-white/20" />Available</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-600" />Selected</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-950" />Unavailable</span>
             </div>
           </motion.div>
 
-          {/* Slot Picker + Confirm Panel */}
+          {/* Slot Picker Panel */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="flex flex-col gap-5">
 
-            {/* Time List */}
-            <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_4px_30px_rgb(0,0,0,0.04)]">
-              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Clock size={14} /> Available Times
+            <div className="bg-slate-950/80 border border-white/10 rounded-3xl p-6 shadow-2xl backdrop-blur-2xl">
+              <h3 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <Clock size={14} className="text-red-500" /> Available Time Slots
               </h3>
               {!selectedDate ? (
                 <div className="text-center py-8">
-                  <Calendar size={40} className="text-slate-200 mx-auto mb-3" />
-                  <p className="text-slate-400 font-bold text-sm">Select a date first.</p>
+                  <Calendar size={36} className="text-slate-700 mx-auto mb-2" />
+                  <p className="text-slate-400 font-medium text-xs">Select a date from the calendar first.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
@@ -250,8 +252,6 @@ export default function ScheduleInterview() {
                     let hh = parseInt(h);
                     const ampm = hh >= 12 ? 'PM' : 'AM';
                     hh = hh % 12 || 12;
-                    // Disallow times that have already passed when booking for TODAY (IST).
-                    // e.g. at 3:01 PM the 3:00 PM slot must not be selectable.
                     const istNow = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' });
                     const [nowH, nowM] = istNow.split(':').map(Number);
                     const slotMinutes = parseInt(h) * 60 + parseInt(m);
@@ -260,12 +260,12 @@ export default function ScheduleInterview() {
                       <motion.button key={time} disabled={isPastTime}
                         onClick={() => { if (!isPastTime) setSelectedTime(time); }}
                         whileHover={isPastTime ? undefined : { scale: 1.02 }} whileTap={isPastTime ? undefined : { scale: 0.98 }}
-                        className={`w-full py-3 rounded-xl border text-sm font-bold transition-all text-center ${
+                        className={`w-full py-2.5 rounded-xl border text-xs font-mono font-bold transition-all text-center ${
                           isPastTime
-                            ? 'bg-slate-50 border-slate-100 text-slate-300 line-through opacity-60 cursor-not-allowed'
+                            ? 'bg-slate-950 border-white/5 text-slate-700 line-through cursor-not-allowed'
                             : isSelected
-                            ? 'bg-red-50 border-red-300 shadow-sm text-red-600'
-                            : 'bg-slate-50 border-slate-100 hover:border-red-200 text-slate-600 hover:bg-red-50/30'
+                            ? 'bg-red-950/60 border-red-500 text-red-400 shadow-sm'
+                            : 'bg-slate-900 border-white/10 hover:border-red-500/40 text-slate-300 hover:bg-red-950/20'
                         }`}
                       >
                         {hh}:{m} {ampm}
@@ -280,13 +280,13 @@ export default function ScheduleInterview() {
             <AnimatePresence>
               {selectedDate && selectedTime && (
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_4px_30px_rgb(0,0,0,0.04)]">
-                  <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <CheckCircle size={14} /> Confirm Slot
+                  className="bg-slate-950/80 border border-white/10 rounded-3xl p-6 shadow-2xl backdrop-blur-2xl">
+                  <h3 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <CheckCircle size={14} className="text-emerald-400" /> Confirm Selected Slot
                   </h3>
-                  <div className="bg-red-50 border border-red-100 rounded-2xl p-4 mb-4">
-                    <p className="font-black text-red-800 text-base">{formatISTDayDate(selectedDate)}</p>
-                    <p className="text-red-600 font-extrabold text-lg mt-1">
+                  <div className="bg-red-950/40 border border-red-500/30 rounded-2xl p-4 mb-4">
+                    <p className="font-bold text-white text-sm">{formatISTDayDate(selectedDate)}</p>
+                    <p className="text-red-400 font-extrabold text-base mt-1 font-mono">
                       {(() => {
                         let [h, m] = selectedTime.split(':');
                         let hh = parseInt(h);
@@ -295,21 +295,18 @@ export default function ScheduleInterview() {
                         return `${hh}:${m} ${ampm}`;
                       })()}
                     </p>
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><MapPin size={10} />{Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata'}</p>
+                    <p className="text-slate-400 text-xs mt-1 flex items-center gap-1 font-mono"><MapPin size={10} />{Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata'}</p>
                   </div>
-                  <p className="text-slate-400 text-xs font-medium mb-4">
-                    📧 A confirmation email will be sent immediately.
-                  </p>
                   {error && (
-                    <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-red-600 text-sm font-bold">
-                      <AlertCircle size={16} /> {error}
+                    <div className="flex items-center gap-2 bg-red-950/40 border border-red-500/30 rounded-xl p-3 mb-4 text-red-400 text-xs font-medium">
+                      <AlertCircle size={14} /> {error}
                     </div>
                   )}
                   <button onClick={handleBook} disabled={confirming || !!booking}
-                    className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(220,38,38,0.3)] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                    className="w-full py-3.5 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-bold uppercase tracking-wider text-xs rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-600/30 disabled:opacity-50 active:scale-[0.99]">
                     {confirming
-                      ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Booking…</>
-                      : booking ? '⚠️ Cancel current booking first' : '✅ Confirm This Slot'
+                      ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Reserving Slot…</>
+                      : booking ? '⚠️ Cancel current booking first' : 'Confirm Slot Reservation →'
                     }
                   </button>
                 </motion.div>
@@ -318,6 +315,6 @@ export default function ScheduleInterview() {
           </motion.div>
         </div>
       </main>
-    </div>
+    </PageWrapper>
   );
 }

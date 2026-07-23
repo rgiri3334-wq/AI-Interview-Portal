@@ -41,6 +41,84 @@ function useTypewriter(words, speed = 100) {
   return text;
 }
 
+// ── Main Component ────────────────────────────────────────────────────────────
+import PageWrapper from '../components/Layout/PageWrapper';
+import { Camera, Volume2, Cpu } from 'lucide-react';
+
+// ── Biometric Laser Scan & Audio Visualizer Badge ──────────────────────
+function BiometricHeroCard() {
+  const [bars, setBars] = useState([40, 65, 30, 85, 50, 90, 45, 70, 35, 80]);
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setBars(prev => prev.map(() => Math.floor(20 + Math.random() * 75)));
+    }, 150);
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.8, delay: 0.3 }}
+      className="relative w-full max-w-md my-8 bg-slate-900/90 backdrop-blur-xl border border-red-500/30 rounded-3xl p-6 shadow-[0_20px_50px_rgba(220,38,38,0.25)] overflow-hidden text-left"
+    >
+      {/* Animated Laser Scanning Line */}
+      <motion.div
+        animate={{ y: [0, 160, 0] }}
+        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_15px_#ef4444] z-20 pointer-events-none"
+      />
+
+      <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-500">
+            <Camera size={18} />
+          </div>
+          <div>
+            <h4 className="text-xs font-black uppercase tracking-widest text-slate-100">Proctoring Hud Active</h4>
+            <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider">Face Lock &amp; Voice Authenticator</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 px-2.5 py-1 rounded-full text-[10px] font-black text-red-400 uppercase tracking-widest animate-pulse">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Scanning
+        </div>
+      </div>
+
+      {/* Grid view simulation */}
+      <div className="relative h-24 bg-slate-950/80 rounded-2xl border border-slate-800 overflow-hidden flex items-center justify-center mb-4">
+        {/* Face Mesh Simulation Corner Brackets */}
+        <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-red-500" />
+        <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-red-500" />
+        <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-red-500" />
+        <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-red-500" />
+        
+        <div className="text-center">
+          <Cpu className="mx-auto text-red-500/80 mb-1 animate-pulse" size={24} />
+          <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-widest">3D Facial Landmark Tracking: OK</span>
+        </div>
+      </div>
+
+      {/* Audio Waveform Equalizer */}
+      <div className="flex items-center justify-between bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+          <Volume2 size={16} className="text-red-500" /> Audio Stream
+        </div>
+        <div className="flex items-end gap-1 h-6">
+          {bars.map((h, i) => (
+            <motion.div
+              key={i}
+              animate={{ height: `${h}%` }}
+              transition={{ duration: 0.15 }}
+              className="w-1 bg-red-500 rounded-full"
+            />
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Candidate Hero Section ───────────────────────────────────────────────────
 function CandidateHeroSection() {
   const navigate = useNavigate();
@@ -61,20 +139,23 @@ function CandidateHeroSection() {
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 backdrop-blur border border-red-100 text-red-600 text-xs font-bold uppercase tracking-widest mb-8 shadow-sm"
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 backdrop-blur border border-red-100 text-red-600 text-xs font-bold uppercase tracking-widest mb-6 shadow-sm"
         >
           <Shield size={14} /> Candidate Portal · Powered by Sterling
         </motion.div>
 
-        <h1 className="text-5xl md:text-7xl font-black leading-tight mb-8 tracking-tight text-slate-900 drop-shadow-sm mix-blend-multiply">
+        <h1 className="text-5xl md:text-7xl font-black leading-tight mb-6 tracking-tight text-slate-900 drop-shadow-sm mix-blend-multiply">
           The Future of<br />
           <span className="text-red-600 bg-clip-text">{typed}</span>
           <span className="text-red-400 animate-pulse font-light">|</span>
         </h1>
 
-        <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
+        <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-6 leading-relaxed font-medium">
           The definitive AI hiring engine for EV Powertrains and Embedded Systems Engineering. Context-aware, privacy-safe, and infinitely scalable.
         </p>
+
+        {/* Biometric Laser Scan & Audio Waveform Hero Component */}
+        <BiometricHeroCard />
 
         <div className="flex gap-4 items-center justify-center flex-wrap w-full">
           <motion.button
@@ -160,7 +241,7 @@ export default function CandidateLanding() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 text-slate-900 overflow-x-hidden font-sans relative selection:bg-red-200 selection:text-red-900">
+    <PageWrapper className="min-h-screen w-full bg-slate-50 text-slate-900 overflow-x-hidden font-sans relative selection:bg-red-200 selection:text-red-900">
 
       {/* Dynamic 3D Background */}
       <InteractiveBrain3D />
@@ -213,6 +294,6 @@ export default function CandidateLanding() {
 
       {/* Footer */}
       <DynamicFooter />
-    </div>
+    </PageWrapper>
   );
 }

@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 
+import PageWrapper from '../components/Layout/PageWrapper';
+
 const GOODBYES = [
   "It was a genuine pleasure getting to know you today.",
   "You brought a lot of energy and thought to this session.",
@@ -50,7 +52,7 @@ export default function InterviewGoodbye() {
 
   if (terminationReason) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-6">
+      <PageWrapper className="min-h-screen bg-black flex items-center justify-center p-6">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -74,12 +76,12 @@ export default function InterviewGoodbye() {
             Return to Dashboard
           </button>
         </motion.div>
-      </div>
+      </PageWrapper>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-red-950 flex items-center justify-center overflow-hidden relative font-sans">
+    <PageWrapper className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-red-950 flex items-center justify-center overflow-hidden relative font-sans">
       {/* Confetti particles */}
       {particles.map(p => (
         <motion.div key={p.id}
@@ -113,7 +115,7 @@ export default function InterviewGoodbye() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="text-5xl"
+            className="text-5xl text-white"
           >
             ✓
           </motion.span>
@@ -155,6 +157,6 @@ export default function InterviewGoodbye() {
           </button>
         </motion.div>
       </motion.div>
-    </div>
+    </PageWrapper>
   );
 }
