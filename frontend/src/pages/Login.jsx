@@ -48,42 +48,41 @@ export default function Login() {
   };
 
   return (
-    <PageWrapper className="min-h-screen flex flex-col justify-between py-10 px-4 sm:px-6 lg:px-8 relative font-sans text-white bg-slate-950 overflow-hidden">
+    <PageWrapper className="min-h-screen flex flex-col justify-between py-10 px-4 sm:px-6 lg:px-8 relative font-sans text-slate-900 bg-slate-50 overflow-hidden">
       
-      {/* Dynamic Animated Cyber Background */}
+      {/* Dynamic Animated Background */}
       <LoginBackground />
 
-      {/* TOP HEADER BAR & PURE BLACK LOGO BADGE */}
-      <header className="relative z-20 w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-white/10 pb-6">
+      {/* TOP HEADER BAR */}
+      <header className="relative z-20 w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200 pb-6">
         
         {/* BRAND LOGO BADGE */}
         <div className="flex items-center gap-4 group cursor-pointer" onClick={() => navigate('/')}>
-          <div className="relative w-14 h-14 bg-black rounded-2xl border border-slate-800 shadow-[0_0_30px_rgba(220,38,38,0.35)] flex items-center justify-center p-2.5 group-hover:scale-105 transition-transform duration-300 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none" />
+          <div className="relative w-14 h-14 bg-white rounded-2xl border border-slate-200 shadow-lg flex items-center justify-center p-2.5 group-hover:scale-105 transition-transform duration-300">
             <img 
               src={logoUrl} 
               alt="Sterling Logo" 
-              className="w-full h-full object-contain relative z-10"
+              className="w-full h-full object-contain relative z-10 drop-shadow-sm"
             />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">
-              Spark-<span className="text-red-500 drop-shadow-[0_0_12px_rgba(220,38,38,0.6)]">Hire</span>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              Spark-<span className="text-red-600">Hire</span>
             </h1>
-            <p className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-[0.25em]">
+            <p className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-[0.25em]">
               Sterling E-Mobility Control
             </p>
           </div>
         </div>
 
         {/* MODE TAB SWITCHER */}
-        <div className="flex items-center bg-slate-900/90 border border-white/10 p-1.5 rounded-2xl shadow-xl backdrop-blur-xl">
+        <div className="flex items-center bg-white border border-slate-200 p-1.5 rounded-2xl shadow-sm">
           <button
             onClick={() => setActiveTab('admin')}
             className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'admin'
-                ? 'bg-red-600 text-white shadow-lg shadow-red-600/30'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
             <Lock size={14} /> Recruiter Access
@@ -92,8 +91,8 @@ export default function Login() {
             onClick={() => setActiveTab('candidate')}
             className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'candidate'
-                ? 'bg-red-600 text-white shadow-lg shadow-red-600/30'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
             <User size={14} /> Candidate Entry
@@ -140,13 +139,13 @@ export default function Login() {
       </main>
 
       {/* SECURITY & COMPLIANCE FOOTER */}
-      <footer className="relative z-20 w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/10 pt-6 text-[11px] font-mono text-slate-400">
+      <footer className="relative z-20 w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 pt-6 text-[11px] font-mono text-slate-500">
         <div className="flex items-center gap-2">
-          <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
+          <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
           <span>ISO 27001 Certified • End-to-End Encrypted Telemetry</span>
         </div>
         <div className="flex items-center gap-6">
-          <span className="flex items-center gap-1"><Cpu size={14} className="text-red-500" /> AI Engine v3.0</span>
+          <span className="flex items-center gap-1"><Cpu size={14} className="text-red-600" /> AI Engine v3.0</span>
           <span>EV Powertrains &amp; Embedded Systems</span>
         </div>
       </footer>
