@@ -104,9 +104,9 @@ function CountdownTimer({ targetDate, targetTime, onStartReady, onMissed }) {
 // ── Score Tier Badge ──────────────────────────────────────────────────────────
 const TIER_CONFIG = {
   'Exceptional': { color: 'text-white', bg: 'bg-red-600', border: 'border-red-700', emoji: '🏆' },
-  'Strong': { color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', emoji: '⭐' },
-  'Good': { color: 'text-slate-800', bg: 'bg-slate-100', border: 'border-slate-200', emoji: '✅' },
-  'Needs Development': { color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200', emoji: '📈' },
+  'Strong': { color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-100', emoji: '⭐' },
+  'Good': { color: 'text-red-600', bg: 'bg-white', border: 'border-red-100', emoji: '✅' },
+  'Needs Development': { color: 'text-slate-500', bg: 'bg-white', border: 'border-slate-100', emoji: '📈' },
 };
 
 function TierBadge({ tier }) {
@@ -217,10 +217,10 @@ export default function CandidateHome() {
   const currentStageIdx = STAGES.findIndex(s => s.key === app.stage);
 
   return (
-    <PageWrapper className="pb-20 bg-slate-50">
+    <PageWrapper className="pb-20 bg-white">
 
       {/* ── NAV ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-2xl border-b border-red-50 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain" />
           <span className="font-extrabold text-slate-900 text-lg tracking-tight">
@@ -228,49 +228,49 @@ export default function CandidateHome() {
           </span>
         </div>
         <div className="flex items-center gap-4">
-          <button onClick={load} className="text-slate-400 hover:text-slate-700 transition-colors bg-white p-2 rounded-full shadow-sm">
+          <button onClick={load} className="text-slate-400 hover:text-red-600 transition-colors bg-white p-2 rounded-full shadow-sm border border-slate-100 hover:border-red-100">
             <RotateCcw size={16} />
           </button>
-          <button onClick={handleLogout} className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm text-red-500 hover:text-red-600 font-bold text-sm transition-colors border border-slate-100">
+          <button onClick={handleLogout} className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm text-red-600 hover:text-white hover:bg-red-600 font-bold text-sm transition-all border border-red-100">
             <LogOut size={16} /> Sign Out
           </button>
         </div>
       </nav>
 
-      {/* ── HERO HEADER (Gradient & Glass) ── */}
-      <div className="bg-gradient-to-br from-red-700 via-red-600 to-red-800 pt-32 pb-24 px-4 sm:px-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay pointer-events-none" />
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-red-500 rounded-full mix-blend-screen filter blur-[100px] opacity-50 animate-pulse" />
-        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-slate-50 to-transparent" />
-
+      {/* ── HERO HEADER (High-Tech Red/White Glass) ── */}
+      <div className="bg-white pt-32 pb-24 px-4 sm:px-8 relative overflow-hidden">
+        {/* Ambient Red Glows */}
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-red-500 rounded-full mix-blend-multiply filter blur-[150px] opacity-[0.08] animate-pulse pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-red-600 rounded-full mix-blend-multiply filter blur-[120px] opacity-[0.05] pointer-events-none" />
+        
         <div className="max-w-5xl mx-auto relative z-10">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <span className="px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-black uppercase tracking-widest rounded-xl flex items-center gap-2">
+                <span className="px-3 py-1 bg-red-50 border border-red-100 text-red-600 text-xs font-black uppercase tracking-widest rounded-xl flex items-center gap-2">
                   <Hash size={12} /> {candidate.id || 'ID PENDING'}
                 </span>
                 {candidate.kyc_verified && (
-                  <span className="px-3 py-1 bg-emerald-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-100 text-xs font-black uppercase tracking-widest rounded-xl flex items-center gap-1">
+                  <span className="px-3 py-1 bg-red-50 border border-red-100 text-red-600 text-xs font-black uppercase tracking-widest rounded-xl flex items-center gap-1">
                     <Shield size={12} /> VERIFIED
                   </span>
                 )}
               </div>
 
-              <h1 className="text-5xl sm:text-6xl font-black tracking-tighter text-white leading-tight drop-shadow-sm">
+              <h1 className="text-5xl sm:text-6xl font-black tracking-tighter text-slate-900 leading-tight drop-shadow-sm">
                 {candidate.name || 'Candidate'}
-                <span className="text-red-300">.</span>
+                <span className="text-red-600">.</span>
               </h1>
-              <p className="text-red-100/80 mt-3 font-medium text-lg max-w-xl">
+              <p className="text-slate-500 mt-3 font-medium text-lg max-w-xl">
                 {app.job_role
-                  ? <>Pipeline active for <span className="text-white font-bold">{app.job_role}</span></>
+                  ? <>Pipeline active for <span className="text-slate-900 font-bold">{app.job_role}</span></>
                   : <>Profile initiated. Prepare for assessment.</>
                 }
               </p>
             </div>
 
             <div className="flex gap-3">
-              <button onClick={() => navigate('/candidate')} className="px-5 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 rounded-2xl text-white text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg">
+              <button onClick={() => navigate('/candidate')} className="px-5 py-3 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-2xl text-red-600 text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm">
                 <Edit3 size={16} /> Update Profile
               </button>
             </div>
@@ -363,7 +363,7 @@ export default function CandidateHome() {
                 </div>
               ) : app.is_completed ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
-                  <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-6">
+                  <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-6 border border-red-100">
                     <CheckCircle size={40} />
                   </div>
                   <p className="font-black text-slate-800 text-xl uppercase tracking-tighter mb-2">Interview Completed</p>
@@ -411,7 +411,7 @@ export default function CandidateHome() {
                   <div className="flex justify-between items-center py-3 border-b border-slate-50">
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Resume Status</span>
                     {resume.uploaded
-                      ? <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1 uppercase tracking-widest"><CheckCircle size={12} /> SECURED</span>
+                      ? <span className="text-[10px] font-black text-red-600 bg-red-50 border border-red-100 px-3 py-1.5 rounded-xl flex items-center gap-1 uppercase tracking-widest"><CheckCircle size={12} /> SECURED</span>
                       : <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">MISSING</span>
                     }
                   </div>
@@ -456,7 +456,7 @@ export default function CandidateHome() {
                 {attempts.map((a) => (
                   <div key={a.attempt_number} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black ${a.is_completed ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-200'
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black ${a.is_completed ? 'bg-red-600 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-200'
                         }`}>
                         #{a.attempt_number}
                       </div>
