@@ -58,7 +58,7 @@ export default function Login() {
         
         {/* BRAND LOGO BADGE */}
         <div className="flex items-center gap-4 group cursor-pointer" onClick={() => navigate('/')}>
-          <div className="relative w-14 h-14 bg-white rounded-2xl border border-slate-200 shadow-lg flex items-center justify-center p-2.5 group-hover:scale-105 transition-transform duration-300">
+          <div className="relative w-14 h-14 bg-black rounded-2xl border border-slate-800 shadow-[0_0_20px_rgba(220,38,38,0.2)] flex items-center justify-center p-2.5 group-hover:scale-105 transition-transform duration-300">
             <img 
               src={logoUrl} 
               alt="Sterling Logo" 
