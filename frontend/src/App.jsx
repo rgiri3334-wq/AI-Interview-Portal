@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import CandidateLogin from './pages/CandidateLogin';
 import VerifyInvitation from './pages/VerifyInvitation';
 import LoadingScreen from './components/UI/LoadingScreen';
+import { lazyWithReload } from './utils/lazyWithReload';
 
 // ── Route-Level Code Splitting ──────────────────────────────────────────────
 // Heavy pages are lazy-loaded so the initial login bundle stays tiny (~50KB).
