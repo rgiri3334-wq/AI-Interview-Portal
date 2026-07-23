@@ -14,12 +14,12 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // ── Stage pipeline config ─────────────────────────────────────────────────────
 const STAGES = [
-  { key: 'REGISTERED', label: 'Registered', icon: User, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-200 bg-slate-900 border-white/10' },
-  { key: 'APPLIED', label: 'Applied', icon: FileText, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-200 bg-slate-900 border-white/10' },
-  { key: 'INTERVIEW_PENDING', label: 'Schedule Interview', icon: Calendar, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-200 bg-slate-900 border-white/10' },
-  { key: 'INTERVIEW_SCHEDULED', label: 'Interview Scheduled', icon: Clock, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-200 bg-slate-900 border-white/10' },
-  { key: 'UNDER_REVIEW', label: 'Under Review', icon: Shield, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-200 bg-slate-900 border-white/10' },
-  { key: 'DECISION_MADE', label: 'Decision Made', icon: Star, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-slate-200 bg-slate-900 border-white/10' },
+  { key: 'REGISTERED', label: 'Registered', icon: User, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-red-600 bg-red-50 border-red-200' },
+  { key: 'APPLIED', label: 'Applied', icon: FileText, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-red-600 bg-red-50 border-red-200' },
+  { key: 'INTERVIEW_PENDING', label: 'Schedule Interview', icon: Calendar, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-red-600 bg-red-50 border-red-200' },
+  { key: 'INTERVIEW_SCHEDULED', label: 'Interview Scheduled', icon: Clock, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-red-600 bg-red-50 border-red-200' },
+  { key: 'UNDER_REVIEW', label: 'Under Review', icon: Shield, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-red-600 bg-red-50 border-red-200' },
+  { key: 'DECISION_MADE', label: 'Decision Made', icon: Star, activeColor: 'text-white bg-red-600 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]', doneColor: 'text-red-600 bg-red-50 border-red-200' },
 ];
 
 // ── Countdown Timer (With 15-Min Expiration) ──────────────────────────────
@@ -103,10 +103,10 @@ function CountdownTimer({ targetDate, targetTime, onStartReady, onMissed }) {
 
 // ── Score Tier Badge ──────────────────────────────────────────────────────────
 const TIER_CONFIG = {
-  'Exceptional': { color: 'text-white', bg: 'bg-slate-900', border: 'border-slate-800', emoji: '🏆' },
-  'Strong': { color: 'text-slate-800', bg: 'bg-emerald-50', border: 'border-emerald-200', emoji: '⭐' },
-  'Good': { color: 'text-slate-800', bg: 'bg-blue-50', border: 'border-blue-200', emoji: '✅' },
-  'Needs Development': { color: 'text-slate-600', bg: 'bg-amber-50', border: 'border-amber-200', emoji: '📈' },
+  'Exceptional': { color: 'text-white', bg: 'bg-red-600', border: 'border-red-700', emoji: '🏆' },
+  'Strong': { color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', emoji: '⭐' },
+  'Good': { color: 'text-slate-800', bg: 'bg-slate-100', border: 'border-slate-200', emoji: '✅' },
+  'Needs Development': { color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200', emoji: '📈' },
 };
 
 function TierBadge({ tier }) {
@@ -217,14 +217,14 @@ export default function CandidateHome() {
   const currentStageIdx = STAGES.findIndex(s => s.key === app.stage);
 
   return (
-    <PageWrapper className="pb-20">
+    <PageWrapper className="pb-20 bg-slate-50">
 
       {/* ── NAV ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex items-center justify-between">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           <img src={logoUrl} alt="Sterling Logo" className="w-9 h-9 object-contain" />
-          <span className="font-extrabold text-white text-lg tracking-tight">
-            Sterling<span className="text-red-500 font-light ml-1">E-Mobility</span>
+          <span className="font-extrabold text-slate-900 text-lg tracking-tight">
+            Sterling<span className="text-red-600 font-light ml-1">E-Mobility</span>
           </span>
         </div>
         <div className="flex items-center gap-4">
@@ -238,7 +238,7 @@ export default function CandidateHome() {
       </nav>
 
       {/* ── HERO HEADER (Gradient & Glass) ── */}
-      <div className="bg-gradient-to-br from-red-700 via-red-600 to-slate-900 pt-32 pb-24 px-4 sm:px-8 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-red-700 via-red-600 to-red-800 pt-32 pb-24 px-4 sm:px-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay pointer-events-none" />
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-red-500 rounded-full mix-blend-screen filter blur-[100px] opacity-50 animate-pulse" />
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-slate-50 to-transparent" />
@@ -378,7 +378,7 @@ export default function CandidateHome() {
                   <p className="font-black text-slate-800 text-xl uppercase tracking-tighter mb-2">No Active Slot</p>
                   <p className="text-slate-500 text-sm font-medium mb-8">Secure your preferred interview window immediately.</p>
                   <button onClick={() => navigate('/schedule-interview')}
-                    className="w-full py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest text-sm transition-all shadow-lg">
+                    className="w-full py-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-sm transition-all shadow-lg">
                     SCHEDULE INTERVIEW
                   </button>
                 </div>
