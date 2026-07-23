@@ -175,11 +175,12 @@ function ParticleVortex({ count = 2000, stage }) {
 
 function CameraDirector({ stage }) {
   const { camera } = useThree();
-  const targetPos = useRef(new THREE.Vector3(0, 30, 80));
+  const targetPos = useRef(new THREE.Vector3(0, 0, 60));
   const targetLook = useRef(new THREE.Vector3(0, 0, 0));
   
   useEffect(() => {
-    camera.position.set(0, -40, 10); // Start way below the logo looking up
+    // Start perfectly centered, just slightly further back
+    camera.position.set(0, 0, 60);
     camera.lookAt(0, 0, 0);
   }, [camera]);
 
@@ -188,31 +189,26 @@ function CameraDirector({ stage }) {
 
     switch (stage) {
       case 'blank':
-        targetPos.current.set(0, -30, 20); // Sit low in the dark
+        targetPos.current.set(0, 0, 60);
         break;
       case 'logo-in':
-        // Dramatic sweep up from below
-        targetPos.current.set(
-          Math.sin(time * 0.5) * 15, 
-          -5 + time * 2.0, 
-          25
-        );
+        // Subtle, elegant push inward, staying centered
+        targetPos.current.set(0, 0, 45);
         break;
       case 'logo-pause':
-        // Majestic orbit with Z-roll (drone style)
+        // Extremely gentle, professional slow drift (no tilting/rolling)
         targetPos.current.set(
-          Math.sin(time * 0.3) * 20, 
-          Math.sin(time * 0.4) * 5, 
-          Math.cos(time * 0.3) * 20
+          Math.sin(time * 0.1) * 2.0, 
+          Math.sin(time * 0.2) * 0.5, 
+          40
         );
-        // Tilt the camera sideways dynamically
-        camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, Math.sin(time * 0.5) * 0.1, delta * 2.0);
+        camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, 0, delta * 2.0); // Ensure perfectly level
         break;
       case 'zoomIn':
         // Blast the camera completely through the logo (past Z=0 into negatives)
         targetPos.current.set(0, 0, targetPos.current.z - 150 * delta); 
         targetLook.current.set(0, 0, -100); 
-        camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, 0, delta * 5.0); // Level out
+        camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, 0, delta * 5.0);
         break;
       case 'bg-out':
         targetPos.current.set(0, 0, targetPos.current.z - 200 * delta);
@@ -222,7 +218,7 @@ function CameraDirector({ stage }) {
     }
 
     if (stage !== 'zoomIn' && stage !== 'bg-out') {
-      camera.position.lerp(targetPos.current, delta * 1.5); // Slower, smoother lerp
+      camera.position.lerp(targetPos.current, delta * 1.5);
       targetLook.current.lerp(new THREE.Vector3(0, 0, 0), delta * 2.0);
       camera.lookAt(targetLook.current);
     } else {
