@@ -138,12 +138,12 @@ function RobotRig({ phase, speak, hasSpoken, setCaption, portalData }) {
       }
       if (a.hasWaved && a.waveT < 3.5) {
         a.waveT += dt;
-        let waveAmt = Math.sin(a.waveT * Math.PI) * 0.5 + 0.5; // Smooth 0->1->0
+         let waveAmt = Math.sin(a.waveT * Math.PI) * 0.5 + 0.5; // Smooth 0->1->0
         if (a.waveT > 3.0) waveAmt = 0; // End wave
         
         if (waveAmt > 0) {
-          targetRightArmRoll = -1.2; 
-          targetRightForeArmPitch = Math.sin(a.t * 15) * 0.5 - 0.8; 
+          targetRightArmRoll = -0.9; // Less extension so hand stays in frame
+          targetRightForeArmPitch = Math.sin(a.t * 12) * 0.35 - 0.6; // Gentler wave
         }
       }
     } else if (phase === 'IDLE') {
@@ -187,13 +187,13 @@ function RobotRig({ phase, speak, hasSpoken, setCaption, portalData }) {
 
     // Camera control based on phase
     if (phase === 'WAKING') {
-      state.camera.position.lerp(new THREE.Vector3(0, -0.2, 1.2), dt * 2); // Close up
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 1.5), dt * 2); // Close up on face
     } else if (phase === 'GREETING') {
-      state.camera.position.lerp(new THREE.Vector3(0, -0.2, 1.8), dt * 2); // Pull back slightly
+      state.camera.position.lerp(new THREE.Vector3(0, 0.2, 2.8), dt * 2); // Pull back enough to fit wave
     } else {
       state.camera.position.lerp(new THREE.Vector3(0, -0.2, 3.5), dt * 2); // Full body for corner
     }
-    state.camera.lookAt(0, -0.5, 0);
+    state.camera.lookAt(0, -0.3, 0);
   });
 
   return (
