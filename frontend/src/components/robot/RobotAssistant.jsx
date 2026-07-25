@@ -27,30 +27,21 @@ function resolveBone(nodes, scene, ...candidates) {
 
 const LightweightStars = () => (
   <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-    <style>{`
-      @keyframes twinkle {
-        0%, 100% { opacity: 0.1; transform: scale(0.5); }
-        50% { opacity: 0.8; transform: scale(1.2); }
-      }
-      .vr-star {
-        position: absolute;
-        background: #ffffff;
-        border-radius: 50%;
-        box-shadow: 0 0 8px rgba(255, 100, 100, 0.6);
-        animation: twinkle infinite ease-in-out;
-      }
-    `}</style>
+    <style>{
+      "@keyframes twinkle { 0%, 100% { opacity: 0.1; transform: scale(0.5); } 50% { opacity: 0.8; transform: scale(1.2); } } " +
+      ".vr-star { position: absolute; background: #ffffff; border-radius: 50%; box-shadow: 0 0 8px rgba(255, 100, 100, 0.6); animation: twinkle infinite ease-in-out; }"
+    }</style>
     {Array.from({ length: 50 }).map((_, i) => (
-      <div 
-        key={i} 
-        className="vr-star" 
+      <div
+        key={i}
+        className="vr-star"
         style={{
-          left: \`\${Math.random() * 100}%\`,
-          top: \`\${Math.random() * 100}%\`,
-          width: \`\${Math.random() * 2 + 1}px\`,
-          height: \`\${Math.random() * 2 + 1}px\`,
-          animationDuration: \`\${Math.random() * 4 + 2}s\`,
-          animationDelay: \`\${Math.random() * 2}s\`
+          left: Math.random() * 100 + "%",
+          top: Math.random() * 100 + "%",
+          width: Math.random() * 2 + 1 + "px",
+          height: Math.random() * 2 + 1 + "px",
+          animationDuration: Math.random() * 4 + 2 + "s",
+          animationDelay: Math.random() * 2 + "s"
         }}
       />
     ))}
