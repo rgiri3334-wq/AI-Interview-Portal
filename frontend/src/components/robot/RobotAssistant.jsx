@@ -28,7 +28,7 @@ function resolveBone(nodes, scene, ...candidates) {
 
 const damp = (current, target, factor, dt) => THREE.MathUtils.damp(current, target, factor, dt);
 
-function RobotRig({ phase, speak, hasSpoken, setCaption }) {
+function RobotRig({ phase, speak, hasSpoken, setCaption, portalData }) {
   const { nodes, scene } = useGLTF('/robot.glb');
   const anim = useRef({
     t: 0,
@@ -56,8 +56,25 @@ function RobotRig({ phase, speak, hasSpoken, setCaption }) {
   useEffect(() => {
     if (phase === 'GREETING' && !hasSpoken.current) {
       hasSpoken.current = true;
-      const isNew = !sessionStorage.getItem('isAuthenticated'); // Simplified check
-      const text = isNew ? "Welcome to the virtual reality." : "Welcome back.";
+      
+      const name = portalData?.candidate?.name?.split(' ')[0] || "Candidate";
+      const stage = portalData?.application?.stage;
+      
+      let text = "";
+      if (stage === 'REGISTERED' || stage === 'APPLIED') {
+         text = `Welcome to the Sterling Virtual Reality, ${name}. I am your A I Virtual Assistant. To begin your journey, please schedule your interview slot using the timeline on your left.`;
+      } else if (stage === 'INTERVIEW_PENDING') {
+         text = `Welcome back, ${name}. Your application is currently pending an interview schedule. Please book a slot to continue.`;
+      } else if (stage === 'INTERVIEW_SCHEDULED') {
+         text = `Welcome back, ${name}. Your interview is scheduled. When the timer hits zero, you may begin your assessment.`;
+      } else if (stage === 'UNDER_REVIEW') {
+         text = `Welcome back, ${name}. Your interview is complete and is currently under review by our team.`;
+      } else if (stage === 'DECISION_MADE') {
+         text = `Welcome back, ${name}. A decision has been made on your application. Please check your portal for details.`;
+      } else {
+         text = `Welcome back, ${name}. I am your A I Virtual Assistant.`;
+      }
+      
       setCaption(text);
       
       const utterance = new SpeechSynthesisUtterance(text);
@@ -250,11 +267,19 @@ function ChatbotUI({ onClose }) {
   );
 }
 
-export default function RobotAssistant({ onIntroComplete, skipIntro }) {
-  const [phase, setPhase] = useState(skipIntro ? 'IDLE' : 'PROMPT'); // PROMPT -> WAKING -> GREETING -> RESIZING -> IDLE
+export default function RobotAssistant({ onIntroComplete, skipIntro, portalData }) {
+  const [phase, setPhase] = useState(skipIntro ? 'IDLE' : 'WAKING'); // WAKING -> GREETING -> RESIZING -> IDLE
   const [chatOpen, setChatOpen] = useState(false);
   const [caption, setCaption] = useState("");
   const hasSpoken = useRef(skipIntro);
+
+  // Auto transition from WAKING to GREETING
+  useEffect(() => {
+    if (phase === 'WAKING') {
+      const timer = setTimeout(() => setPhase('GREETING'), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [phase]);
 
   useEffect(() => {
     if (phase === 'RESIZING') {
@@ -265,40 +290,17 @@ export default function RobotAssistant({ onIntroComplete, skipIntro }) {
     }
   }, [phase, onIntroComplete]);
 
-  // Click handler for 3D model
+  // Click handler for 3D model (Only opens chat now)
   const handleCanvasClick = () => {
-    if (phase === 'PROMPT') {
-      setPhase('WAKING');
-      setTimeout(() => setPhase('GREETING'), 2000);
-    } else if (phase === 'IDLE') {
+    if (phase === 'IDLE') {
       setChatOpen(true);
     }
   };
 
-  const isFullscreen = phase === 'PROMPT' || phase === 'WAKING' || phase === 'GREETING' || phase === 'RESIZING';
+  const isFullscreen = phase === 'WAKING' || phase === 'GREETING' || phase === 'RESIZING';
 
   return (
     <>
-      <AnimatePresence>
-        {phase === 'PROMPT' && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center cursor-pointer"
-            onClick={handleCanvasClick}
-          >
-            <motion.p 
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="text-white font-mono uppercase tracking-widest text-sm font-bold"
-            >
-              Click anywhere to initialize
-            </motion.p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <motion.div
         className="fixed z-[90] cursor-pointer shadow-2xl overflow-hidden"
         initial={false}
@@ -311,11 +313,10 @@ export default function RobotAssistant({ onIntroComplete, skipIntro }) {
         }}
         transition={{ duration: 1.5, ease: [0.77, 0, 0.175, 1] }}
         onClick={handleCanvasClick}
-        style={{ pointerEvents: phase === 'PROMPT' ? 'none' : 'auto' }}
       >
         {/* Dynamic Background Effect */}
         <AnimatePresence>
-          {isFullscreen && phase !== 'PROMPT' && (
+          {isFullscreen && (
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -337,7 +338,7 @@ export default function RobotAssistant({ onIntroComplete, skipIntro }) {
           <ambientLight intensity={1.5} />
           <directionalLight position={[2, 5, 2]} intensity={2.5} castShadow />
           <Environment preset="city" />
-          <RobotRig phase={phase} speak={setPhase} hasSpoken={hasSpoken} setCaption={setCaption} />
+          <RobotRig phase={phase} speak={setPhase} hasSpoken={hasSpoken} setCaption={setCaption} portalData={portalData} />
           <ContactShadows position={[0, -1.8, 0]} opacity={0.4} scale={5} blur={2} far={2.5} />
         </Canvas>
 

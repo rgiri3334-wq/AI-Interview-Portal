@@ -219,7 +219,7 @@ export default function CandidateHome() {
 
   return (
     <PageWrapper className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col lg:flex-row overflow-hidden relative">
-      <RobotAssistant onIntroComplete={handleIntroComplete} skipIntro={introComplete} />
+      <RobotAssistant onIntroComplete={handleIntroComplete} skipIntro={introComplete} portalData={portal} />
       
       {/* Main Content Wrapper (Hidden during Intro) */}
       <motion.div 
