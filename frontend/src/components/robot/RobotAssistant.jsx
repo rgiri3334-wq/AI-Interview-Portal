@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send } from 'lucide-react';
 import { apiClient } from '../../api/apiClient';
+import logoTextureUrl from '../../assets/sterling_logo.png';
 
 function resolveBone(nodes, scene, ...candidates) {
   for (const name of candidates) {
@@ -26,7 +27,7 @@ function resolveBone(nodes, scene, ...candidates) {
 }
 
 const SemLogo = ({ phase }) => {
-  const texture = useTexture('/src/assets/sterling_logo.png');
+  const texture = useTexture(logoTextureUrl);
   const groupRef = useRef();
 
   useFrame((state, delta) => {
