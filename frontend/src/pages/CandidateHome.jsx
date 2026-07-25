@@ -9,6 +9,7 @@ import {
 import logoUrl from '../assets/sterling_logo.png';
 import { formatISTDayDate } from '../utils/istTime';
 import PageWrapper from '../components/Layout/PageWrapper';
+import RobotAssistant from '../components/robot/RobotAssistant';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -126,6 +127,12 @@ export default function CandidateHome() {
   const [isInterviewReady, setIsInterviewReady] = useState(false);
   const [isMarkingNoShow, setIsMarkingNoShow] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [introComplete, setIntroComplete] = useState(() => sessionStorage.getItem('robotIntroDone') === 'true');
+
+  const handleIntroComplete = () => {
+    sessionStorage.setItem('robotIntroDone', 'true');
+    setIntroComplete(true);
+  };
 
   const load = useCallback(async () => {
     if (!candidateId) { navigate('/candidate-login'); return; }
@@ -211,8 +218,17 @@ export default function CandidateHome() {
   const currentStageIdx = STAGES.findIndex(s => s.key === app.stage);
 
   return (
-    <PageWrapper className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col lg:flex-row overflow-hidden">
+    <PageWrapper className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col lg:flex-row overflow-hidden relative">
+      <RobotAssistant onIntroComplete={handleIntroComplete} skipIntro={introComplete} />
       
+      {/* Main Content Wrapper (Hidden during Intro) */}
+      <motion.div 
+        className="flex flex-col lg:flex-row w-full h-full relative z-10"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: introComplete ? 1 : 0 }}
+        style={{ pointerEvents: introComplete ? 'auto' : 'none' }}
+        transition={{ duration: 0.8 }}
+      >
       {/* ── LEFT SIDEBAR: THE VERTICAL JOURNEY ── */}
       <aside className="w-full lg:w-96 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 lg:h-screen flex flex-col shrink-0 relative z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         
@@ -514,6 +530,7 @@ export default function CandidateHome() {
 
         </div>
       </main>
+      </motion.div>
     </PageWrapper>
   );
 }

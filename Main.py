@@ -4625,6 +4625,18 @@ async def get_candidate_portal(candidate_id: str, db: Session = Depends(get_db),
         "interview_id": latest.interview_id if latest else None,
     }
 
+class ChatRequest(BaseModel):
+    message: str
+
+@app.post("/api/assistant/chat")
+async def assistant_chat(req: ChatRequest):
+    try:
+        from services.gemini_service import ask_assistant
+        reply = await ask_assistant(req.message)
+        return {"reply": reply}
+    except Exception as e:
+        logger.error(f"Chatbot error: {e}")
+        return {"reply": "Sorry, I am having trouble connecting to my neural net."}
 
 if __name__ == "__main__":
     import uvicorn

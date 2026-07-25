@@ -48,11 +48,13 @@ export default function Login() {
         sessionStorage.setItem('adminToken', res.token);
         if (res.email) sessionStorage.setItem('adminEmail', res.email);
         if (res.role) sessionStorage.setItem('adminRole', res.role);
-        navigate('/home'); 
+        // We will call the onSuccess callback if provided, else navigate immediately
+        return res;
       }
     } catch (err) {
       setError(err.message || 'Invalid credentials. Please try again.');
       setLoading(false);
+      throw err;
     }
   };
 

@@ -39,7 +39,11 @@ api.interceptors.request.use((config) => {
     // Use whichever token the current session holds — prefer the admin token when
     // an admin is logged in, otherwise fall back to the candidate token. Without
     // this, an admin opening a report sent no valid token and got a 401.
-    const token = sessionStorage.getItem('adminToken') || sessionStorage.getItem('candidateToken');
+    const role = sessionStorage.getItem('role');
+    const token = role === 'admin' 
+      ? sessionStorage.getItem('adminToken') 
+      : (sessionStorage.getItem('candidateToken') || sessionStorage.getItem('adminToken'));
+      
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
