@@ -48,7 +48,26 @@ export default function ReportList() {
   const filteredCandidates = candidates.filter(c => {
     const matchesSearch = (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (c.job_role || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDept = selectedDept === 'ALL' || (c.department || c.department_id || '').toLowerCase().includes(selectedDept.toLowerCase());
+    
+    const roleString = (c.department || c.department_id || c.job_role || '').toLowerCase();
+    const searchDept = selectedDept.toLowerCase();
+    
+    // For short acronyms like 'IT', do a more precise word boundary check if possible,
+    // but a simple inclusion is usually fine for "Engineering", "Sales", etc.
+    let matchesDept = selectedDept === 'ALL';
+    if (!matchesDept) {
+      if (searchDept === 'it') {
+        matchesDept = /\bit\b/.test(roleString);
+      } else {
+        // e.g. "engineering" will match "software engineering"
+        // "sales" will match "sales manager"
+        // "operations" will match "devops operations" (or similar)
+        matchesDept = roleString.includes(searchDept) || 
+                      (searchDept === 'engineering' && roleString.includes('engineer')) ||
+                      (searchDept === 'human resources' && roleString.includes('hr'));
+      }
+    }
+
     return matchesSearch && matchesDept;
   });
 
