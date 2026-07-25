@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useFrame, Canvas } from '@react-three/fiber';
-import { useGLTF, Environment, ContactShadows } from '@react-three/drei';
+import { useGLTF, Environment, ContactShadows, useTexture, Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send } from 'lucide-react';
@@ -24,6 +24,31 @@ function resolveBone(nodes, scene, ...candidates) {
   }
   return null;
 }
+
+const SemLogo = ({ phase }) => {
+  const texture = useTexture('/src/assets/sterling_logo.png');
+  const groupRef = useRef();
+
+  useFrame((state, delta) => {
+    if (groupRef.current) {
+      groupRef.current.position.y = Math.sin(state.clock.elapsedTime) * 0.05 + 1.2;
+      groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
+    }
+  });
+
+  // Only show when fully zoomed out to prevent it blocking the face during WAKING
+  const visible = phase === 'IDLE' || phase === 'RESIZING';
+
+  return (
+    <group ref={groupRef} position={[1.4, 1.2, -0.5]} scale={visible ? 0.8 : 0}>
+      <mesh>
+        <planeGeometry args={[1.5, 1.5]} />
+        <meshBasicMaterial map={texture} transparent opacity={0.9} depthWrite={false} />
+      </mesh>
+      <Sparkles count={40} scale={1.8} size={2} speed={0.4} opacity={0.5} color="#ef4444" />
+    </group>
+  );
+};
 
 const LightweightStars = () => (
   <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
@@ -99,38 +124,56 @@ function RobotRig({ phase, speak, hasSpoken, setCaption, portalData }) {
       
       setCaption(text);
       
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.pitch = 1.2; // Slightly higher/robotic pitch
-      utterance.rate = 0.9;
-      
-      // Attempt to find a suitable voice
-      const setVoice = () => {
-        const voices = speechSynthesis.getVoices();
-        const preferred = voices.find(v => v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Google UK English Female'));
-        if (preferred) utterance.voice = preferred;
-        speechSynthesis.speak(utterance);
-      };
-
-      if (speechSynthesis.getVoices().length > 0) setVoice();
-      else speechSynthesis.onvoiceschanged = setVoice;
-
       let hasFinished = false;
-      
       const finishGreeting = () => {
         if (hasFinished) return;
         hasFinished = true;
         setCaption("");
-        // Tell parent to move to RESIZING phase
-        setTimeout(() => speak('RESIZING'), 800); // Wait a bit before resizing
+        setTimeout(() => speak('RESIZING'), 800);
       };
 
-      utterance.onend = finishGreeting;
-      utterance.onerror = finishGreeting;
+      const playNeuralVoice = async () => {
+        try {
+          const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+          const audioUrl = `${backendUrl}/api/tts?text=${encodeURIComponent(text)}`;
+          const audio = new Audio(audioUrl);
+          audio.onended = finishGreeting;
+          audio.onerror = () => { throw new Error('Neural TTS Failed'); };
+          
+          // Fallback timer if audio hangs
+          const fallbackTimer = setTimeout(() => {
+            if (!hasFinished) {
+              console.warn("TTS Audio stalled, falling back...");
+              finishGreeting();
+            }
+          }, (text.length / 15) * 1000 + 4000);
+          
+          await audio.play();
+        } catch (err) {
+          console.warn("Falling back to local TTS", err);
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.pitch = 1.1;
+          utterance.rate = 1.0;
+          
+          const setVoice = () => {
+            const voices = speechSynthesis.getVoices();
+            const preferred = voices.find(v => v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Google UK English Female'));
+            if (preferred) utterance.voice = preferred;
+            speechSynthesis.speak(utterance);
+          };
 
-      // Fallback in case speechSynthesis is blocked by the browser's autoplay policy
-      // and onend never fires. Calculate approximate time based on text length.
-      const fallbackTime = (text.length / 15) * 1000 + 2000; 
-      setTimeout(finishGreeting, fallbackTime);
+          if (speechSynthesis.getVoices().length > 0) setVoice();
+          else speechSynthesis.onvoiceschanged = setVoice;
+
+          utterance.onend = finishGreeting;
+          utterance.onerror = finishGreeting;
+
+          const fallbackTime = (text.length / 15) * 1000 + 2000;
+          setTimeout(finishGreeting, fallbackTime);
+        }
+      };
+
+      playNeuralVoice();
     }
   }, [phase, speak, hasSpoken, setCaption, portalData]);
 
@@ -259,16 +302,16 @@ function ChatbotUI({ onClose }) {
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.95 }}
-      className="absolute bottom-32 right-6 w-80 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col z-50 h-96"
+      className="absolute bottom-32 right-6 w-80 bg-white/80 backdrop-blur-3xl border border-white/60 rounded-3xl shadow-[0_15px_40px_rgba(220,38,38,0.15)] overflow-hidden flex flex-col z-50 h-96"
     >
-      <div className="bg-red-600 p-4 text-white flex justify-between items-center">
+      <div className="bg-white/90 border-b border-red-100 p-4 text-red-700 flex justify-between items-center shadow-sm">
         <h3 className="font-bold text-sm flex items-center gap-2"><MessageSquare size={16}/> Virtual Assistant</h3>
-        <button onClick={onClose} className="hover:bg-red-700 p-1 rounded-full"><X size={16}/></button>
+        <button onClick={onClose} className="hover:bg-red-50 text-red-400 hover:text-red-600 p-1 rounded-full transition-colors"><X size={16}/></button>
       </div>
       
       <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
         {messages.map((msg, i) => (
-          <div key={i} className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-red-600 text-white self-end rounded-br-sm' : 'bg-slate-100 text-slate-800 self-start rounded-bl-sm'}`}>
+          <div key={i} className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm ${msg.role === 'user' ? 'bg-red-600 text-white self-end rounded-br-sm' : 'bg-white text-slate-800 self-start rounded-bl-sm border border-slate-100'}`}>
             {msg.content}
           </div>
         ))}
@@ -342,7 +385,7 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
           inset: isFullscreen ? '0px 0px 0px 0px' : 'auto 24px 24px auto',
           width: isFullscreen ? '100vw' : '250px',
           height: isFullscreen ? '100vh' : '350px',
-          background: isFullscreen ? 'rgba(2,6,23,1)' : 'rgba(2,6,23,0)',
+          background: isFullscreen ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0)',
           borderRadius: isFullscreen ? '0px' : '24px',
         }}
         transition={{ duration: 1.5, ease: [0.77, 0, 0.175, 1] }}
@@ -356,24 +399,25 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 1 }}
-              className="absolute inset-0 overflow-hidden pointer-events-none bg-gradient-to-b from-slate-950 via-red-950/20 to-slate-950"
+              className="absolute inset-0 overflow-hidden pointer-events-none bg-gradient-to-br from-white via-slate-50 to-red-50"
             >
-              <LightweightStars />
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#ef444415_1px,transparent_1px),linear-gradient(to_bottom,#ef444415_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_70%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,#fee2e2,transparent_50%),radial-gradient(circle_at_80%_70%,#f1f5f9,transparent_50%)] opacity-80 mix-blend-multiply"></div>
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#ef444408_1px,transparent_1px),linear-gradient(to_bottom,#ef444408_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_40%,#000_70%,transparent_100%)]"></div>
               <motion.div 
-                animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }}
-                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-red-600/10 blur-[100px] rounded-full"
+                animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.6, 0.4] }}
+                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white blur-[120px] rounded-full"
               />
             </motion.div>
           )}
         </AnimatePresence>
 
         <Canvas camera={{ position: [0, 0, 1.2], fov: 35 }}>
-          <ambientLight intensity={0.8} color="#ffffff" />
-          <pointLight position={[0, 2, -2]} intensity={8} color="#ff0000" distance={10} />
-          <directionalLight position={[2, 5, 2]} intensity={1.5} color="#ffd5d5" castShadow />
+          <ambientLight intensity={1.5} color="#ffffff" />
+          <pointLight position={[0, 2, -2]} intensity={4} color="#ef4444" distance={10} />
+          <directionalLight position={[2, 5, 2]} intensity={2.5} color="#ffffff" castShadow />
           <Environment preset="city" />
+          <SemLogo phase={phase} />
           <RobotRig phase={phase} speak={setPhase} hasSpoken={hasSpoken} setCaption={setCaption} portalData={portalData} />
           <ContactShadows position={[0, -1.8, 0]} opacity={0.6} color="#ff0000" scale={5} blur={2} far={2.5} />
         </Canvas>
@@ -385,9 +429,9 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="absolute bottom-20 left-1/2 -translate-x-1/2 px-10 py-5 bg-black/30 backdrop-blur-2xl border border-red-500/30 rounded-3xl shadow-[0_0_40px_rgba(220,38,38,0.2)]"
+              className="absolute bottom-20 left-1/2 -translate-x-1/2 px-10 py-5 bg-white/70 backdrop-blur-2xl border border-white/50 rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.1)]"
             >
-              <p className="text-white text-2xl font-light tracking-wide text-center drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">
+              <p className="text-slate-800 text-2xl font-light tracking-wide text-center">
                 {caption}
               </p>
             </motion.div>
