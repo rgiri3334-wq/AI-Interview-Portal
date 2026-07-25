@@ -104,7 +104,7 @@ async def ask_assistant(message: str) -> str:
 
 # ── Admin DB Helper ────────────────────────────────────────────────────────
 
-def _get_admin_question_data(job_role: str, asked_questions: list, current_question: str = None, candidate_id: str = None):
+def _get_admin_question_data(job_role: str, asked_questions: list, current_question: Optional[str] = None, candidate_id: Optional[str] = None):
     """
     Fetch admin question bank data using SQLAlchemy (works on both SQLite and Supabase).
     Uses the same DB session engine as Main.py — fully production-safe.
@@ -140,7 +140,7 @@ def _get_admin_question_data(job_role: str, asked_questions: list, current_quest
                 cand_conf = db.query(GlobalConfig).filter(GlobalConfig.key == f"ai_config_{candidate_id}").first()
                 if cand_conf and cand_conf.value:
                     try:
-                        c_data = json.loads(cand_conf.value)
+                        c_data = json.loads(str(cand_conf.value))
                         if "persona" in c_data:
                             persona = c_data["persona"]
                         if "weights" in c_data:
