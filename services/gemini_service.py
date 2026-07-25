@@ -31,11 +31,24 @@ except ImportError:
 
 
 def _get_client():
+    """Get the primary Gemini client for interview AI (question generation, assessment, reports)."""
     if not GENAI_AVAILABLE:
         raise RuntimeError("google-genai not installed.")
     key = os.getenv("GEMINI_API_KEY", "")
     if not key or key == "your_gemini_api_key_here":
         raise RuntimeError("GEMINI_API_KEY missing or placeholder.")
+    return genai.Client(api_key=key)
+
+
+def _get_chatbot_client():
+    """Get a separate Gemini client for the chatbot assistant.
+    Uses GEMINI_CHATBOT_KEY if available, otherwise falls back to the primary key.
+    This lets you use a different API key (and therefore a separate quota) for the chatbot."""
+    if not GENAI_AVAILABLE:
+        raise RuntimeError("google-genai not installed.")
+    key = os.getenv("GEMINI_CHATBOT_KEY", "") or os.getenv("GEMINI_API_KEY", "")
+    if not key or key == "your_gemini_api_key_here":
+        raise RuntimeError("GEMINI_CHATBOT_KEY / GEMINI_API_KEY missing or placeholder.")
     return genai.Client(api_key=key)
 
 
@@ -57,7 +70,7 @@ async def ask_assistant(message: str) -> str:
     """Chatbot assistant logic for candidates, strict system prompt."""
     if not GENAI_AVAILABLE:
         return "I'm offline right now."
-    client = _get_client()
+    client = _get_chatbot_client()
     sys_prompt = (
         "You are a friendly, concise AI virtual assistant for Sterling E-Mobility's Candidate Portal. "
         "Your job is to help candidates navigate the platform. If they ask about slots, tell them to "
