@@ -63,6 +63,12 @@ build/
 .eslintcache
 .stylelintcache
 
+# Video sample files (reference only, not for GitHub)
+*.mp4
+*.avi
+*.mov
+*.webm
+
 # OS generated files
 .DS_Store
 .DS_Store?
