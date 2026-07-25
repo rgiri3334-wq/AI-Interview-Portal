@@ -80,6 +80,8 @@ async def ask_assistant(message: str) -> str:
         return response.text or "I am here to help you!"
     except Exception as e:
         logger.error(f"Error in ask_assistant: {e}")
+        if "429" in str(e) or "quota" in str(e).lower() or "exhausted" in str(e).lower():
+            return "I am currently experiencing high traffic or my API quota is exhausted. Please try again later."
         return "I'm experiencing some neural interference, please try again."
 
 

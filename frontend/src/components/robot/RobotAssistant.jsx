@@ -62,17 +62,17 @@ function RobotRig({ phase, speak, hasSpoken, setCaption, portalData }) {
       
       let text = "";
       if (stage === 'REGISTERED' || stage === 'APPLIED') {
-         text = `Welcome to the Sterling Virtual Reality, ${name}. I am your A I Virtual Assistant. To begin your journey, please schedule your interview slot using the timeline on your left.`;
+         text = `Hello! I am your A I assistant. Welcome to the Sterling Virtual Reality, ${name}. To begin your journey, please schedule your interview slot using the timeline on your left.`;
       } else if (stage === 'INTERVIEW_PENDING') {
-         text = `Welcome back, ${name}. Your application is currently pending an interview schedule. Please book a slot to continue.`;
+         text = `Hello! I am your A I assistant. Welcome back, ${name}. Your application is currently pending an interview schedule. Please book a slot to continue.`;
       } else if (stage === 'INTERVIEW_SCHEDULED') {
-         text = `Welcome back, ${name}. Your interview is scheduled. When the timer hits zero, you may begin your assessment.`;
+         text = `Hello! I am your A I assistant. Welcome back, ${name}. Your interview is scheduled. When the timer hits zero, you may begin your assessment.`;
       } else if (stage === 'UNDER_REVIEW') {
-         text = `Welcome back, ${name}. Your interview is complete and is currently under review by our team.`;
+         text = `Hello! I am your A I assistant. Welcome back, ${name}. Your interview is complete and is currently under review by our team.`;
       } else if (stage === 'DECISION_MADE') {
-         text = `Welcome back, ${name}. A decision has been made on your application. Please check your portal for details.`;
+         text = `Hello! I am your A I assistant. Welcome back, ${name}. A decision has been made on your application. Please check your portal for details.`;
       } else {
-         text = `Welcome back, ${name}. I am your A I Virtual Assistant.`;
+         text = `Hello! I am your A I assistant. Welcome back, ${name}.`;
       }
       
       setCaption(text);
@@ -92,13 +92,25 @@ function RobotRig({ phase, speak, hasSpoken, setCaption, portalData }) {
       if (speechSynthesis.getVoices().length > 0) setVoice();
       else speechSynthesis.onvoiceschanged = setVoice;
 
-      utterance.onend = () => {
+      let hasFinished = false;
+      
+      const finishGreeting = () => {
+        if (hasFinished) return;
+        hasFinished = true;
         setCaption("");
         // Tell parent to move to RESIZING phase
         setTimeout(() => speak('RESIZING'), 800); // Wait a bit before resizing
       };
+
+      utterance.onend = finishGreeting;
+      utterance.onerror = finishGreeting;
+
+      // Fallback in case speechSynthesis is blocked by the browser's autoplay policy
+      // and onend never fires. Calculate approximate time based on text length.
+      const fallbackTime = (text.length / 15) * 1000 + 2000; 
+      setTimeout(finishGreeting, fallbackTime);
     }
-  }, [phase, speak, hasSpoken, setCaption]);
+  }, [phase, speak, hasSpoken, setCaption, portalData]);
 
   useFrame((state, delta) => {
     if (!nodes) return;
