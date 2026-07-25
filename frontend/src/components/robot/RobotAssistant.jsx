@@ -28,7 +28,7 @@ function resolveBone(nodes, scene, ...candidates) {
 
 const damp = (current, target, factor, dt) => THREE.MathUtils.damp(current, target, factor, dt);
 
-function RobotRig({ phase, speak, hasSpoken }) {
+function RobotRig({ phase, speak, hasSpoken, setCaption }) {
   const { nodes, scene } = useGLTF('/robot.glb');
   const anim = useRef({
     t: 0,
@@ -58,6 +58,7 @@ function RobotRig({ phase, speak, hasSpoken }) {
       hasSpoken.current = true;
       const isNew = !sessionStorage.getItem('isAuthenticated'); // Simplified check
       const text = isNew ? "Welcome to the virtual reality." : "Welcome back.";
+      setCaption(text);
       
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.pitch = 1.2; // Slightly higher/robotic pitch
@@ -75,11 +76,12 @@ function RobotRig({ phase, speak, hasSpoken }) {
       else speechSynthesis.onvoiceschanged = setVoice;
 
       utterance.onend = () => {
+        setCaption("");
         // Tell parent to move to RESIZING phase
-        setTimeout(() => speak('RESIZING'), 500);
+        setTimeout(() => speak('RESIZING'), 800); // Wait a bit before resizing
       };
     }
-  }, [phase, speak, hasSpoken]);
+  }, [phase, speak, hasSpoken, setCaption]);
 
   useFrame((state, delta) => {
     if (!nodes) return;
@@ -105,14 +107,14 @@ function RobotRig({ phase, speak, hasSpoken }) {
         a.waveT = 0;
         a.hasWaved = true;
       }
-      if (a.hasWaved && a.waveT < 3.0) {
+      if (a.hasWaved && a.waveT < 3.5) {
         a.waveT += dt;
         let waveAmt = Math.sin(a.waveT * Math.PI) * 0.5 + 0.5; // Smooth 0->1->0
-        if (a.waveT > 2.5) waveAmt = 0; // End wave
+        if (a.waveT > 3.0) waveAmt = 0; // End wave
         
         if (waveAmt > 0) {
-          targetRightArmRoll = -1.5; 
-          targetRightForeArmPitch = Math.sin(a.t * 12) * 0.4 - 0.5; 
+          targetRightArmRoll = -1.2; 
+          targetRightForeArmPitch = Math.sin(a.t * 15) * 0.5 - 0.8; 
         }
       }
     } else if (phase === 'IDLE') {
@@ -124,13 +126,18 @@ function RobotRig({ phase, speak, hasSpoken }) {
     a.headYaw = damp(a.headYaw, targetHeadYaw, 4, dt);
     a.headRoll = damp(a.headRoll, targetHeadRoll, 4, dt);
     a.spinePitch = damp(a.spinePitch, targetSpinePitch, 2, dt);
-    a.rightArmRoll = damp(a.rightArmRoll, targetRightArmRoll, 5, dt);
-    a.rightForeArmPitch = damp(a.rightForeArmPitch, targetRightForeArmPitch, 5, dt);
+    a.rightArmRoll = damp(a.rightArmRoll, targetRightArmRoll, 8, dt); // Faster damp for wave
+    a.rightForeArmPitch = damp(a.rightForeArmPitch, targetRightForeArmPitch, 8, dt);
 
     const head = resolveBone(nodes, scene, 'Head');
     const spine = resolveBone(nodes, scene, 'Spine', 'Spine1');
     const rightArm = resolveBone(nodes, scene, 'RightArm');
     const rightForeArm = resolveBone(nodes, scene, 'RightForeArm');
+
+    const leftArm = resolveBone(nodes, scene, 'LeftArm');
+    const leftForeArm = resolveBone(nodes, scene, 'LeftForeArm');
+    const rightShoulder = resolveBone(nodes, scene, 'RightShoulder');
+    const leftShoulder = resolveBone(nodes, scene, 'LeftShoulder');
 
     if (head) {
       head.rotation.x = a.headPitch;
@@ -140,6 +147,14 @@ function RobotRig({ phase, speak, hasSpoken }) {
     if (spine) spine.rotation.x = a.spinePitch;
     if (rightArm) rightArm.rotation.z = a.rightArmRoll;
     if (rightForeArm) rightForeArm.rotation.x = a.rightForeArmPitch;
+    
+    // Default resting pose for left arm
+    if (leftArm) leftArm.rotation.z = -1.2; // Mirrored from right arm (assuming local axes)
+    if (leftForeArm) leftForeArm.rotation.x = 0.1;
+    
+    // Slump shoulders slightly for a relaxed look
+    if (rightShoulder) rightShoulder.rotation.z = 0.2;
+    if (leftShoulder) leftShoulder.rotation.z = -0.2;
 
     // Camera control based on phase
     if (phase === 'WAKING') {
@@ -180,7 +195,7 @@ function ChatbotUI({ onClose }) {
     
     try {
       // Call our new Chatbot endpoint
-      const res = await apiClient.request('/api/assistant/chat', 'POST', { message: userMsg });
+      const res = await apiClient.askAssistant({ message: userMsg });
       setMessages(prev => [...prev, { role: 'assistant', content: res.reply }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I am having trouble connecting to my neural net.' }]);
@@ -238,6 +253,7 @@ function ChatbotUI({ onClose }) {
 export default function RobotAssistant({ onIntroComplete, skipIntro }) {
   const [phase, setPhase] = useState(skipIntro ? 'IDLE' : 'PROMPT'); // PROMPT -> WAKING -> GREETING -> RESIZING -> IDLE
   const [chatOpen, setChatOpen] = useState(false);
+  const [caption, setCaption] = useState("");
   const hasSpoken = useRef(skipIntro);
 
   useEffect(() => {
@@ -297,13 +313,49 @@ export default function RobotAssistant({ onIntroComplete, skipIntro }) {
         onClick={handleCanvasClick}
         style={{ pointerEvents: phase === 'PROMPT' ? 'none' : 'auto' }}
       >
+        {/* Dynamic Background Effect */}
+        <AnimatePresence>
+          {isFullscreen && phase !== 'PROMPT' && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1 }}
+              className="absolute inset-0 overflow-hidden pointer-events-none"
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+              <motion.div 
+                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-600/20 blur-[120px] rounded-full"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <Canvas camera={{ position: [0, 0, 1.2], fov: 35 }}>
           <ambientLight intensity={1.5} />
           <directionalLight position={[2, 5, 2]} intensity={2.5} castShadow />
           <Environment preset="city" />
-          <RobotRig phase={phase} speak={setPhase} hasSpoken={hasSpoken} />
+          <RobotRig phase={phase} speak={setPhase} hasSpoken={hasSpoken} setCaption={setCaption} />
           <ContactShadows position={[0, -1.8, 0]} opacity={0.4} scale={5} blur={2} far={2.5} />
         </Canvas>
+
+        {/* Caption Overlay */}
+        <AnimatePresence>
+          {caption && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute bottom-20 left-1/2 -translate-x-1/2 px-8 py-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl"
+            >
+              <p className="text-white text-2xl font-light tracking-wide text-center drop-shadow-md">
+                {caption}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       <AnimatePresence>

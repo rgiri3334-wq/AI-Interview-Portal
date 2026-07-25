@@ -153,6 +153,7 @@ export const apiClient = {
   generateQuestion: (data) => withRetry(() => api.post('/generate-question', data)),
   assessCandidate:  (data) => withRetry(() => api.post('/api/interview/assess', data)),
   executeCode: (data) => api.post('/api/execute-code', data),
+  askAssistant: (data) => withRetry(() => api.post('/api/assistant/chat', data)),
 
   // ── Whisper Transcription ─────────────────────────────────────────────
   transcribeAudio: (audioBlob) => {
