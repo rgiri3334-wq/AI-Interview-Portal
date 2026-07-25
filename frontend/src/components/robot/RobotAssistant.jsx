@@ -1,11 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useFrame, Canvas } from '@react-three/fiber';
-import { useGLTF, Environment, ContactShadows, useTexture, Sparkles } from '@react-three/drei';
+import { useGLTF, Environment, ContactShadows, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send } from 'lucide-react';
 import { apiClient } from '../../api/apiClient';
-import logoTextureUrl from '../../assets/sterling_logo.png';
 
 function resolveBone(nodes, scene, ...candidates) {
   for (const name of candidates) {
@@ -26,30 +25,6 @@ function resolveBone(nodes, scene, ...candidates) {
   return null;
 }
 
-const SemLogo = ({ phase }) => {
-  const texture = useTexture(logoTextureUrl);
-  const groupRef = useRef();
-
-  useFrame((state, delta) => {
-    if (groupRef.current) {
-      groupRef.current.position.y = Math.sin(state.clock.elapsedTime) * 0.05 + 1.2;
-      groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
-    }
-  });
-
-  // Only show when fully zoomed out to prevent it blocking the face during WAKING
-  const visible = phase === 'IDLE' || phase === 'RESIZING';
-
-  return (
-    <group ref={groupRef} position={[1.4, 1.2, -0.5]} scale={visible ? 0.8 : 0}>
-      <mesh>
-        <planeGeometry args={[1.5, 1.5]} />
-        <meshBasicMaterial map={texture} transparent opacity={0.9} depthWrite={false} />
-      </mesh>
-      <Sparkles count={40} scale={1.8} size={2} speed={0.4} opacity={0.5} color="#ef4444" />
-    </group>
-  );
-};
 
 const LightweightStars = () => (
   <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
@@ -81,7 +56,9 @@ function RobotRig({ phase, speak, hasSpoken, setCaption, portalData }) {
   const anim = useRef({
     t: 0,
     headPitch: 0, headYaw: 0, headRoll: 0,
-    spinePitch: 0, rightArmRoll: 1.2, rightForeArmPitch: 0,
+    spinePitch: 0, 
+    rightArmRoll: 1.2, rightArmPitch: 0.1, rightArmYaw: 0,
+    rightForeArmPitch: 0, rightHandYaw: 0,
     leftArmRoll: 1.2, leftForeArmPitch: 0,
     waveT: 0, hasWaved: false
   });
@@ -189,7 +166,10 @@ function RobotRig({ phase, speak, hasSpoken, setCaption, portalData }) {
     let targetHeadRoll = 0;
     let targetSpinePitch = Math.sin(a.t * 1.5) * 0.015; // Breath
     let targetRightArmRoll = 1.2;
+    let targetRightArmPitch = 0.1;
+    let targetRightArmYaw = 0;
     let targetRightForeArmPitch = 0.1;
+    let targetRightHandYaw = 0;
     
     if (phase === 'WAKING') {
       targetHeadPitch = 0.5; // Looking down/sleeping
@@ -208,8 +188,11 @@ function RobotRig({ phase, speak, hasSpoken, setCaption, portalData }) {
         if (a.waveT > 3.0) waveAmt = 0; // End wave
         
         if (waveAmt > 0) {
-          targetRightArmRoll = -0.9; // Less extension so hand stays in frame
-          targetRightForeArmPitch = Math.sin(a.t * 12) * 0.35 - 0.6; // Gentler wave
+          targetRightArmRoll = -1.1; // Lift arm out
+          targetRightArmPitch = -0.3; // Forward
+          targetRightArmYaw = 0.2; // Turn elbow out
+          targetRightForeArmPitch = Math.sin(a.t * 8) * 0.4 - 0.7; // Smooth bend
+          targetRightHandYaw = Math.sin(a.t * 8) * 0.3; // Wrist wave
         }
       }
     } else if (phase === 'IDLE') {
@@ -221,8 +204,11 @@ function RobotRig({ phase, speak, hasSpoken, setCaption, portalData }) {
     a.headYaw = damp(a.headYaw, targetHeadYaw, 4, dt);
     a.headRoll = damp(a.headRoll, targetHeadRoll, 4, dt);
     a.spinePitch = damp(a.spinePitch, targetSpinePitch, 2, dt);
-    a.rightArmRoll = damp(a.rightArmRoll, targetRightArmRoll, 8, dt); // Faster damp for wave
+    a.rightArmRoll = damp(a.rightArmRoll, targetRightArmRoll, 8, dt);
+    a.rightArmPitch = damp(a.rightArmPitch, targetRightArmPitch, 8, dt);
+    a.rightArmYaw = damp(a.rightArmYaw, targetRightArmYaw, 8, dt);
     a.rightForeArmPitch = damp(a.rightForeArmPitch, targetRightForeArmPitch, 8, dt);
+    a.rightHandYaw = damp(a.rightHandYaw, targetRightHandYaw, 8, dt);
 
     const head = resolveBone(nodes, scene, 'Head');
     const spine = resolveBone(nodes, scene, 'Spine', 'Spine1');
@@ -240,8 +226,14 @@ function RobotRig({ phase, speak, hasSpoken, setCaption, portalData }) {
       head.rotation.z = a.headRoll;
     }
     if (spine) spine.rotation.x = a.spinePitch;
-    if (rightArm) rightArm.rotation.z = a.rightArmRoll;
+    if (rightArm) {
+      rightArm.rotation.x = a.rightArmPitch;
+      rightArm.rotation.y = a.rightArmYaw;
+      rightArm.rotation.z = a.rightArmRoll;
+    }
     if (rightForeArm) rightForeArm.rotation.x = a.rightForeArmPitch;
+    const rightHand = resolveBone(nodes, scene, 'RightHand');
+    if (rightHand) rightHand.rotation.y = a.rightHandYaw;
     
     // Default resting pose for left arm
     if (leftArm) leftArm.rotation.z = -1.2; // Mirrored from right arm (assuming local axes)
@@ -303,16 +295,16 @@ function ChatbotUI({ onClose }) {
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.95 }}
-      className="absolute bottom-32 right-6 w-80 bg-white/80 backdrop-blur-3xl border border-white/60 rounded-3xl shadow-[0_15px_40px_rgba(220,38,38,0.15)] overflow-hidden flex flex-col z-50 h-96"
+      className="absolute bottom-32 right-6 w-80 bg-black/50 backdrop-blur-3xl border border-white/10 rounded-3xl shadow-[0_0_50px_rgba(220,38,38,0.1)] overflow-hidden flex flex-col z-50 h-96"
     >
-      <div className="bg-white/90 border-b border-red-100 p-4 text-red-700 flex justify-between items-center shadow-sm">
+      <div className="bg-white/5 border-b border-white/10 p-4 text-slate-200 flex justify-between items-center shadow-sm">
         <h3 className="font-bold text-sm flex items-center gap-2"><MessageSquare size={16}/> Virtual Assistant</h3>
-        <button onClick={onClose} className="hover:bg-red-50 text-red-400 hover:text-red-600 p-1 rounded-full transition-colors"><X size={16}/></button>
+        <button onClick={onClose} className="hover:bg-red-500/20 text-slate-400 hover:text-red-400 p-1 rounded-full transition-colors"><X size={16}/></button>
       </div>
       
       <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
         {messages.map((msg, i) => (
-          <div key={i} className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm ${msg.role === 'user' ? 'bg-red-600 text-white self-end rounded-br-sm' : 'bg-white text-slate-800 self-start rounded-bl-sm border border-slate-100'}`}>
+          <div key={i} className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm ${msg.role === 'user' ? 'bg-gradient-to-r from-red-700 to-red-600 text-white self-end rounded-br-sm' : 'bg-slate-800/80 text-slate-100 self-start rounded-bl-sm border border-white/5'}`}>
             {msg.content}
           </div>
         ))}
@@ -386,7 +378,7 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
           inset: isFullscreen ? '0px 0px 0px 0px' : 'auto 24px 24px auto',
           width: isFullscreen ? '100vw' : '250px',
           height: isFullscreen ? '100vh' : '350px',
-          background: isFullscreen ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0)',
+          background: isFullscreen ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0)',
           borderRadius: isFullscreen ? '0px' : '24px',
         }}
         transition={{ duration: 1.5, ease: [0.77, 0, 0.175, 1] }}
@@ -400,25 +392,24 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 1 }}
-              className="absolute inset-0 overflow-hidden pointer-events-none bg-gradient-to-br from-white via-slate-50 to-red-50"
+              className="absolute inset-0 overflow-hidden pointer-events-none bg-gradient-to-b from-[#020617] via-slate-950 to-black"
             >
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,#fee2e2,transparent_50%),radial-gradient(circle_at_80%_70%,#f1f5f9,transparent_50%)] opacity-80 mix-blend-multiply"></div>
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#ef444408_1px,transparent_1px),linear-gradient(to_bottom,#ef444408_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_40%,#000_70%,transparent_100%)]"></div>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,#ef444405,transparent_50%),radial-gradient(circle_at_80%_70%,#ef444402,transparent_50%)] mix-blend-screen"></div>
               <motion.div 
-                animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.6, 0.4] }}
+                animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }}
                 transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white blur-[120px] rounded-full"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-900/20 blur-[120px] rounded-full"
               />
             </motion.div>
           )}
         </AnimatePresence>
 
         <Canvas camera={{ position: [0, 0, 1.2], fov: 35 }}>
-          <ambientLight intensity={1.5} color="#ffffff" />
-          <pointLight position={[0, 2, -2]} intensity={4} color="#ef4444" distance={10} />
-          <directionalLight position={[2, 5, 2]} intensity={2.5} color="#ffffff" castShadow />
+          <ambientLight intensity={0.5} color="#ffffff" />
+          <pointLight position={[0, 2, -2]} intensity={6} color="#ef4444" distance={15} />
+          <directionalLight position={[2, 5, 2]} intensity={1.2} color="#f8fafc" castShadow />
+          <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
           <Environment preset="city" />
-          <SemLogo phase={phase} />
           <RobotRig phase={phase} speak={setPhase} hasSpoken={hasSpoken} setCaption={setCaption} portalData={portalData} />
           <ContactShadows position={[0, -1.8, 0]} opacity={0.6} color="#ff0000" scale={5} blur={2} far={2.5} />
         </Canvas>
@@ -430,9 +421,9 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="absolute bottom-20 left-1/2 -translate-x-1/2 px-10 py-5 bg-white/70 backdrop-blur-2xl border border-white/50 rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.1)]"
+              className="absolute bottom-20 left-1/2 -translate-x-1/2 px-10 py-5 bg-black/60 backdrop-blur-3xl border border-white/10 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.5),_0_0_20px_rgba(220,38,38,0.15)]"
             >
-              <p className="text-slate-800 text-2xl font-light tracking-wide text-center">
+              <p className="text-slate-100 text-2xl font-light tracking-wide text-center drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
                 {caption}
               </p>
             </motion.div>
