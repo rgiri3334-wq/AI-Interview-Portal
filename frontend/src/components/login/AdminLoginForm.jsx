@@ -58,6 +58,8 @@ export default function AdminLoginForm({ email, setEmail, password, setPassword,
       // Error handled by parent
     }
   };
+
+  return (
     <motion.div 
       className="w-full max-w-md mx-auto relative"
       initial={{ opacity: 0, x: -30 }}
