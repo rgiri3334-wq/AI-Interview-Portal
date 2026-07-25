@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send } from 'lucide-react';
 import { apiClient } from '../../api/apiClient';
 
-// Resolve a bone by trying several common naming conventions
 function resolveBone(nodes, scene, ...candidates) {
   for (const name of candidates) {
     if (nodes && nodes[name]) return nodes[name];
@@ -25,6 +24,38 @@ function resolveBone(nodes, scene, ...candidates) {
   }
   return null;
 }
+
+const LightweightStars = () => (
+  <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+    <style>{`
+      @keyframes twinkle {
+        0%, 100% { opacity: 0.1; transform: scale(0.5); }
+        50% { opacity: 0.8; transform: scale(1.2); }
+      }
+      .vr-star {
+        position: absolute;
+        background: #ffffff;
+        border-radius: 50%;
+        box-shadow: 0 0 8px rgba(255, 100, 100, 0.6);
+        animation: twinkle infinite ease-in-out;
+      }
+    `}</style>
+    {Array.from({ length: 50 }).map((_, i) => (
+      <div 
+        key={i} 
+        className="vr-star" 
+        style={{
+          left: \`\${Math.random() * 100}%\`,
+          top: \`\${Math.random() * 100}%\`,
+          width: \`\${Math.random() * 2 + 1}px\`,
+          height: \`\${Math.random() * 2 + 1}px\`,
+          animationDuration: \`\${Math.random() * 4 + 2}s\`,
+          animationDelay: \`\${Math.random() * 2}s\`
+        }}
+      />
+    ))}
+  </div>
+);
 
 const damp = (current, target, factor, dt) => THREE.MathUtils.damp(current, target, factor, dt);
 
@@ -334,24 +365,26 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 1 }}
-              className="absolute inset-0 overflow-hidden pointer-events-none"
+              className="absolute inset-0 overflow-hidden pointer-events-none bg-gradient-to-b from-slate-950 via-red-950/20 to-slate-950"
             >
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+              <LightweightStars />
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#ef444415_1px,transparent_1px),linear-gradient(to_bottom,#ef444415_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_70%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
               <motion.div 
-                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-600/20 blur-[120px] rounded-full"
+                animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }}
+                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-red-600/10 blur-[100px] rounded-full"
               />
             </motion.div>
           )}
         </AnimatePresence>
 
         <Canvas camera={{ position: [0, 0, 1.2], fov: 35 }}>
-          <ambientLight intensity={1.5} />
-          <directionalLight position={[2, 5, 2]} intensity={2.5} castShadow />
+          <ambientLight intensity={0.8} color="#ffffff" />
+          <pointLight position={[0, 2, -2]} intensity={8} color="#ff0000" distance={10} />
+          <directionalLight position={[2, 5, 2]} intensity={1.5} color="#ffd5d5" castShadow />
           <Environment preset="city" />
           <RobotRig phase={phase} speak={setPhase} hasSpoken={hasSpoken} setCaption={setCaption} portalData={portalData} />
-          <ContactShadows position={[0, -1.8, 0]} opacity={0.4} scale={5} blur={2} far={2.5} />
+          <ContactShadows position={[0, -1.8, 0]} opacity={0.6} color="#ff0000" scale={5} blur={2} far={2.5} />
         </Canvas>
 
         {/* Caption Overlay */}
@@ -361,9 +394,9 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="absolute bottom-20 left-1/2 -translate-x-1/2 px-8 py-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl"
+              className="absolute bottom-20 left-1/2 -translate-x-1/2 px-10 py-5 bg-black/30 backdrop-blur-2xl border border-red-500/30 rounded-3xl shadow-[0_0_40px_rgba(220,38,38,0.2)]"
             >
-              <p className="text-white text-2xl font-light tracking-wide text-center drop-shadow-md">
+              <p className="text-white text-2xl font-light tracking-wide text-center drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">
                 {caption}
               </p>
             </motion.div>

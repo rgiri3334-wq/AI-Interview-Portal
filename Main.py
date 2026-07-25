@@ -42,6 +42,10 @@ from services.gemini_service import (
     assess_answer,
     generate_final_report,
 )
+from utils.encryption import encrypt_data, decrypt_data
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from services.interview_memory import get_or_create_session, get_session, clear_session
 from services.prompt_engine import get_fallback_question, get_difficulty_label
 from services.resume_engine import parse_and_score_resume, score_to_status
@@ -83,14 +87,14 @@ logging.basicConfig(
 logger = logging.getLogger("EnterpriseInterviewAPI")
 
 # ── JWT Config ───────────────────────────────────────────────
-# JWT_SECRET MUST be supplied via the environment in production. If it is not set
-# we fall back to an ephemeral random secret so the app still boots in dev, but we
-# emit a loud warning: an ephemeral secret invalidates every issued token on each
-# restart and must never be relied on in production.
-# Annotated as `str` (not str | None) so type checkers know it is never None at
-# the jwt.encode/decode call sites. The `or` fallback guarantees a string value.
-JWT_SECRET: str = os.environ.get("JWT_SECRET") or secrets.token_hex(32)
-if not os.environ.get("JWT_SECRET"):
+_IS_PROD = os.environ.get("RENDER", "") or os.environ.get("VERCEL", "") or os.environ.get("NODE_ENV") == "production"
+
+JWT_SECRET_ENV = os.environ.get("JWT_SECRET")
+if _IS_PROD and not JWT_SECRET_ENV:
+    raise RuntimeError("CRITICAL SECURITY ERROR: JWT_SECRET must be set in production.")
+
+JWT_SECRET: str = JWT_SECRET_ENV or secrets.token_hex(32)
+if not JWT_SECRET_ENV:
     logging.getLogger("EnterpriseInterviewAPI").warning(
         "JWT_SECRET is not set — using an ephemeral secret. Set JWT_SECRET in the "
         "environment for stable, secure tokens (all sessions reset on restart otherwise)."
@@ -430,12 +434,25 @@ async def lifespan(app: FastAPI):
     logger.info("Graceful shutdown complete.")
 
 # ── App ───────────────────────────────────────────────────────────────────
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+
 app = FastAPI(
     title="AI Virtual Interview Engine",
     description="Production-grade AI interview platform with Sterling AI 2.0 Flash + Multi-LLM orchestration.",
     version="5.0.0",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; img-src 'self' data: https: blob:; media-src 'self' blob: https:;"
+    return response
 # ── CORS ──────────────────────────────────────────────────────────────────────
 # A wildcard origin ("*") combined with allow_credentials=True is both invalid per
 # the CORS spec and a security hole, so we use an explicit allow-list.
@@ -969,22 +986,9 @@ async def register_candidate(request: Request, data: CandidateRegister, db: Sess
     
     return CandidateResponse(id=cid, name=data.name, email=data.email, phone=data.phone, created_at=str(new_cand.registration_date))
 
-_login_rate_limit = {}
-
 @app.post("/api/auth/login", tags=["Auth"])
+@limiter.limit("10/minute")
 async def login_candidate(request: Request, data: CandidateLogin, db: Session = Depends(get_db)):
-    ip = request.client.host if request.client else "127.0.0.1"
-    now = time.time()
-    
-    if ip in _login_rate_limit:
-        _login_rate_limit[ip] = [ts for ts in _login_rate_limit[ip] if now - ts < 60]
-    else:
-        _login_rate_limit[ip] = []
-        
-    if len(_login_rate_limit[ip]) >= 100:
-        raise HTTPException(status_code=429, detail="Too many login attempts. Please wait a minute.")
-        
-    _login_rate_limit[ip].append(now)
 
     cand = db.query(Candidate).filter(Candidate.email == data.email.lower()).first()
     if not cand or not bcrypt.checkpw(data.password.encode(), cand.password_hash.encode('utf-8')):
@@ -993,7 +997,8 @@ async def login_candidate(request: Request, data: CandidateLogin, db: Session = 
     return {"status": "success", "candidate_id": cand.candidate_id, "name": cand.name}
 
 @app.post("/api/auth/admin-login", tags=["Auth"])
-async def admin_login(data: CandidateLogin, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def admin_login(request: Request, data: CandidateLogin, db: Session = Depends(get_db)):
     admin = db.query(AdminUser).filter(AdminUser.email == data.email.lower()).first()
     
     if admin and bcrypt.checkpw(data.password.encode(), admin.password_hash.encode('utf-8')):
@@ -1040,6 +1045,13 @@ async def create_admin_user(data: AdminUserCreate, req: Request, db: Session = D
     email_lower = data.email.lower()
     if db.query(AdminUser).filter(AdminUser.email == email_lower).first():
         raise HTTPException(status_code=400, detail="Admin with this email already exists")
+    
+    # ── Password Policy Enforcement ──
+    if not re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", data.password):
+        raise HTTPException(
+            status_code=400, 
+            detail="Password must be at least 8 characters long, contain one uppercase letter, one lowercase letter, one number, and one special character."
+        )
     
     # Force role to sub_admin if creator is not a master_admin
     new_role = "sub_admin"
@@ -1532,8 +1544,15 @@ async def complete_candidate_profile(
     safe_filename = os.path.basename(resume.filename) if resume.filename else "resume.pdf"
     file_path = os.path.join(upload_dir, f"{safe_cid}_{safe_filename}")
     
+    raw_resume_bytes = await resume.read()
+    encrypted_resume = encrypt_data(raw_resume_bytes)
     with open(file_path, "wb") as buffer:
-        buffer.write(await resume.read())
+        buffer.write(encrypted_resume)
+        
+    # Temporary file for ATS parsing since parser needs raw file on disk
+    tmp_path = os.path.join(upload_dir, f"tmp_{safe_cid}_{safe_filename}")
+    with open(tmp_path, "wb") as tmp_buffer:
+        tmp_buffer.write(raw_resume_bytes)
         
     # ATS Parsing
     from services.resume_engine import parse_and_score_resume
@@ -1555,13 +1574,20 @@ async def complete_candidate_profile(
         # Assuming job role text is fetched
         role_record = db.query(JobRole).filter(JobRole.role_id == cand.role_id).first()
         role_desc = role_record.role_name if role_record else "General"
-        score, skills, txt = await parse_and_score_resume(file_path, str(role_desc))
+        score, skills, txt = await parse_and_score_resume(tmp_path, str(role_desc))
         new_resume.resume_score = score
         new_resume.skills_detected = json.dumps(skills)  # type: ignore
         new_resume.extracted_text = txt
         db.commit()
     except Exception as e:
         logger.error(f"ATS Parsing Failed: {e}")
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except Exception as e:
+                logger.error(f"Failed to delete temporary resume file: {e}")
+        
         
     return {"status": "success", "message": "Profile completed successfully"}
 
@@ -1608,7 +1634,9 @@ async def upload_profile_photo(data: ProfilePhotoUploadRequest, db: Session = De
         selfie_data = data.selfie_image.split(',')[1] if ',' in data.selfie_image else data.selfie_image
         selfie_bytes = base64.b64decode(selfie_data)
             
-        # 2. Save images to Supabase Storage
+        # 2. Encrypt and Save images
+        encrypted_selfie_bytes = encrypt_data(selfie_bytes)
+        
         upload_dir = "recordings"
         os.makedirs(upload_dir, exist_ok=True)
         
@@ -1617,13 +1645,13 @@ async def upload_profile_photo(data: ProfilePhotoUploadRequest, db: Session = De
         selfie_path = os.path.join(upload_dir, f"selfie_{safe_cid}.jpg")
         
         with open(selfie_path, "wb") as f:
-            f.write(selfie_bytes)
+            f.write(encrypted_selfie_bytes)
             
         selfie_url = ""
         if supabase_client:
             try:
                 # Upload to Supabase bucket
-                supabase_client.storage.from_("kyc-images").upload(f"selfie_{safe_cid}.jpg", selfie_bytes, file_options={"content-type": "image/jpeg", "upsert": "true"})
+                supabase_client.storage.from_("kyc-images").upload(f"selfie_{safe_cid}.jpg", encrypted_selfie_bytes, file_options={"content-type": "application/octet-stream", "upsert": "true"})
                 
                 # Get public URLs
                 selfie_url = supabase_client.storage.from_("kyc-images").get_public_url(f"selfie_{safe_cid}.jpg")
@@ -3361,11 +3389,12 @@ async def upload_interview_recording(interview_id: str, file: UploadFile = File(
     recording_url = ""
     if supabase_client:
         try:
+            encrypted_bytes = encrypt_data(raw_bytes)
             filename = f"INT_{interview_id}_{int(datetime.now(timezone.utc).timestamp())}.webm"
             supabase_client.storage.from_("interview-recordings").upload(
                 filename, 
-                raw_bytes, 
-                file_options={"content-type": "video/webm", "upsert": "true"}
+                encrypted_bytes, 
+                file_options={"content-type": "application/octet-stream", "upsert": "true"}
             )
             recording_url = supabase_client.storage.from_("interview-recordings").get_public_url(filename)
         except Exception as e:
