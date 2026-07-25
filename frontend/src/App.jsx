@@ -4,7 +4,6 @@ import Login from './pages/Login';
 import CandidateLogin from './pages/CandidateLogin';
 import VerifyInvitation from './pages/VerifyInvitation';
 import LoadingScreen from './components/UI/LoadingScreen';
-import AppSplash from './components/UI/AppSplash';
 import { lazyWithReload } from './utils/lazyWithReload';
 
 // ── Route-Level Code Splitting ──────────────────────────────────────────────
