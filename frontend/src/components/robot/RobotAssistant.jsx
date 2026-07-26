@@ -61,7 +61,7 @@ function SpatialCaption({ text, durationMs = 3000 }) {
       exit={{ opacity: 0, y: -12 }}
       transition={{ duration: 0.5 }}
       // Adjusted positioning, sizing, and added a soft radial gradient background
-      className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-3xl max-h-[35vh] overflow-hidden px-10 py-8 pointer-events-none z-20 flex flex-col items-center justify-center"
+      className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl px-4 md:px-10 py-6 pointer-events-none z-20 flex flex-col items-center justify-center rounded-3xl"
       style={{
         background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0) 80%)'
       }}
@@ -363,35 +363,35 @@ function RobotRig({ phase, chatOpen }) {
       if (b) b.rotation.z = a.rightThumbCurl;
     });
 
-    // ── Camera Framing (Ensure full robot visibility) ──
-    // A Z-distance of ~4.5 and lookAt of -0.9 ensures the full 1.8 unit tall robot fits in frame
+    // ── Camera Framing (Professional mid-shot composition) ──
+    // A Z-distance of ~3.2 and lookAt of -0.6 ensures a much more natural, engaging waist-up proportion
     if (phase === 'WALKING') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.8), dt * 2);
+      state.camera.position.lerp(new THREE.Vector3(0, -0.2, 4.2), dt * 2);
     } else if (phase === 'WAKING') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.5), dt * 2);
+      state.camera.position.lerp(new THREE.Vector3(0, -0.2, 3.5), dt * 2);
     } else if (phase === 'GREETING') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.5), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(0, -0.2, 3.2), dt * 1.5);
     } else if (phase === 'INTRO_PORTAL') {
-      state.camera.position.lerp(new THREE.Vector3(0.2, 0, 4.5), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(0.3, -0.2, 3.2), dt * 1.5);
     } else if (phase === 'INTRO_FEATURES') {
-      state.camera.position.lerp(new THREE.Vector3(-0.2, 0, 4.5), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(-0.3, -0.2, 3.2), dt * 1.5);
     } else if (phase === 'INTRO_ENCOURAGE') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.5), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(0, -0.2, 3.0), dt * 1.5); // Slightly closer
     } else if (phase === 'INTRO_READY') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.5), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(0, -0.2, 3.2), dt * 1.5);
     } else if (phase === 'RESIZING') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0, 5.0), dt * 2);
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.5), dt * 2);
     } else {
       if (chatOpen) {
         // Shift camera slightly to give room for chat UI without clipping robot
-        state.camera.position.lerp(new THREE.Vector3(-0.3, 0, 4.5), dt * 2);
+        state.camera.position.lerp(new THREE.Vector3(-0.5, 0, 3.5), dt * 2);
       } else {
         // Idle state in small window - pull back a bit more due to vertical aspect ratio
-        state.camera.position.lerp(new THREE.Vector3(0, 0, 5.2), dt * 2);
+        state.camera.position.lerp(new THREE.Vector3(0, 0, 4.8), dt * 2);
       }
     }
-    // Look lower to center the robot's full body (feet are at -1.8, head at ~0)
-    state.camera.lookAt(0, -0.9, 0); 
+    // Look at chest level for a better portrait proportion
+    state.camera.lookAt(0, -0.6, 0); 
   });
 
   return (
