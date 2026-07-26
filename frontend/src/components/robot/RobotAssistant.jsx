@@ -28,9 +28,13 @@ function resolveBone(nodes, scene, ...candidates) {
   return null;
 }
 
-const damp = (current, target, factor, dt) => THREE.MathUtils.damp(current, target, factor, dt);
+const dampVal = (current, target, factor, dt) => THREE.MathUtils.damp(current, target, factor, dt);
+
+// Ease-out cubic helper
+const easeOutCubic = (t) => 1 - Math.pow(1 - Math.min(Math.max(t, 0), 1), 3);
 
 // ─── Spatial Caption: Holographic word-by-word typing ────────
+// FIX 3: Smaller text, more padding, higher bottom offset, overflow safety
 
 function SpatialCaption({ text }) {
   const [visibleWords, setVisibleWords] = useState(0);
@@ -44,7 +48,7 @@ function SpatialCaption({ text }) {
       count++;
       setVisibleWords(count);
       if (count >= words.length) clearInterval(interval);
-    }, 150); // ~150ms per word — natural projection pace
+    }, 150);
     return () => clearInterval(interval);
   }, [text]);
 
@@ -56,7 +60,7 @@ function SpatialCaption({ text }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
       transition={{ duration: 0.5 }}
-      className="absolute bottom-14 left-1/2 -translate-x-1/2 w-[82%] max-w-3xl pointer-events-none z-20"
+      className="absolute bottom-20 left-1/2 -translate-x-1/2 w-[75%] max-w-2xl max-h-[25vh] overflow-hidden px-6 pointer-events-none z-20"
     >
       {/* Scanline sweep */}
       <motion.div
@@ -67,7 +71,7 @@ function SpatialCaption({ text }) {
       />
 
       <p
-        className="text-white text-lg md:text-2xl font-light tracking-wide text-center leading-relaxed relative"
+        className="text-white text-base md:text-xl font-light tracking-wide text-center leading-relaxed relative"
         style={{ textShadow: '0 0 20px rgba(239,68,68,0.35), 0 0 60px rgba(239,68,68,0.08)' }}
       >
         {words.slice(0, visibleWords).join(' ')}
@@ -88,18 +92,27 @@ function SpatialCaption({ text }) {
   );
 }
 
-// ─── Robot Rig: Full gesture library ─────────────────────────
+// ─── Robot Rig: Walking entrance + full gesture library ──────
+// FIX 1: Walking from left. FIX 5: Natural wave motion.
 
 function RobotRig({ phase, chatOpen }) {
   const { nodes, scene } = useGLTF('/robot.glb');
+  const groupRef = useRef();
   const anim = useRef({
     t: 0,
+    // Walk entrance
+    walkProgress: 0,
+    // Head
     headPitch: 0, headYaw: 0, headRoll: 0,
-    spinePitch: 0,
+    // Body
+    spinePitch: 0, spineYaw: 0,
+    // Right arm
     rightArmRoll: 1.2, rightArmPitch: 0.1, rightArmYaw: 0,
-    rightForeArmPitch: 0, rightHandYaw: 0,
+    rightForeArmPitch: 0.1, rightHandYaw: 0,
+    // Left arm
     leftArmRoll: -1.2, leftArmPitch: 0.1, leftArmYaw: 0,
     leftForeArmPitch: 0.1,
+    // Wave state
     waveT: 0, hasWaved: false,
   });
 
@@ -123,33 +136,76 @@ function RobotRig({ phase, chatOpen }) {
     const a = anim.current;
     a.t += dt;
 
+    // ── Walking entrance animation ──
+    if (groupRef.current) {
+      if (phase === 'WALKING') {
+        a.walkProgress = Math.min(a.walkProgress + dt / 3, 1); // 3 seconds to cross
+        const eased = easeOutCubic(a.walkProgress);
+        const walkBob = eased < 0.95 ? Math.sin(a.t * 8) * 0.018 * (1 - eased) : 0;
+        groupRef.current.position.x = THREE.MathUtils.lerp(-4, 0, eased);
+        groupRef.current.position.y = -1.8 + walkBob;
+      } else {
+        // Smoothly settle to final position after walk ends
+        groupRef.current.position.x = dampVal(groupRef.current.position.x, 0, 5, dt);
+        groupRef.current.position.y = dampVal(groupRef.current.position.y, -1.8, 5, dt);
+      }
+    }
+
     // ── Gesture targets per phase ──
     let tHP = 0, tHY = 0, tHR = 0;
     let tSP = Math.sin(a.t * 1.5) * 0.015; // Breathing
+    let tSY = 0; // Spine yaw
     let tRAR = 1.2, tRAP = 0.1, tRAY = 0;
     let tRFP = 0.1, tRHY = 0;
     let tLAR = -1.2, tLAP = 0.1, tLAY = 0;
     let tLFP = 0.1;
 
-    if (phase === 'WAKING') {
-      tHP = 0.5; // Head down — sleeping
+    if (phase === 'WALKING') {
+      // Walking body language: arm swing, head forward, slight spine sway
+      tHP = Math.sin(a.t * 4) * 0.025;
+      tSY = Math.sin(a.t * 4) * 0.02;
+      tRAR = 1.2 + Math.sin(a.t * 4) * 0.15;
+      tLAR = -1.2 - Math.sin(a.t * 4) * 0.15;
+      tRFP = 0.1 + Math.sin(a.t * 4 + Math.PI) * 0.08;
+      tLFP = 0.1 + Math.sin(a.t * 4) * 0.08;
+    } else if (phase === 'WAKING') {
+      tHP = 0.5; // Head down — sleeping/booting
     } else if (phase === 'GREETING') {
-      // Wave gesture
-      tHY = Math.sin(a.t * 2) * 0.08;
+      tHY = Math.sin(a.t * 1.5) * 0.06;
+
+      // FIX 5: Natural 3-phase wave
       if (!a.hasWaved) { a.waveT = 0; a.hasWaved = true; }
-      if (a.waveT < 5.5) {
-        a.waveT += dt;
-        const env = Math.sin(a.waveT * Math.PI / 3) * 0.5 + 0.5;
-        if (a.waveT < 5 && env > 0) {
-          tRAR = -1.1;
-          tRAP = -0.3;
-          tRAY = 0.2;
-          tRFP = Math.sin(a.t * 6) * 0.35 - 0.7;
-          tRHY = Math.sin(a.t * 6) * 0.25;
-        }
+      a.waveT += dt;
+
+      if (a.waveT < 1.2) {
+        // Phase 1: RAISE — arm slowly lifts, no forearm wave yet
+        const raise = easeOutCubic(a.waveT / 1.2);
+        tRAR = THREE.MathUtils.lerp(1.2, -1.0, raise);
+        tRAP = THREE.MathUtils.lerp(0.1, -0.25, raise);
+        tRAY = THREE.MathUtils.lerp(0, 0.2, raise);
+        tRFP = THREE.MathUtils.lerp(0.1, -0.5, raise);
+        tSY = raise * 0.03; // Slight torso lean
+      } else if (a.waveT < 3.8) {
+        // Phase 2: WAVE — forearm oscillates with decreasing amplitude
+        const waveTime = a.waveT - 1.2;
+        const decay = Math.max(0, 1 - waveTime / 2.6); // Amplitude fades out
+        tRAR = -1.0;
+        tRAP = -0.25;
+        tRAY = 0.2;
+        tRFP = -0.5 + Math.sin(waveTime * 3.5) * 0.3 * decay;
+        tRHY = Math.sin(waveTime * 3.5) * 0.2 * decay;
+        tSY = 0.03;
+      } else if (a.waveT < 5.2) {
+        // Phase 3: LOWER — arm smoothly returns to rest
+        const lower = easeOutCubic((a.waveT - 3.8) / 1.4);
+        tRAR = THREE.MathUtils.lerp(-1.0, 1.2, lower);
+        tRAP = THREE.MathUtils.lerp(-0.25, 0.1, lower);
+        tRAY = THREE.MathUtils.lerp(0.2, 0, lower);
+        tRFP = THREE.MathUtils.lerp(-0.5, 0.1, lower);
+        tRHY = THREE.MathUtils.lerp(0, 0, lower);
+        tSY = THREE.MathUtils.lerp(0.03, 0, lower);
       }
     } else if (phase === 'INTRO_PORTAL') {
-      // Head looks left, right arm points left
       tHY = 0.35;
       tHP = -0.05;
       tRAR = -0.7;
@@ -157,7 +213,6 @@ function RobotRig({ phase, chatOpen }) {
       tRAY = 0.4;
       tRFP = -0.3;
     } else if (phase === 'INTRO_FEATURES') {
-      // Nodding head, subtle hand float
       tHP = Math.sin(a.t * 2.5) * 0.08;
       tHY = Math.sin(a.t * 0.8) * 0.15;
       tRAR = 0.8;
@@ -165,7 +220,6 @@ function RobotRig({ phase, chatOpen }) {
       tLAR = -0.8;
       tLFP = Math.sin(a.t * 1.5 + 1) * 0.1 + 0.2;
     } else if (phase === 'INTRO_ENCOURAGE') {
-      // Both arms open outward — open palms
       tHP = -0.05;
       tHY = Math.sin(a.t * 0.5) * 0.05;
       tRAR = -0.6;
@@ -175,34 +229,35 @@ function RobotRig({ phase, chatOpen }) {
       tLAP = -0.2;
       tLFP = -0.2;
     } else if (phase === 'INTRO_READY') {
-      // Right arm points toward camera
       tHP = -0.1;
       tRAR = 0.2;
       tRAP = -0.6;
       tRFP = -0.4;
     } else if (phase === 'IDLE' || phase === 'RESIZING') {
       if (chatOpen) {
-        tHY = -0.35; // Face right toward chat panel
-        tHP = Math.sin(a.t * 2) * 0.03; // Subtle nod
+        tHY = -0.35;
+        tHP = Math.sin(a.t * 2) * 0.03;
       } else {
         tHY = 0.3 + Math.sin(a.t * 0.5) * 0.1;
       }
     }
 
     // ── Damp all values ──
-    a.headPitch = damp(a.headPitch, tHP, 5, dt);
-    a.headYaw = damp(a.headYaw, tHY, 5, dt);
-    a.headRoll = damp(a.headRoll, tHR, 5, dt);
-    a.spinePitch = damp(a.spinePitch, tSP, 2, dt);
-    a.rightArmRoll = damp(a.rightArmRoll, tRAR, 6, dt);
-    a.rightArmPitch = damp(a.rightArmPitch, tRAP, 6, dt);
-    a.rightArmYaw = damp(a.rightArmYaw, tRAY, 6, dt);
-    a.rightForeArmPitch = damp(a.rightForeArmPitch, tRFP, 6, dt);
-    a.rightHandYaw = damp(a.rightHandYaw, tRHY, 6, dt);
-    a.leftArmRoll = damp(a.leftArmRoll, tLAR, 6, dt);
-    a.leftArmPitch = damp(a.leftArmPitch, tLAP, 6, dt);
-    a.leftArmYaw = damp(a.leftArmYaw, tLAY, 6, dt);
-    a.leftForeArmPitch = damp(a.leftForeArmPitch, tLFP, 6, dt);
+    const df = 5;
+    a.headPitch = dampVal(a.headPitch, tHP, df, dt);
+    a.headYaw = dampVal(a.headYaw, tHY, df, dt);
+    a.headRoll = dampVal(a.headRoll, tHR, df, dt);
+    a.spinePitch = dampVal(a.spinePitch, tSP, 2, dt);
+    a.spineYaw = dampVal(a.spineYaw, tSY, 4, dt);
+    a.rightArmRoll = dampVal(a.rightArmRoll, tRAR, 5, dt);
+    a.rightArmPitch = dampVal(a.rightArmPitch, tRAP, 5, dt);
+    a.rightArmYaw = dampVal(a.rightArmYaw, tRAY, 5, dt);
+    a.rightForeArmPitch = dampVal(a.rightForeArmPitch, tRFP, 5, dt);
+    a.rightHandYaw = dampVal(a.rightHandYaw, tRHY, 5, dt);
+    a.leftArmRoll = dampVal(a.leftArmRoll, tLAR, 5, dt);
+    a.leftArmPitch = dampVal(a.leftArmPitch, tLAP, 5, dt);
+    a.leftArmYaw = dampVal(a.leftArmYaw, tLAY, 5, dt);
+    a.leftForeArmPitch = dampVal(a.leftForeArmPitch, tLFP, 5, dt);
 
     // ── Apply to bones ──
     const head = resolveBone(nodes, scene, 'Head');
@@ -220,7 +275,10 @@ function RobotRig({ phase, chatOpen }) {
       head.rotation.y = a.headYaw;
       head.rotation.z = a.headRoll;
     }
-    if (spine) spine.rotation.x = a.spinePitch;
+    if (spine) {
+      spine.rotation.x = a.spinePitch;
+      spine.rotation.y = a.spineYaw;
+    }
     if (rightArm) {
       rightArm.rotation.x = a.rightArmPitch;
       rightArm.rotation.y = a.rightArmYaw;
@@ -238,7 +296,9 @@ function RobotRig({ phase, chatOpen }) {
     if (leftShoulder) leftShoulder.rotation.z = -0.2;
 
     // ── Camera control per phase ──
-    if (phase === 'WAKING') {
+    if (phase === 'WALKING') {
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 3.5), dt * 2);
+    } else if (phase === 'WAKING') {
       state.camera.position.lerp(new THREE.Vector3(0, 0.2, 1.5), dt * 2);
     } else if (phase === 'GREETING') {
       state.camera.position.lerp(new THREE.Vector3(0, 0.2, 2.8), dt * 1.5);
@@ -253,7 +313,6 @@ function RobotRig({ phase, chatOpen }) {
     } else if (phase === 'RESIZING') {
       state.camera.position.lerp(new THREE.Vector3(0, -0.2, 3.5), dt * 2);
     } else {
-      // IDLE
       if (chatOpen) {
         state.camera.position.lerp(new THREE.Vector3(0, -0.1, 2.8), dt * 2);
       } else {
@@ -264,13 +323,14 @@ function RobotRig({ phase, chatOpen }) {
   });
 
   return (
-    <group position={[0, -1.8, 0]} scale={1}>
+    <group ref={groupRef} position={[-4, -1.8, 0]}>
       <primitive object={scene} />
     </group>
   );
 }
 
 // ─── Chat Panel: Spatial dark theme ──────────────────────────
+// FIX 4: Close button visibility — text-white/60
 
 function ChatPanel({ onClose }) {
   const [messages, setMessages] = useState([
@@ -310,7 +370,7 @@ function ChatPanel({ onClose }) {
       transition={{ duration: 0.4 }}
       className="flex flex-col h-full w-full"
     >
-      {/* Header */}
+      {/* Header — FIX 4: visible close button */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex items-center gap-2 text-slate-300 text-xs font-semibold uppercase tracking-widest">
           <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -318,7 +378,7 @@ function ChatPanel({ onClose }) {
         </div>
         <button
           onClick={onClose}
-          className="text-slate-500 hover:text-red-400 p-1 rounded-full transition-colors"
+          className="text-white/60 hover:text-red-400 hover:bg-white/10 p-1.5 rounded-full transition-colors"
         >
           <X size={14} />
         </button>
@@ -353,18 +413,9 @@ function ChatPanel({ onClose }) {
             style={{ background: 'rgba(255,255,255,0.05)' }}
           >
             <span className="inline-flex gap-1.5">
-              <span
-                className="w-1.5 h-1.5 bg-red-500/70 rounded-full animate-bounce"
-                style={{ animationDelay: '0ms' }}
-              />
-              <span
-                className="w-1.5 h-1.5 bg-red-500/70 rounded-full animate-bounce"
-                style={{ animationDelay: '150ms' }}
-              />
-              <span
-                className="w-1.5 h-1.5 bg-red-500/70 rounded-full animate-bounce"
-                style={{ animationDelay: '300ms' }}
-              />
+              <span className="w-1.5 h-1.5 bg-red-500/70 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 bg-red-500/70 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 bg-red-500/70 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </span>
           </div>
         )}
@@ -397,9 +448,10 @@ function ChatPanel({ onClose }) {
 // ─── Main Component ──────────────────────────────────────────
 
 export default function RobotAssistant({ onIntroComplete, skipIntro, portalData }) {
-  const [phase, setPhase] = useState(skipIntro ? 'IDLE' : 'WAKING');
+  const [phase, setPhase] = useState(skipIntro ? 'IDLE' : 'WALKING');
   const [chatOpen, setChatOpen] = useState(false);
   const [caption, setCaption] = useState('');
+  const [ttsStarted, setTtsStarted] = useState(false); // FIX 2: sync flag
   const hasSpoken = useRef(skipIntro);
 
   const name = (portalData?.candidate?.name?.split(' ')[0]) || 'Candidate';
@@ -411,27 +463,20 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
       'Hello ' + name + '! I am your AI assistant, and I am thrilled to welcome you to Sterling.';
     if (stage === 'INTERVIEW_PENDING') {
       greeting =
-        'Hello ' +
-        name +
-        '! Welcome back. I am your AI assistant. Your application is pending an interview schedule.';
+        'Hello ' + name + '! Welcome back. I am your AI assistant. Your application is pending an interview schedule.';
     } else if (stage === 'INTERVIEW_SCHEDULED') {
       greeting =
-        'Hello ' +
-        name +
-        '! Welcome back. I am your AI assistant. Your interview is all set and ready to go.';
+        'Hello ' + name + '! Welcome back. I am your AI assistant. Your interview is all set and ready to go.';
     } else if (stage === 'UNDER_REVIEW') {
       greeting =
-        'Hello ' +
-        name +
-        '! Welcome back. I am your AI assistant. Your interview is complete and currently under review.';
+        'Hello ' + name + '! Welcome back. I am your AI assistant. Your interview is complete and currently under review.';
     } else if (stage === 'DECISION_MADE') {
       greeting =
-        'Hello ' +
-        name +
-        '! Welcome back. I am your AI assistant. A decision has been made on your application.';
+        'Hello ' + name + '! Welcome back. I am your AI assistant. A decision has been made on your application.';
     }
 
     return {
+      WALKING: '', // Silent walk — no caption
       WAKING: 'Initializing Sterling AI 2.0 Flash...',
       GREETING: greeting,
       INTRO_PORTAL:
@@ -448,6 +493,7 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
   // ── Phase auto-advance (timer-based) ──
   useEffect(() => {
     const transitions = {
+      WALKING: { duration: 3000, next: 'WAKING' },
       WAKING: { duration: 2000, next: 'GREETING' },
       GREETING: { duration: 7000, next: 'INTRO_PORTAL' },
       INTRO_PORTAL: { duration: 10000, next: 'INTRO_FEATURES' },
@@ -468,11 +514,27 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
   }, [phase, onIntroComplete]);
 
   // ── Caption updates per phase ──
+  // FIX 2: Only show speech captions AFTER TTS actually starts.
+  // WALKING has no caption. WAKING is a system message (shown immediately).
+  // GREETING onward requires ttsStarted === true.
   useEffect(() => {
-    setCaption(phaseCaptions[phase] || '');
-  }, [phase, phaseCaptions]);
+    const text = phaseCaptions[phase] || '';
+
+    if (phase === 'WALKING') {
+      setCaption('');
+    } else if (phase === 'WAKING') {
+      // System message — show immediately, no TTS needed
+      setCaption(text);
+    } else if (ttsStarted) {
+      // Speech phases — only show when TTS is confirmed playing
+      setCaption(text);
+    } else {
+      setCaption('');
+    }
+  }, [phase, phaseCaptions, ttsStarted]);
 
   // ── TTS: Play full combined text starting at GREETING ──
+  // FIX 2: Set ttsStarted on audio.onplay / utterance.onstart
   useEffect(() => {
     if (phase === 'GREETING' && !hasSpoken.current) {
       hasSpoken.current = true;
@@ -489,15 +551,18 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
           const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
           const audioUrl = backendUrl + '/api/tts?text=' + encodeURIComponent(fullText);
           const audio = new Audio(audioUrl);
-          audio.onerror = () => {
-            throw new Error('Neural TTS failed');
-          };
+
+          audio.onplay = () => setTtsStarted(true); // ← SYNC: caption appears NOW
+          audio.onerror = () => { throw new Error('Neural TTS failed'); };
           await audio.play();
         } catch (err) {
           console.warn('Falling back to local TTS:', err);
           const utterance = new SpeechSynthesisUtterance(fullText);
           utterance.pitch = 1.1;
           utterance.rate = 0.9;
+
+          utterance.onstart = () => setTtsStarted(true); // ← SYNC: caption appears NOW
+
           const pickVoice = () => {
             const voices = speechSynthesis.getVoices();
             const preferred = voices.find(
@@ -511,6 +576,9 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
           };
           if (speechSynthesis.getVoices().length > 0) pickVoice();
           else speechSynthesis.onvoiceschanged = pickVoice;
+
+          // Safety fallback: if onstart never fires (some browsers), force it after 2s
+          setTimeout(() => setTtsStarted(true), 2000);
         }
       };
       playTTS();
@@ -519,13 +587,8 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
 
   // ── Derived state ──
   const isFullscreen = [
-    'WAKING',
-    'GREETING',
-    'INTRO_PORTAL',
-    'INTRO_FEATURES',
-    'INTRO_ENCOURAGE',
-    'INTRO_READY',
-    'RESIZING',
+    'WALKING', 'WAKING', 'GREETING', 'INTRO_PORTAL',
+    'INTRO_FEATURES', 'INTRO_ENCOURAGE', 'INTRO_READY', 'RESIZING',
   ].includes(phase);
 
   const handleCanvasClick = () => {
@@ -594,14 +657,7 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
             <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
             <Environment preset="city" />
             <RobotRig phase={phase} chatOpen={chatOpen} />
-            <ContactShadows
-              position={[0, -1.8, 0]}
-              opacity={0.6}
-              color="#ff0000"
-              scale={5}
-              blur={2}
-              far={2.5}
-            />
+            <ContactShadows position={[0, -1.8, 0]} opacity={0.6} color="#ff0000" scale={5} blur={2} far={2.5} />
           </Canvas>
 
           {/* Spatial Caption Overlay — only during intro */}
@@ -625,10 +681,7 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
               {/* Red accent divider */}
               <div
                 className="w-[1px] h-full flex-shrink-0"
-                style={{
-                  background:
-                    'linear-gradient(to bottom, transparent, rgba(239,68,68,0.3), transparent)',
-                }}
+                style={{ background: 'linear-gradient(to bottom, transparent, rgba(239,68,68,0.3), transparent)' }}
               />
               <div className="flex-1 h-full min-w-0">
                 <ChatPanel onClose={() => setChatOpen(false)} />
