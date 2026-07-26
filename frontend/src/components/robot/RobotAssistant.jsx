@@ -34,7 +34,7 @@ const easeOutCubic = (t) => 1 - Math.pow(1 - Math.min(Math.max(t, 0), 1), 3);
 // ─── Spatial Caption: Holographic word-by-word typing ────────
 // FIX 2: Dark vignette background for perfect readability without hard box edges
 
-function SpatialCaption({ text }) {
+function SpatialCaption({ text, durationMs = 3000 }) {
   const [visibleWords, setVisibleWords] = useState(0);
   const words = text ? text.split(' ') : [];
 
@@ -42,13 +42,15 @@ function SpatialCaption({ text }) {
     if (!text) return;
     setVisibleWords(0);
     let count = 0;
+    // Aim to finish typing the sentence when ~85% of its allocated speech time has passed
+    const intervalMs = Math.max(50, (durationMs * 0.85) / Math.max(1, words.length));
     const interval = setInterval(() => {
       count++;
       setVisibleWords(count);
       if (count >= words.length) clearInterval(interval);
-    }, 150);
+    }, intervalMs);
     return () => clearInterval(interval);
-  }, [text]);
+  }, [text, durationMs]);
 
   if (!text) return null;
 
@@ -109,7 +111,14 @@ function RobotRig({ phase, chatOpen }) {
     rightForeArmPitch: 0.1, rightHandYaw: 0,
     leftArmRoll: -1.2, leftArmPitch: 0.1, leftArmYaw: 0,
     leftForeArmPitch: 0.1,
+    rightUpLegPitch: 0, rightLegPitch: 0,
+    leftUpLegPitch: 0, leftLegPitch: 0,
     waveT: 0, hasWaved: false,
+    rightForeArmYaw: 0, rightForeArmRoll: 0,
+    leftForeArmYaw: 0, leftForeArmRoll: 0,
+    rightHandPitch: 0, rightHandRoll: 0,
+    leftHandPitch: 0, leftHandYaw: 0, leftHandRoll: 0,
+    rightFingersCurl: 0.1, rightThumbCurl: 0.1,
   });
 
   useEffect(() => {
@@ -159,78 +168,90 @@ function RobotRig({ phase, chatOpen }) {
     let tSP = Math.sin(a.t * 1.5) * 0.015; // Breathing
     let tSY = 0;
     let tRAR = 1.2, tRAP = 0.1, tRAY = 0;
-    let tRFP = 0.1, tRHY = 0;
+    let tRFP = 0.1, tRFY = 0, tRFR = 0;
+    let tRHY = 0, tRHP = 0, tRHR = 0;
     let tLAR = -1.2, tLAP = 0.1, tLAY = 0;
-    let tLFP = 0.1;
+    let tLFP = 0.1, tLFY = 0, tLFR = 0;
+    let tLHY = 0, tLHP = 0, tLHR = 0;
+    let tRULP = 0, tRLP = 0;
+    let tLULP = 0, tLLP = 0;
+    let tRFC = 0.1, tRTC = 0.1; // Natural slight finger curl
 
     if (phase === 'WALKING') {
+      const walkSpeed = 6;
+      const cycle = a.t * walkSpeed;
+      
       tHP = Math.sin(a.t * 4) * 0.025;
       tSY = Math.sin(a.t * 4) * 0.02;
-      tRAR = 1.2 + Math.sin(a.t * 4) * 0.15;
-      tLAR = -1.2 - Math.sin(a.t * 4) * 0.15;
-      tRFP = 0.1 + Math.sin(a.t * 4 + Math.PI) * 0.08;
-      tLFP = 0.1 + Math.sin(a.t * 4) * 0.08;
+      
+      tRAR = 1.2; tRAP = Math.sin(cycle + Math.PI) * 0.5;
+      tLAR = -1.2; tLAP = Math.sin(cycle) * 0.5;
+      tRFP = 0.1 + Math.sin(cycle + Math.PI) * 0.08;
+      tLFP = 0.1 + Math.sin(cycle) * 0.08;
+
+      tRULP = Math.sin(cycle) * 0.5; 
+      tRLP = Math.max(0, Math.sin(cycle - Math.PI/2)) * 0.8;
+      tLULP = Math.sin(cycle + Math.PI) * 0.5;
+      tLLP = Math.max(0, Math.sin(cycle + Math.PI - Math.PI/2)) * 0.8;
     } else if (phase === 'WAKING') {
       tHP = 0.5; // Look down initially
     } else if (phase === 'GREETING') {
-      tHY = Math.sin(a.t * 1.5) * 0.06;
-
+      // Namaste Gesture
+      tHP = 0.15; // Bow head slightly
+      tHY = 0;
+      
+      // Both arms rotate forward and inward
+      tRAP = -0.2; tRAY = -0.8; tRAR = 1.2;
+      tLAP = -0.2; tLAY = 0.8; tLAR = -1.2;
+      
+      // Forearms bend up strongly to chest level
+      tRFP = -1.8; tRFY = 0.2; tRFR = 0;
+      tLFP = -1.8; tLFY = -0.2; tLFR = 0;
+      
+      // Hands bend back so palms face each other
+      tRHP = -0.4; tRHY = -0.8; tRHR = 0.2;
+      tLHP = -0.4; tLHY = 0.8; tLHR = -0.2;
+      
+      // Fingers flat
+      tRFC = 0; tRTC = 0;
+    } else if (phase === 'INTRO_PORTAL') {
+      // Waving Gesture
+      tHY = 0.15;
       if (!a.hasWaved) { a.waveT = 0; a.hasWaved = true; }
       a.waveT += dt;
 
-      if (a.waveT < 1.2) {
-        const raise = easeOutCubic(a.waveT / 1.2);
-        tRAR = THREE.MathUtils.lerp(1.2, -1.0, raise);
-        tRAP = THREE.MathUtils.lerp(0.1, -0.25, raise);
-        tRAY = THREE.MathUtils.lerp(0, 0.2, raise);
-        tRFP = THREE.MathUtils.lerp(0.1, -0.5, raise);
-        tSY = raise * 0.03;
-      } else if (a.waveT < 3.8) {
-        const waveTime = a.waveT - 1.2;
-        const decay = Math.max(0, 1 - waveTime / 2.6);
-        tRAR = -1.0;
-        tRAP = -0.25;
-        tRAY = 0.2;
-        tRFP = -0.5 + Math.sin(waveTime * 3.5) * 0.3 * decay;
-        tRHY = Math.sin(waveTime * 3.5) * 0.2 * decay;
-        tSY = 0.03;
-      } else if (a.waveT < 5.2) {
-        const lower = easeOutCubic((a.waveT - 3.8) / 1.4);
-        tRAR = THREE.MathUtils.lerp(-1.0, 1.2, lower);
-        tRAP = THREE.MathUtils.lerp(-0.25, 0.1, lower);
-        tRAY = THREE.MathUtils.lerp(0.2, 0, lower);
-        tRFP = THREE.MathUtils.lerp(-0.5, 0.1, lower);
-        tRHY = THREE.MathUtils.lerp(0, 0, lower);
-        tSY = THREE.MathUtils.lerp(0.03, 0, lower);
-      }
-    } else if (phase === 'INTRO_PORTAL') {
-      tHY = 0.35;
-      tHP = -0.05;
-      tRAR = -0.7;
-      tRAP = -0.15;
+      tRAR = -1.2;
+      tRAP = -0.5;
       tRAY = 0.4;
-      tRFP = -0.3;
+      tRFP = -1.2 + Math.sin(a.t * 8) * 0.5; // Quick forearm oscillate
+      tRHY = Math.sin(a.t * 8) * 0.2;
+      tRFC = 0.1; tRTC = 0.1;
+      
+      // Left arm idle
+      tLAR = 1.2; tLAP = 0.1; tLAY = 0; tLFP = 0.1;
     } else if (phase === 'INTRO_FEATURES') {
       tHP = Math.sin(a.t * 2.5) * 0.08;
       tHY = Math.sin(a.t * 0.8) * 0.15;
-      tRAR = 0.8;
-      tRFP = Math.sin(a.t * 1.5) * 0.1 + 0.2;
-      tLAR = -0.8;
-      tLFP = Math.sin(a.t * 1.5 + 1) * 0.1 + 0.2;
+      tRAR = 0.8; tRFP = Math.sin(a.t * 1.5) * 0.1 - 0.2;
+      tLAR = -0.8; tLFP = Math.sin(a.t * 1.5 + 1) * 0.1 - 0.2;
     } else if (phase === 'INTRO_ENCOURAGE') {
       tHP = -0.05;
       tHY = Math.sin(a.t * 0.5) * 0.05;
-      tRAR = -0.6;
-      tRAP = -0.2;
-      tRFP = -0.2;
-      tLAR = 0.6;
-      tLAP = -0.2;
-      tLFP = -0.2;
+      tRAR = -0.6; tRAP = -0.2; tRFP = -0.4;
+      tLAR = 0.6; tLAP = -0.2; tLFP = -0.4;
     } else if (phase === 'INTRO_READY') {
+      // Thumbs Up Gesture
       tHP = -0.1;
-      tRAR = 0.2;
-      tRAP = -0.6;
-      tRFP = -0.4;
+      tRAR = 0.3; tRAP = -0.6; tRAY = -0.2;
+      tRFP = -1.2; tRFY = -0.3; tRHR = -0.4;
+      tRHP = -0.2; tRHY = -0.2;
+      
+      // Make fist with fingers, thumb straight
+      tRFC = 1.4; // Curled fingers
+      tRTC = 0.0; // Straight thumb
+      
+      // Left arm idle
+      tLAR = 1.2; tLAP = 0.1; tLAY = 0; tLFP = 0.1;
     } else if (phase === 'IDLE' || phase === 'RESIZING') {
       if (chatOpen) {
         tHY = -0.35;
@@ -250,11 +271,26 @@ function RobotRig({ phase, chatOpen }) {
     a.rightArmPitch = dampVal(a.rightArmPitch, tRAP, 5, dt);
     a.rightArmYaw = dampVal(a.rightArmYaw, tRAY, 5, dt);
     a.rightForeArmPitch = dampVal(a.rightForeArmPitch, tRFP, 5, dt);
+    a.rightForeArmYaw = dampVal(a.rightForeArmYaw, tRFY, 5, dt);
+    a.rightForeArmRoll = dampVal(a.rightForeArmRoll, tRFR, 5, dt);
     a.rightHandYaw = dampVal(a.rightHandYaw, tRHY, 5, dt);
+    a.rightHandPitch = dampVal(a.rightHandPitch, tRHP, 5, dt);
+    a.rightHandRoll = dampVal(a.rightHandRoll, tRHR, 5, dt);
     a.leftArmRoll = dampVal(a.leftArmRoll, tLAR, 5, dt);
     a.leftArmPitch = dampVal(a.leftArmPitch, tLAP, 5, dt);
     a.leftArmYaw = dampVal(a.leftArmYaw, tLAY, 5, dt);
     a.leftForeArmPitch = dampVal(a.leftForeArmPitch, tLFP, 5, dt);
+    a.leftForeArmYaw = dampVal(a.leftForeArmYaw, tLFY, 5, dt);
+    a.leftForeArmRoll = dampVal(a.leftForeArmRoll, tLFR, 5, dt);
+    a.leftHandYaw = dampVal(a.leftHandYaw, tLHY, 5, dt);
+    a.leftHandPitch = dampVal(a.leftHandPitch, tLHP, 5, dt);
+    a.leftHandRoll = dampVal(a.leftHandRoll, tLHR, 5, dt);
+    a.rightUpLegPitch = dampVal(a.rightUpLegPitch, tRULP, 5, dt);
+    a.rightLegPitch = dampVal(a.rightLegPitch, tRLP, 5, dt);
+    a.leftUpLegPitch = dampVal(a.leftUpLegPitch, tLULP, 5, dt);
+    a.leftLegPitch = dampVal(a.leftLegPitch, tLLP, 5, dt);
+    a.rightFingersCurl = dampVal(a.rightFingersCurl, tRFC, 5, dt);
+    a.rightThumbCurl = dampVal(a.rightThumbCurl, tRTC, 5, dt);
 
     const head = resolveBone(nodes, scene, 'Head');
     const spine = resolveBone(nodes, scene, 'Spine', 'Spine1');
@@ -263,8 +299,24 @@ function RobotRig({ phase, chatOpen }) {
     const rightHand = resolveBone(nodes, scene, 'RightHand');
     const leftArm = resolveBone(nodes, scene, 'LeftArm');
     const leftForeArm = resolveBone(nodes, scene, 'LeftForeArm');
+    const leftHand = resolveBone(nodes, scene, 'LeftHand');
     const rightShoulder = resolveBone(nodes, scene, 'RightShoulder');
     const leftShoulder = resolveBone(nodes, scene, 'LeftShoulder');
+    const rightUpLeg = resolveBone(nodes, scene, 'RightUpLeg');
+    const rightLeg = resolveBone(nodes, scene, 'RightLeg');
+    const leftUpLeg = resolveBone(nodes, scene, 'LeftUpLeg');
+    const leftLeg = resolveBone(nodes, scene, 'LeftLeg');
+    
+    // Fingers
+    const rThumb1 = resolveBone(nodes, scene, 'RightHandThumb1');
+    const rThumb2 = resolveBone(nodes, scene, 'RightHandThumb2');
+    const rThumb3 = resolveBone(nodes, scene, 'RightHandThumb3');
+    const rFingers = [
+      'RightHandIndex1', 'RightHandIndex2', 'RightHandIndex3',
+      'RightHandMiddle1', 'RightHandMiddle2', 'RightHandMiddle3',
+      'RightHandRing1', 'RightHandRing2', 'RightHandRing3',
+      'RightHandPinky1', 'RightHandPinky2', 'RightHandPinky3'
+    ].map(n => resolveBone(nodes, scene, n));
 
     if (head) {
       head.rotation.x = a.headPitch;
@@ -280,43 +332,75 @@ function RobotRig({ phase, chatOpen }) {
       rightArm.rotation.y = a.rightArmYaw;
       rightArm.rotation.z = a.rightArmRoll;
     }
-    if (rightForeArm) rightForeArm.rotation.x = a.rightForeArmPitch;
-    if (rightHand) rightHand.rotation.y = a.rightHandYaw;
+    if (rightForeArm) {
+      rightForeArm.rotation.x = a.rightForeArmPitch;
+      rightForeArm.rotation.y = a.rightForeArmYaw;
+      rightForeArm.rotation.z = a.rightForeArmRoll;
+    }
+    if (rightHand) {
+      rightHand.rotation.x = a.rightHandPitch;
+      rightHand.rotation.y = a.rightHandYaw;
+      rightHand.rotation.z = a.rightHandRoll;
+    }
     if (leftArm) {
       leftArm.rotation.x = a.leftArmPitch;
       leftArm.rotation.y = a.leftArmYaw;
       leftArm.rotation.z = a.leftArmRoll;
     }
-    if (leftForeArm) leftForeArm.rotation.x = a.leftForeArmPitch;
+    if (leftForeArm) {
+      leftForeArm.rotation.x = a.leftForeArmPitch;
+      leftForeArm.rotation.y = a.leftForeArmYaw;
+      leftForeArm.rotation.z = a.leftForeArmRoll;
+    }
+    if (leftHand) {
+      leftHand.rotation.x = a.leftHandPitch;
+      leftHand.rotation.y = a.leftHandYaw;
+      leftHand.rotation.z = a.leftHandRoll;
+    }
     if (rightShoulder) rightShoulder.rotation.z = 0.2;
     if (leftShoulder) leftShoulder.rotation.z = -0.2;
+    if (rightUpLeg) rightUpLeg.rotation.x = a.rightUpLegPitch;
+    if (rightLeg) rightLeg.rotation.x = a.rightLegPitch;
+    if (leftUpLeg) leftUpLeg.rotation.x = a.leftUpLegPitch;
+    if (leftLeg) leftLeg.rotation.x = a.leftLegPitch;
 
-    // ── Camera Framing (Shifted up to leave more room for captions below) ──
+    // Apply Finger Curls
+    rFingers.forEach(b => {
+      if (b) b.rotation.z = a.rightFingersCurl;
+    });
+    [rThumb1, rThumb2, rThumb3].forEach(b => {
+      if (b) b.rotation.z = a.rightThumbCurl;
+    });
+
+    // ── Camera Framing (Ensure full robot visibility) ──
+    // A Z-distance of ~4.5 and lookAt of -0.9 ensures the full 1.8 unit tall robot fits in frame
     if (phase === 'WALKING') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0, 3.5), dt * 2);
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.8), dt * 2);
     } else if (phase === 'WAKING') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0.4, 1.5), dt * 2);
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.5), dt * 2);
     } else if (phase === 'GREETING') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0.4, 2.8), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.5), dt * 1.5);
     } else if (phase === 'INTRO_PORTAL') {
-      state.camera.position.lerp(new THREE.Vector3(0.3, 0.2, 2.5), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(0.2, 0, 4.5), dt * 1.5);
     } else if (phase === 'INTRO_FEATURES') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0.3, 3.0), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(-0.2, 0, 4.5), dt * 1.5);
     } else if (phase === 'INTRO_ENCOURAGE') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0.2, 2.6), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.5), dt * 1.5);
     } else if (phase === 'INTRO_READY') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0.2, 2.2), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.5), dt * 1.5);
     } else if (phase === 'RESIZING') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0, 3.5), dt * 2);
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 5.0), dt * 2);
     } else {
       if (chatOpen) {
-        state.camera.position.lerp(new THREE.Vector3(0, 0.1, 2.8), dt * 2);
+        // Shift camera slightly to give room for chat UI without clipping robot
+        state.camera.position.lerp(new THREE.Vector3(-0.3, 0, 4.5), dt * 2);
       } else {
-        state.camera.position.lerp(new THREE.Vector3(0, 0, 3.5), dt * 2);
+        // Idle state in small window - pull back a bit more due to vertical aspect ratio
+        state.camera.position.lerp(new THREE.Vector3(0, 0, 5.2), dt * 2);
       }
     }
-    // Look higher to push robot up in the frame
-    state.camera.lookAt(0, -0.1, 0); 
+    // Look lower to center the robot's full body (feet are at -1.8, head at ~0)
+    state.camera.lookAt(0, -0.9, 0); 
   });
 
   return (
@@ -447,6 +531,7 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
   const [chatOpen, setChatOpen] = useState(false);
   const [caption, setCaption] = useState('');
   const [ttsStarted, setTtsStarted] = useState(false);
+  const [phaseDurationMs, setPhaseDurationMs] = useState(3000);
   const hasSpoken = useRef(skipIntro);
 
   const name = (portalData?.candidate?.name?.split(' ')[0]) || 'Candidate';
@@ -476,14 +561,11 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
   }, [name, stage]);
 
   useEffect(() => {
+    // Only handle automatic transitions for non-speech phases.
+    // Speech phases are now dynamically synced with the TTS audio duration.
     const transitions = {
       WALKING: { duration: 3000, next: 'WAKING' },
       WAKING: { duration: 2000, next: 'GREETING' },
-      GREETING: { duration: 7000, next: 'INTRO_PORTAL' },
-      INTRO_PORTAL: { duration: 10000, next: 'INTRO_FEATURES' },
-      INTRO_FEATURES: { duration: 12000, next: 'INTRO_ENCOURAGE' },
-      INTRO_ENCOURAGE: { duration: 10000, next: 'INTRO_READY' },
-      INTRO_READY: { duration: 5000, next: 'RESIZING' },
       RESIZING: { duration: 2000, next: 'IDLE' },
     };
 
@@ -514,13 +596,10 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
   useEffect(() => {
     if (phase === 'GREETING' && !hasSpoken.current) {
       hasSpoken.current = true;
-      const fullText = [
-        phaseCaptions.GREETING,
-        phaseCaptions.INTRO_PORTAL,
-        phaseCaptions.INTRO_FEATURES,
-        phaseCaptions.INTRO_ENCOURAGE,
-        phaseCaptions.INTRO_READY,
-      ].join(' ');
+      const speechPhases = ['GREETING', 'INTRO_PORTAL', 'INTRO_FEATURES', 'INTRO_ENCOURAGE', 'INTRO_READY'];
+      const lengths = speechPhases.map(p => phaseCaptions[p].length);
+      const totalChars = lengths.reduce((a, b) => a + b, 0);
+      const fullText = speechPhases.map(p => phaseCaptions[p]).join(' ');
 
       const playTTS = async () => {
         try {
@@ -528,32 +607,67 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
           const audioUrl = backendUrl + '/api/tts?text=' + encodeURIComponent(fullText);
           const audio = new Audio(audioUrl);
 
-          // FIX 3: Wait until the browser actually starts playing sound
           audio.onplaying = () => setTtsStarted(true);
+          
+          audio.ontimeupdate = () => {
+            const dur = (audio.duration && audio.duration !== Infinity) ? audio.duration : (totalChars * 0.07);
+            const progress = audio.currentTime / dur;
+            
+            let acc = 0;
+            for (let i = 0; i < speechPhases.length; i++) {
+              acc += lengths[i] / totalChars;
+              if (progress <= acc || i === speechPhases.length - 1) {
+                const newPhase = speechPhases[i];
+                setPhase(prev => {
+                  if (prev !== newPhase) {
+                    setPhaseDurationMs((lengths[i] / totalChars) * dur * 1000);
+                    return newPhase;
+                  }
+                  return prev;
+                });
+                break;
+              }
+            }
+          };
+
+          audio.onended = () => {
+            setPhase('RESIZING');
+          };
           
           audio.onerror = () => { throw new Error('Neural TTS failed'); };
           await audio.play();
         } catch (err) {
           console.warn('Falling back to local TTS:', err);
-          const utterance = new SpeechSynthesisUtterance(fullText);
-          utterance.pitch = 1.1;
-          utterance.rate = 0.9;
+          
+          const playLocalPhase = (idx) => {
+            if (idx >= speechPhases.length) {
+              setPhase('RESIZING');
+              return;
+            }
+            const p = speechPhases[idx];
+            setPhase(p);
+            
+            const text = phaseCaptions[p];
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.pitch = 1.1;
+            utterance.rate = 0.9;
+            
+            // Estimate duration for local TTS based on string length to sync the caption typing
+            setPhaseDurationMs((text.length * 0.07) * 1000);
 
-          utterance.onstart = () => setTtsStarted(true);
+            if (idx === 0) utterance.onstart = () => setTtsStarted(true);
+            utterance.onend = () => playLocalPhase(idx + 1);
 
-          const pickVoice = () => {
             const voices = speechSynthesis.getVoices();
             const preferred = voices.find(
-              (v) =>
-                v.name.includes('Female') ||
-                v.name.includes('Zira') ||
-                v.name.includes('Google UK English Female')
+              (v) => v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Google UK English Female')
             );
             if (preferred) utterance.voice = preferred;
             speechSynthesis.speak(utterance);
           };
-          if (speechSynthesis.getVoices().length > 0) pickVoice();
-          else speechSynthesis.onvoiceschanged = pickVoice;
+
+          if (speechSynthesis.getVoices().length > 0) playLocalPhase(0);
+          else speechSynthesis.onvoiceschanged = () => playLocalPhase(0);
 
           setTimeout(() => setTtsStarted(true), 1500); // Safety fallback
         }
@@ -564,7 +678,7 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
 
   const isFullscreen = [
     'WALKING', 'WAKING', 'GREETING', 'INTRO_PORTAL',
-    'INTRO_FEATURES', 'INTRO_ENCOURAGE', 'INTRO_READY', 'RESIZING',
+    'INTRO_FEATURES', 'INTRO_ENCOURAGE', 'INTRO_READY'
   ].includes(phase);
 
   const handleCanvasClick = () => {
@@ -634,7 +748,7 @@ export default function RobotAssistant({ onIntroComplete, skipIntro, portalData 
           </Canvas>
 
           <AnimatePresence mode="wait">
-            {caption && isFullscreen && <SpatialCaption key={phase} text={caption} />}
+            {caption && isFullscreen && <SpatialCaption key={phase} text={caption} durationMs={phaseDurationMs} />}
           </AnimatePresence>
         </div>
 
