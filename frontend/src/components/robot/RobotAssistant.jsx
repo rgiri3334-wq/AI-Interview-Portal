@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useFrame, Canvas } from '@react-three/fiber';
-import { useGLTF, Environment, ContactShadows, Stars, useFBX, useAnimations } from '@react-three/drei';
+import { useGLTF, Environment, ContactShadows, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send } from 'lucide-react';
@@ -8,7 +8,25 @@ import { apiClient } from '../../api/apiClient';
 
 // ─── Utilities ───────────────────────────────────────────────
 
-
+function resolveBone(nodes, scene, ...candidates) {
+  for (const name of candidates) {
+    if (nodes && nodes[name]) return nodes[name];
+  }
+  if (scene) {
+    let hit = null;
+    scene.traverse((o) => {
+      if (hit) return;
+      for (const name of candidates) {
+        if (o.name === name || o.name === 'mixamorig:' + name || o.name === 'mixamorig' + name) {
+          hit = o;
+          return;
+        }
+      }
+    });
+    if (hit) return hit;
+  }
+  return null;
+}
 
 const dampVal = (current, target, factor, dt) => THREE.MathUtils.damp(current, target, factor, dt);
 const easeOutCubic = (t) => 1 - Math.pow(1 - Math.min(Math.max(t, 0), 1), 3);
@@ -84,37 +102,23 @@ function SpatialCaption({ text, durationMs = 3000 }) {
 function RobotRig({ phase, chatOpen }) {
   const { nodes, scene } = useGLTF('/robot.glb');
   const groupRef = useRef();
-  
-  // Load motion-captured animations
-  const fbxWalk = useFBX('/Walking.fbx');
-  const fbxGreet = useFBX('/Standing Greeting.fbx');
-  const fbxTalk1 = useFBX('/Talking.fbx');
-  const fbxTalk2 = useFBX('/Talking (1).fbx');
-
-  const animations = useMemo(() => {
-    if (!fbxWalk || !fbxGreet || !fbxTalk1 || !fbxTalk2) return [];
-    
-    // Clone and name the animations so they are easily referenceable
-    const walkAnim = fbxWalk.animations[0].clone();
-    walkAnim.name = 'Walking';
-    
-    const greetAnim = fbxGreet.animations[0].clone();
-    greetAnim.name = 'Greeting';
-    
-    const talk1Anim = fbxTalk1.animations[0].clone();
-    talk1Anim.name = 'Talking1';
-    
-    const talk2Anim = fbxTalk2.animations[0].clone();
-    talk2Anim.name = 'Talking2';
-    
-    return [walkAnim, greetAnim, talk1Anim, talk2Anim];
-  }, [fbxWalk, fbxGreet, fbxTalk1, fbxTalk2]);
-
-  const { actions } = useAnimations(animations, groupRef);
-
   const anim = useRef({
     t: 0,
     walkProgress: 0,
+    headPitch: 0, headYaw: 0, headRoll: 0,
+    spinePitch: 0, spineYaw: 0,
+    rightArmRoll: 1.2, rightArmPitch: 0.1, rightArmYaw: 0,
+    rightForeArmPitch: 0.1, rightHandYaw: 0,
+    leftArmRoll: -1.2, leftArmPitch: 0.1, leftArmYaw: 0,
+    leftForeArmPitch: 0.1,
+    rightUpLegPitch: 0, rightLegPitch: 0,
+    leftUpLegPitch: 0, leftLegPitch: 0,
+    waveT: 0, hasWaved: false,
+    rightForeArmYaw: 0, rightForeArmRoll: 0,
+    leftForeArmYaw: 0, leftForeArmRoll: 0,
+    rightHandPitch: 0, rightHandRoll: 0,
+    leftHandPitch: 0, leftHandYaw: 0, leftHandRoll: 0,
+    rightFingersCurl: 0.1, rightThumbCurl: 0.1,
   });
 
   useEffect(() => {
@@ -122,52 +126,14 @@ function RobotRig({ phase, chatOpen }) {
       scene.traverse((child) => {
         if (child.isMesh) {
           child.frustumCulled = false;
+          if (child.material) {
+            if (child.material.skinning !== undefined) delete child.material.skinning;
+            if (child.material.morphTargets !== undefined) delete child.material.morphTargets;
+          }
         }
       });
     }
   }, [scene]);
-
-  // Handle Animation State Machine
-  useEffect(() => {
-    if (!actions || Object.keys(actions).length === 0) return;
-
-    // Fade duration
-    const fade = 0.5;
-    let activeAction = null;
-
-    if (phase === 'WALKING') {
-      activeAction = actions['Walking'];
-    } else if (phase === 'GREETING' || phase === 'WAKING') {
-      activeAction = actions['Greeting'];
-      if (activeAction) {
-        activeAction.setLoop(THREE.LoopOnce);
-        activeAction.clampWhenFinished = true;
-      }
-    } else if (phase === 'INTRO_PORTAL' || phase === 'INTRO_ENCOURAGE') {
-      activeAction = actions['Talking1'];
-    } else if (phase === 'INTRO_FEATURES' || phase === 'INTRO_READY') {
-      activeAction = actions['Talking2'];
-    } else {
-      // For IDLE or RESIZING, we can just gently play a talking animation or freeze the last frame of greeting
-      // If we don't have a dedicated Idle loop, we'll slowly play Talking2 as an idle stand
-      activeAction = actions['Talking2'];
-      if (activeAction) {
-        activeAction.setEffectiveTimeScale(0.3); // Slow down for idle-like feel
-      }
-    }
-
-    if (activeAction) {
-      // Ensure time scale is 1.0 for non-idle phases
-      if (phase !== 'IDLE' && phase !== 'RESIZING') {
-        activeAction.setEffectiveTimeScale(1.0);
-      }
-      activeAction.reset().fadeIn(fade).play();
-    }
-
-    return () => {
-      if (activeAction) activeAction.fadeOut(fade);
-    };
-  }, [phase, actions]);
 
   useFrame((state, delta) => {
     if (!nodes) return;
@@ -175,28 +141,230 @@ function RobotRig({ phase, chatOpen }) {
     const a = anim.current;
     a.t += dt;
 
-    // ── Walking entrance translation ──
+    // ── Walking entrance animation with rotation ──
     if (groupRef.current) {
       if (phase === 'WALKING') {
         a.walkProgress = Math.min(a.walkProgress + dt / 3, 1); // 3s walk
         const eased = easeOutCubic(a.walkProgress);
+        const walkBob = eased < 0.95 ? Math.sin(a.t * 8) * 0.018 * (1 - eased) : 0;
         
         groupRef.current.position.x = THREE.MathUtils.lerp(-4, 0, eased);
-        groupRef.current.position.y = -1.8;
+        groupRef.current.position.y = -1.8 + walkBob;
         
-        // Face right while walking
+        // FIX 1: Face right while walking (Math.PI / 2)
         groupRef.current.rotation.y = Math.PI / 2;
       } else {
         // Smoothly settle and turn front
         groupRef.current.position.x = dampVal(groupRef.current.position.x, 0, 5, dt);
         groupRef.current.position.y = dampVal(groupRef.current.position.y, -1.8, 5, dt);
         
-        // Turn back to face the camera
+        // FIX 1: Turn back to face the camera (candidate)
         groupRef.current.rotation.y = dampVal(groupRef.current.rotation.y, 0, 4, dt);
       }
     }
 
+    // ── Gesture targets per phase ──
+    let tHP = 0, tHY = 0, tHR = 0;
+    let tSP = Math.sin(a.t * 1.5) * 0.015; // Breathing
+    let tSY = 0;
+    let tRAR = 1.2, tRAP = 0.1, tRAY = 0;
+    let tRFP = 0.1, tRFY = 0, tRFR = 0;
+    let tRHY = 0, tRHP = 0, tRHR = 0;
+    let tLAR = -1.2, tLAP = 0.1, tLAY = 0;
+    let tLFP = 0.1, tLFY = 0, tLFR = 0;
+    let tLHY = 0, tLHP = 0, tLHR = 0;
+    let tRULP = 0, tRLP = 0;
+    let tLULP = 0, tLLP = 0;
+    let tRFC = 0.1, tRTC = 0.1; // Natural slight finger curl
+
+    if (phase === 'WALKING') {
+      const walkSpeed = 6;
+      const cycle = a.t * walkSpeed;
+      
+      tHP = Math.sin(a.t * 4) * 0.025;
+      tSY = Math.sin(a.t * 4) * 0.02;
+      
+      tRAR = 1.2; tRAP = Math.sin(cycle + Math.PI) * 0.3;
+      tLAR = -1.2; tLAP = Math.sin(cycle) * 0.3;
+      tRFP = 0.1;
+      tLFP = 0.1;
+
+      tRULP = Math.sin(cycle) * 0.3; 
+      tRLP = Math.max(0, Math.sin(cycle - Math.PI/2)) * 0.4;
+      tLULP = Math.sin(cycle + Math.PI) * 0.3;
+      tLLP = Math.max(0, Math.sin(cycle + Math.PI - Math.PI/2)) * 0.4;
+    } else if (phase === 'WAKING') {
+      tHP = 0.2; 
+    } else if (phase === 'GREETING') {
+      // Gentle Namaste Gesture
+      tHP = 0.1; 
+      tHY = 0;
+      
+      tRAP = -0.1; tRAY = -0.3; tRAR = 1.0;
+      tLAP = -0.1; tLAY = 0.3; tLAR = -1.0;
+      
+      tRFP = -0.8; 
+      tLFP = -0.8; 
+      
+      tRHP = -0.2; tRHY = -0.3;
+      tLHP = -0.2; tLHY = 0.3;
+      
+      tRFC = 0; tRTC = 0;
+    } else if (phase === 'INTRO_PORTAL') {
+      // Gentle Waving Gesture
+      tHY = 0.1;
+      if (!a.hasWaved) { a.waveT = 0; a.hasWaved = true; }
+      a.waveT += dt;
+
+      tRAR = -0.6;
+      tRAP = -0.2;
+      tRFP = -0.5 + Math.sin(a.t * 6) * 0.2; 
+      tRHY = Math.sin(a.t * 6) * 0.1;
+      
+      tLAR = 1.2; tLAP = 0.1; tLAY = 0; tLFP = 0.1;
+    } else if (phase === 'INTRO_FEATURES') {
+      tHP = Math.sin(a.t * 2.5) * 0.05;
+      tHY = Math.sin(a.t * 0.8) * 0.1;
+      tRAR = 1.0; tRFP = -0.2;
+      tLAR = -1.0; tLFP = -0.2;
+    } else if (phase === 'INTRO_ENCOURAGE') {
+      tHP = -0.05;
+      tHY = Math.sin(a.t * 0.5) * 0.05;
+      tRAR = -0.8; tRAP = -0.1; tRFP = -0.3;
+      tLAR = 0.8; tLAP = -0.1; tLFP = -0.3;
+    } else if (phase === 'INTRO_READY') {
+      // Gentle Thumbs Up Gesture (simplified to avoid mesh breaking)
+      tHP = -0.05;
+      tRAR = 0.5; tRAP = -0.3; tRAY = -0.1;
+      tRFP = -0.6; 
+      
+      // Removed finger curl to prevent mesh distortion
+      tRFC = 0;
+      tRTC = 0;
+      
+      tLAR = 1.2; tLAP = 0.1; tLAY = 0; tLFP = 0.1;
+    } else if (phase === 'IDLE' || phase === 'RESIZING') {
+      if (chatOpen) {
+        tHY = -0.35;
+        tHP = Math.sin(a.t * 2) * 0.03;
+      } else {
+        tHY = 0.3 + Math.sin(a.t * 0.5) * 0.1;
+      }
+    }
+
+    const df = 5;
+    a.headPitch = dampVal(a.headPitch, tHP, df, dt);
+    a.headYaw = dampVal(a.headYaw, tHY, df, dt);
+    a.headRoll = dampVal(a.headRoll, tHR, df, dt);
+    a.spinePitch = dampVal(a.spinePitch, tSP, 2, dt);
+    a.spineYaw = dampVal(a.spineYaw, tSY, 4, dt);
+    a.rightArmRoll = dampVal(a.rightArmRoll, tRAR, 5, dt);
+    a.rightArmPitch = dampVal(a.rightArmPitch, tRAP, 5, dt);
+    a.rightArmYaw = dampVal(a.rightArmYaw, tRAY, 5, dt);
+    a.rightForeArmPitch = dampVal(a.rightForeArmPitch, tRFP, 5, dt);
+    a.rightForeArmYaw = dampVal(a.rightForeArmYaw, tRFY, 5, dt);
+    a.rightForeArmRoll = dampVal(a.rightForeArmRoll, tRFR, 5, dt);
+    a.rightHandYaw = dampVal(a.rightHandYaw, tRHY, 5, dt);
+    a.rightHandPitch = dampVal(a.rightHandPitch, tRHP, 5, dt);
+    a.rightHandRoll = dampVal(a.rightHandRoll, tRHR, 5, dt);
+    a.leftArmRoll = dampVal(a.leftArmRoll, tLAR, 5, dt);
+    a.leftArmPitch = dampVal(a.leftArmPitch, tLAP, 5, dt);
+    a.leftArmYaw = dampVal(a.leftArmYaw, tLAY, 5, dt);
+    a.leftForeArmPitch = dampVal(a.leftForeArmPitch, tLFP, 5, dt);
+    a.leftForeArmYaw = dampVal(a.leftForeArmYaw, tLFY, 5, dt);
+    a.leftForeArmRoll = dampVal(a.leftForeArmRoll, tLFR, 5, dt);
+    a.leftHandYaw = dampVal(a.leftHandYaw, tLHY, 5, dt);
+    a.leftHandPitch = dampVal(a.leftHandPitch, tLHP, 5, dt);
+    a.leftHandRoll = dampVal(a.leftHandRoll, tLHR, 5, dt);
+    a.rightUpLegPitch = dampVal(a.rightUpLegPitch, tRULP, 5, dt);
+    a.rightLegPitch = dampVal(a.rightLegPitch, tRLP, 5, dt);
+    a.leftUpLegPitch = dampVal(a.leftUpLegPitch, tLULP, 5, dt);
+    a.leftLegPitch = dampVal(a.leftLegPitch, tLLP, 5, dt);
+    a.rightFingersCurl = dampVal(a.rightFingersCurl, tRFC, 5, dt);
+    a.rightThumbCurl = dampVal(a.rightThumbCurl, tRTC, 5, dt);
+
+    const head = resolveBone(nodes, scene, 'Head');
+    const spine = resolveBone(nodes, scene, 'Spine', 'Spine1');
+    const rightArm = resolveBone(nodes, scene, 'RightArm');
+    const rightForeArm = resolveBone(nodes, scene, 'RightForeArm');
+    const rightHand = resolveBone(nodes, scene, 'RightHand');
+    const leftArm = resolveBone(nodes, scene, 'LeftArm');
+    const leftForeArm = resolveBone(nodes, scene, 'LeftForeArm');
+    const leftHand = resolveBone(nodes, scene, 'LeftHand');
+    const rightShoulder = resolveBone(nodes, scene, 'RightShoulder');
+    const leftShoulder = resolveBone(nodes, scene, 'LeftShoulder');
+    const rightUpLeg = resolveBone(nodes, scene, 'RightUpLeg');
+    const rightLeg = resolveBone(nodes, scene, 'RightLeg');
+    const leftUpLeg = resolveBone(nodes, scene, 'LeftUpLeg');
+    const leftLeg = resolveBone(nodes, scene, 'LeftLeg');
+    
+    // Fingers
+    const rThumb1 = resolveBone(nodes, scene, 'RightHandThumb1');
+    const rThumb2 = resolveBone(nodes, scene, 'RightHandThumb2');
+    const rThumb3 = resolveBone(nodes, scene, 'RightHandThumb3');
+    const rFingers = [
+      'RightHandIndex1', 'RightHandIndex2', 'RightHandIndex3',
+      'RightHandMiddle1', 'RightHandMiddle2', 'RightHandMiddle3',
+      'RightHandRing1', 'RightHandRing2', 'RightHandRing3',
+      'RightHandPinky1', 'RightHandPinky2', 'RightHandPinky3'
+    ].map(n => resolveBone(nodes, scene, n));
+
+    if (head) {
+      head.rotation.x = a.headPitch;
+      head.rotation.y = a.headYaw;
+      head.rotation.z = a.headRoll;
+    }
+    if (spine) {
+      spine.rotation.x = a.spinePitch;
+      spine.rotation.y = a.spineYaw;
+    }
+    if (rightArm) {
+      rightArm.rotation.x = a.rightArmPitch;
+      rightArm.rotation.y = a.rightArmYaw;
+      rightArm.rotation.z = a.rightArmRoll;
+    }
+    if (rightForeArm) {
+      rightForeArm.rotation.x = a.rightForeArmPitch;
+      rightForeArm.rotation.y = a.rightForeArmYaw;
+      rightForeArm.rotation.z = a.rightForeArmRoll;
+    }
+    if (rightHand) {
+      rightHand.rotation.x = a.rightHandPitch;
+      rightHand.rotation.y = a.rightHandYaw;
+      rightHand.rotation.z = a.rightHandRoll;
+    }
+    if (leftArm) {
+      leftArm.rotation.x = a.leftArmPitch;
+      leftArm.rotation.y = a.leftArmYaw;
+      leftArm.rotation.z = a.leftArmRoll;
+    }
+    if (leftForeArm) {
+      leftForeArm.rotation.x = a.leftForeArmPitch;
+      leftForeArm.rotation.y = a.leftForeArmYaw;
+      leftForeArm.rotation.z = a.leftForeArmRoll;
+    }
+    if (leftHand) {
+      leftHand.rotation.x = a.leftHandPitch;
+      leftHand.rotation.y = a.leftHandYaw;
+      leftHand.rotation.z = a.leftHandRoll;
+    }
+    if (rightShoulder) rightShoulder.rotation.z = 0.2;
+    if (leftShoulder) leftShoulder.rotation.z = -0.2;
+    if (rightUpLeg) rightUpLeg.rotation.x = a.rightUpLegPitch;
+    if (rightLeg) rightLeg.rotation.x = a.rightLegPitch;
+    if (leftUpLeg) leftUpLeg.rotation.x = a.leftUpLegPitch;
+    if (leftLeg) leftLeg.rotation.x = a.leftLegPitch;
+
+    // Apply Finger Curls
+    rFingers.forEach(b => {
+      if (b) b.rotation.z = a.rightFingersCurl;
+    });
+    [rThumb1, rThumb2, rThumb3].forEach(b => {
+      if (b) b.rotation.z = a.rightThumbCurl;
+    });
+
     // ── Camera Framing (Ensure full robot visibility) ──
+    // A Z-distance of ~4.5 and lookAt of -0.9 ensures the full 1.8 unit tall robot fits in frame
     if (phase === 'WALKING') {
       state.camera.position.lerp(new THREE.Vector3(0, 0, 4.8), dt * 2);
     } else if (phase === 'WAKING') {
@@ -215,12 +383,13 @@ function RobotRig({ phase, chatOpen }) {
       state.camera.position.lerp(new THREE.Vector3(0, 0, 5.0), dt * 2);
     } else {
       if (chatOpen) {
+        // Shift camera slightly to give room for chat UI without clipping robot
         state.camera.position.lerp(new THREE.Vector3(-0.3, 0, 4.5), dt * 2);
       } else {
+        // Idle state in small window - pull back a bit more due to vertical aspect ratio
         state.camera.position.lerp(new THREE.Vector3(0, 0, 5.2), dt * 2);
       }
     }
-    
     // Look lower to center the robot's full body (feet are at -1.8, head at ~0)
     state.camera.lookAt(0, -0.9, 0); 
   });
