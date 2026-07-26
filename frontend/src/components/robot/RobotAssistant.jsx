@@ -60,10 +60,10 @@ function SpatialCaption({ text, durationMs = 3000 }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
       transition={{ duration: 0.5 }}
-      // Adjusted positioning, sizing, and added a soft radial gradient background
-      className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl px-4 md:px-10 py-6 pointer-events-none z-20 flex flex-col items-center justify-center rounded-3xl"
+      // Safer positioning to prevent overflow, added glassmorphism backdrop
+      className="absolute bottom-8 left-0 right-0 mx-auto w-11/12 max-w-4xl px-4 md:px-10 py-6 pointer-events-none z-20 flex flex-col items-center justify-center rounded-3xl bg-black/30 backdrop-blur-sm border border-white/10 shadow-2xl"
       style={{
-        background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0) 80%)'
+        boxShadow: '0 0 40px rgba(0,0,0,0.5)'
       }}
     >
       {/* Scanline sweep */}
@@ -75,7 +75,7 @@ function SpatialCaption({ text, durationMs = 3000 }) {
       />
 
       <p
-        className="text-white text-base md:text-xl font-light tracking-wide text-center leading-relaxed relative z-10"
+        className="w-full text-white text-base md:text-xl font-light tracking-wide text-center leading-relaxed relative z-10 break-words whitespace-normal"
         style={{ textShadow: '0 0 20px rgba(239,68,68,0.4), 0 0 60px rgba(239,68,68,0.1)' }}
       >
         {words.slice(0, visibleWords).join(' ')}
@@ -364,34 +364,34 @@ function RobotRig({ phase, chatOpen }) {
     });
 
     // ── Camera Framing (Professional mid-shot composition) ──
-    // A Z-distance of ~3.2 and lookAt of -0.6 ensures a much more natural, engaging waist-up proportion
+    // A Z-distance of ~3.6 and lookAt of -0.4 gives a nice waist-up proportion that feels natural
     if (phase === 'WALKING') {
-      state.camera.position.lerp(new THREE.Vector3(0, -0.2, 4.2), dt * 2);
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.4), dt * 2);
     } else if (phase === 'WAKING') {
-      state.camera.position.lerp(new THREE.Vector3(0, -0.2, 3.5), dt * 2);
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 3.8), dt * 2);
     } else if (phase === 'GREETING') {
-      state.camera.position.lerp(new THREE.Vector3(0, -0.2, 3.2), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 3.6), dt * 1.5);
     } else if (phase === 'INTRO_PORTAL') {
-      state.camera.position.lerp(new THREE.Vector3(0.3, -0.2, 3.2), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(0.4, 0, 3.6), dt * 1.5);
     } else if (phase === 'INTRO_FEATURES') {
-      state.camera.position.lerp(new THREE.Vector3(-0.3, -0.2, 3.2), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(-0.4, 0, 3.6), dt * 1.5);
     } else if (phase === 'INTRO_ENCOURAGE') {
-      state.camera.position.lerp(new THREE.Vector3(0, -0.2, 3.0), dt * 1.5); // Slightly closer
+      state.camera.position.lerp(new THREE.Vector3(0.2, 0, 3.4), dt * 1.5);
     } else if (phase === 'INTRO_READY') {
-      state.camera.position.lerp(new THREE.Vector3(0, -0.2, 3.2), dt * 1.5);
+      state.camera.position.lerp(new THREE.Vector3(-0.2, 0, 3.6), dt * 1.5);
     } else if (phase === 'RESIZING') {
-      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.5), dt * 2);
+      state.camera.position.lerp(new THREE.Vector3(0, 0, 4.6), dt * 2);
     } else {
       if (chatOpen) {
         // Shift camera slightly to give room for chat UI without clipping robot
-        state.camera.position.lerp(new THREE.Vector3(-0.5, 0, 3.5), dt * 2);
+        state.camera.position.lerp(new THREE.Vector3(-0.5, 0, 3.8), dt * 2);
       } else {
         // Idle state in small window - pull back a bit more due to vertical aspect ratio
         state.camera.position.lerp(new THREE.Vector3(0, 0, 4.8), dt * 2);
       }
     }
-    // Look at chest level for a better portrait proportion
-    state.camera.lookAt(0, -0.6, 0); 
+    // Look at upper chest level
+    state.camera.lookAt(0, -0.4, 0); 
   });
 
   return (
