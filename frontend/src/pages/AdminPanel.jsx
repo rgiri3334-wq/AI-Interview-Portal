@@ -15,7 +15,6 @@ import QuestionBank from '../components/admin/QuestionBank';
 import AnalyticsEngine from '../components/admin/AnalyticsEngine';
 import LiveIntervention from '../components/admin/LiveIntervention';
 import SlotManager from '../components/admin/SlotManager';
-import AILearningDashboard from '../components/admin/AILearningDashboard';
 
 import Sidebar from '../components/Layout/Sidebar';
 import PageWrapper from '../components/Layout/PageWrapper';
@@ -257,7 +256,6 @@ export default function AdminPanel() {
     { id: 'context', label: 'Global Context', icon: <Globe size={16} /> },
     { id: 'architecture', label: 'Dept & Role Configuration', icon: <Layers size={16} /> },
     { id: 'questions', label: 'Rubric Engine', icon: <Database size={16} /> },
-    { id: 'ai-learning', label: 'AI Learning', icon: <Brain size={16} /> },
   ];
   return (
     <PageWrapper className="flex min-h-screen bg-slate-50 font-sans relative overflow-hidden text-slate-900">
@@ -403,9 +401,6 @@ export default function AdminPanel() {
             />
           )}
 
-          {activeTab === 'ai-learning' && (
-            <AILearningDashboard key="ai-learning" />
-          )}
 
           {activeTab === 'questions' && (
             <QuestionBank 

@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Database, UserPlus, FileText,
-  Activity, ShieldCheck, ChevronRight, User, LogOut
+  Activity, ShieldCheck, ChevronRight, User, LogOut, Brain
 } from 'lucide-react';
 import logoUrl from '../../assets/sterling_logo.png';
 
@@ -21,6 +21,7 @@ const navSections = [
     items: [
       { path: '/system-health', label: 'System Health HUD', icon: Activity },
       { path: '/admin-management', label: 'Security Access Matrix', icon: ShieldCheck },
+      { path: '/ai-learning', label: 'AI Learning Engine', icon: Brain },
     ],
   },
 ];

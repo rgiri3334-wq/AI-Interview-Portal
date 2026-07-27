@@ -19,6 +19,7 @@ const AdminPanel = React.lazy(() => import('./pages/AdminPanel'));
 const AdminCandidateRegistration = React.lazy(() => import('./pages/AdminCandidateRegistration'));
 const SystemHealth = React.lazy(() => import('./pages/SystemHealth'));
 const AdminManagement = React.lazy(() => import('./pages/AdminManagement'));
+const AILearningPage = React.lazy(() => import('./pages/AILearningPage'));
 const CandidateLanding = React.lazy(() => import('./pages/CandidateLanding'));
 const EquipmentTest = React.lazy(() => import('./pages/EquipmentTest'));
 const ProfilePhotoGuidelines = React.lazy(() => import('./pages/ProfilePhotoGuidelines'));
@@ -92,6 +93,7 @@ export default function App() {
             {/* ── Existing Protected Routes (unchanged) ── */}
             <Route path="/home" element={<ProtectedRoute allowedRoles={['admin']}><Landing /></ProtectedRoute>} />
             <Route path="/candidate" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><CandidateDetails /></ProtectedRoute>} />
+            <Route path="/ai-learning" element={<ProtectedRoute allowedRoles={['admin']}><AILearningPage /></ProtectedRoute>} />
 
             {/* ── KYC Pre-Flight Pipeline ── */}
             <Route path="/equipment-test" element={<ProtectedRoute allowedRoles={['admin', 'candidate']}><EquipmentTest /></ProtectedRoute>} />
