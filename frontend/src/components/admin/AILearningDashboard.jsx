@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { Brain, ShieldAlert, Cpu, Activity, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
-import api from '../../utils/api';
+import api from '../../api/apiClient';
 
 export default function AILearningDashboard() {
   const [stats, setStats] = useState({
