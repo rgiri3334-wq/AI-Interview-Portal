@@ -206,6 +206,13 @@ async def generate_smart_question(
     # Questions 1-2 (index 0, 1): AI Warmup & Resume Deep Dive
     # Questions 9-10 (index 8, 9): AI EQ & Personality Test
     admin_next_q = potential_admin_q if potential_admin_q else None
+    
+    try:
+        from services.ai_learning import get_recent_lessons
+        recent_lessons = get_recent_lessons(limit=3)
+    except Exception as e:
+        logger.error(f"Failed to load AI lessons: {e}")
+        recent_lessons = []
 
     if admin_next_q:
         result = {
@@ -234,6 +241,7 @@ async def generate_smart_question(
             candidate_name=candidate_name,
             key_insights=session.key_insights,
             weights=weights,
+            ai_lessons=recent_lessons,
         )
 
         fallback_q = get_fallback_question(job_role, session.asked_questions)
@@ -429,6 +437,19 @@ async def generate_final_report(
         from utils.json_parser import extract_json_from_text
         data = extract_json_from_text(raw or "")
         if data:
+            if "ai_self_reflection" in data:
+                reflection = data["ai_self_reflection"]
+                if isinstance(reflection, dict):
+                    mistake = reflection.get("mistake_made")
+                    lesson_learned = reflection.get("lesson_learned", "")
+                    future_improvements = reflection.get("future_improvement_areas", "")
+                    rule = reflection.get("new_rule")
+                    if mistake and rule and isinstance(mistake, str) and isinstance(rule, str) and len(rule) > 10:
+                        try:
+                            from services.ai_learning import save_lesson
+                            save_lesson(mistake, rule, lesson_learned, future_improvements)
+                        except Exception as e:
+                            logger.error(f"Failed to save AI lesson: {e}")
             return data
     except Exception as e:
         logger.error(f"Report generation failed: {e}")

@@ -4657,6 +4657,25 @@ async def get_candidate_portal(candidate_id: str, db: Session = Depends(get_db),
 class ChatRequest(BaseModel):
     message: str
 
+@app.get("/api/admin/ai-learning-stats", tags=["Admin"])
+async def get_ai_learning_statistics(_admin: dict = Depends(require_admin)):
+    """
+    Returns the comprehensive training log of the AI Interviewer.
+    Requires Admin authorization.
+    """
+    try:
+        from services.ai_learning import get_all_stats
+        stats = get_all_stats()
+        return {"status": "success", "data": stats}
+    except Exception as e:
+        logger.error(f"Failed to fetch AI learning stats: {e}")
+        return {"status": "error", "message": str(e), "data": {
+            "total_lessons_learned": 0,
+            "last_training_time": None,
+            "active_rules": [],
+            "historical_log": []
+        }}
+
 @app.post("/api/assistant/chat")
 async def assistant_chat(req: ChatRequest):
     try:

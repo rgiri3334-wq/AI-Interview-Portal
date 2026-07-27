@@ -179,6 +179,7 @@ def build_question_prompt(
     company_context: str = "",
     key_insights: list[str] | None = None,
     weights: dict | None = None,
+    ai_lessons: list[str] | None = None,
 ) -> str:
     domains = get_role_domains(job_role)
     tier_info = get_experience_tier(experience)
@@ -266,6 +267,11 @@ Based on these weights, you MUST adapt the category of your next question. If th
     if key_insights:
         memory_instruction = f"**Long-Term Memory Callbacks (CRITICAL):**\nThe candidate previously shared these key insights:\n" + "\n".join([f"- {k}" for k in key_insights]) + "\n*If relevant, occasionally use one of these insights to tie your next question to something they said earlier (e.g., '15 minutes ago you mentioned X, how does that relate to...'). This proves you are listening deeply.*"
 
+    lessons_instruction = ""
+    if ai_lessons and len(ai_lessons) > 0:
+        lessons_formatted = "\n".join([f"- {lesson}" for lesson in ai_lessons])
+        lessons_instruction = f"**Past AI Interviewer Feedback (CRITICAL MEMORY OVERRIDE):**\nTo improve your interviewing skills, you MUST strictly adhere to the following rules learned from your own past mistakes. Do NOT violate these constraints:\n{lessons_formatted}\n"
+
     return f"""
 {personality_instruction}
 {company_instruction}
@@ -300,6 +306,8 @@ Core technical domains for this role: {domain_str}
 
 **DO NOT repeat these questions:**
 - {exclude_str}
+
+{lessons_instruction}
 
 **Your task:**
 Generate ONE highly relevant, intelligent, role-specific interview question.
@@ -496,6 +504,11 @@ System Context:
 You are an elite, highly rigorous Principal Engineering Manager and Technical HR Director. Your job is to analyze the following interview transcript, code submissions, and behavioral telemetry for a candidate applying for the {job_role} position.
 You do not write generic summaries. You are evaluating this candidate for a high-performance enterprise team. You must provide a brutal, honest, and highly specific evaluation.
 
+**Self-Reflection Protocol (CRITICAL DIRECTIVE):**
+As an elite AI, you must continuously improve. After evaluating the candidate, you MUST evaluate YOUR OWN performance during this interview transcript. 
+Ask yourself: Did I talk too much? Did I ask a question they already answered? Did I accidentally give them a hint in my feedback? Was my tone too robotic?
+Identify your single biggest flaw in this interview, and create a strict, 1-sentence command/rule to prevent yourself from making this mistake in future interviews.
+
 Data Inputs:
 * Candidate Name: {candidate_name}
 * Spoken Transcript:
@@ -522,7 +535,13 @@ You must return the evaluation STRICTLY as a raw JSON object matching the exact 
   "difficulty_faced": "String",
   "recommended_hiring_tier": "String",
   "overall_recommendation": "String",
-  "reasoning_summary": "String"
+  "reasoning_summary": "String",
+  "ai_self_reflection": {
+    "mistake_made": "String - Describe exactly what you did wrong.",
+    "lesson_learned": "String - What exactly was learned from this interaction.",
+    "future_improvement_areas": "String - What more improvement can be done.",
+    "new_rule": "String - A strict, 1-sentence behavioral constraint to fix this."
+  }
 }}
 """.strip()
 
