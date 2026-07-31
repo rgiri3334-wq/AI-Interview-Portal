@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { Brain, ShieldAlert, Cpu, Activity, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
-import api from '../../api/apiClient';
+import { customFetch, API_BASE } from '../../config/api';
 
 export default function AILearningDashboard() {
   const [stats, setStats] = useState({
@@ -23,11 +23,12 @@ export default function AILearningDashboard() {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/admin/ai-learning-stats');
-      if (response.data && response.data.status === 'success') {
-        setStats(response.data.data);
+      const response = await customFetch(`${API_BASE}/admin/ai-learning-stats`);
+      const data = await response.json();
+      if (response.ok && data.status === 'success') {
+        setStats(data.data);
       } else {
-        throw new Error(response.data?.message || 'Failed to fetch AI learning stats');
+        throw new Error(data?.message || 'Failed to fetch AI learning stats');
       }
     } catch (err) {
       setError(err.message || 'An error occurred');
