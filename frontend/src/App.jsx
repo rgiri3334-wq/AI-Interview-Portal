@@ -57,8 +57,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
   const rawRole = sessionStorage.getItem('role') || null;
   
-  // Normalize backend roles to the frontend's generic 'admin' role
-  const role = ['master', 'sub_admin'].includes(rawRole) ? 'admin' : rawRole;
+  // Normalize ANY backend admin role to the frontend's generic 'admin' role
+  const role = rawRole === 'candidate' ? 'candidate' : 'admin';
 
   if (!isAuthenticated) return <Navigate to="/" replace />;
 
