@@ -12,6 +12,7 @@ venv.bak/
 *.key
 
 # Database (may contain candidate PII — never commit)
+*.db
 database.db
 database.db-shm
 database.db-wal
