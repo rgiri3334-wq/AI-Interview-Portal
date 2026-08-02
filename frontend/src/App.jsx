@@ -61,7 +61,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (allowedRoles && !allowedRoles.includes(role)) {
     if (role === 'candidate') return <Navigate to="/candidate-home" replace />;
-    return <Navigate to="/home" replace />;
+    
+    // Security Fix: If the session is corrupted or lacks a valid role, clear it
+    // and force re-authentication to prevent infinite redirect loops between / and /home
+    sessionStorage.removeItem('isAuthenticated');
+    sessionStorage.removeItem('role');
+    return <Navigate to="/" replace />;
   }
 
   return children;
