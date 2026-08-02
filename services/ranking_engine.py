@@ -11,33 +11,33 @@ logger = logging.getLogger("RankingEngine")
 
 # ── Weightage Profile (tunable per company/role) ──────────────────────────
 DEFAULT_WEIGHTS = {
-    "resume_score": 0.20,
-    "technical_score": 0.30,
+    "resume_score":       0.20,
+    "technical_score":    0.30,
     "communication_score": 0.15,
-    "confidence_score": 0.10,
-    "behavioral_score": 0.10,
-    "fluency_score": 0.08,
-    "eq_score": 0.07,
+    "confidence_score":   0.10,
+    "behavioral_score":   0.10,
+    "fluency_score":      0.08,
+    "eq_score":           0.07,
 }
 
 ROLE_WEIGHT_OVERRIDES = {
     "product manager": {
-        "resume_score": 0.15,
-        "technical_score": 0.15,
+        "resume_score":        0.15,
+        "technical_score":     0.15,
         "communication_score": 0.30,
-        "confidence_score": 0.15,
-        "behavioral_score": 0.15,
-        "fluency_score": 0.05,
-        "eq_score": 0.05,
+        "confidence_score":    0.15,
+        "behavioral_score":    0.15,
+        "fluency_score":       0.05,
+        "eq_score":            0.05,
     },
     "frontend developer": {
-        "resume_score": 0.20,
-        "technical_score": 0.35,
+        "resume_score":        0.20,
+        "technical_score":     0.35,
         "communication_score": 0.15,
-        "confidence_score": 0.08,
-        "behavioral_score": 0.07,
-        "fluency_score": 0.08,
-        "eq_score": 0.07,
+        "confidence_score":    0.08,
+        "behavioral_score":    0.07,
+        "fluency_score":       0.08,
+        "eq_score":            0.07,
     },
 }
 
@@ -60,19 +60,18 @@ def calculate_global_score(
     """Compute a weighted Global Score (0-100) from all evaluation dimensions."""
     weights = get_weights(job_role)
     score = (
-        resume_score * weights["resume_score"]
-        + technical_score * weights["technical_score"]
+        resume_score        * weights["resume_score"]
+        + technical_score   * weights["technical_score"]
         + communication_score * weights["communication_score"]
-        + confidence_score * weights["confidence_score"]
-        + behavioral_score * weights["behavioral_score"]
-        + fluency_score * weights["fluency_score"]
-        + eq_score * weights["eq_score"]
+        + confidence_score  * weights["confidence_score"]
+        + behavioral_score  * weights["behavioral_score"]
+        + fluency_score     * weights["fluency_score"]
+        + eq_score          * weights["eq_score"]
     )
     return round(min(max(score, 0), 100), 1)
 
 
-def generate_hiring_decision(global_score: float,
-                             technical_score: float) -> dict:
+def generate_hiring_decision(global_score: float, technical_score: float) -> dict:
     """
     Generate the final automated hiring recommendation.
     A strong technical score gates the decision even if overall score is borderline.

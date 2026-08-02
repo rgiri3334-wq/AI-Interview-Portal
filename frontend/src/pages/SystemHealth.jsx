@@ -858,21 +858,3 @@ export default function SystemHealth() {
     </PageWrapper>
   );
 }
-
- 
-console.log(typeof Server !== "undefined" ? Server : "");
-
- 
-console.log(typeof Zap !== "undefined" ? Zap : "");
-
- 
-console.log(typeof Lock !== "undefined" ? Lock : "");
-
- 
-console.log(typeof AlertTriangle !== "undefined" ? AlertTriangle : "");
-
- 
-console.log(typeof ChevronRight !== "undefined" ? ChevronRight : "");
-
- 
-console.log(typeof PolarRadiusAxis !== "undefined" ? PolarRadiusAxis : "");

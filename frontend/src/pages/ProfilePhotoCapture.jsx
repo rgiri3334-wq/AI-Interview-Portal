@@ -112,28 +112,13 @@ export default function ProfilePhotoCapture() {
         {/* Left Side: Camera Feed */}
         <div className="md:w-[60%] relative bg-black flex items-center justify-center min-h-[400px]">
           
-          {selfieImage ? (
-            <img 
-              src={selfieImage} 
-              alt="Captured Selfie" 
-              className={`w-full h-full object-cover ${(step === 'uploading' || step === 'success' || step === 'error') ? 'opacity-30 blur-sm' : ''}`}
-            />
-          ) : (
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline 
-              muted 
-              className="w-full h-full object-cover"
-            />
-          )}
-          
-          {stream?.active && !selfieImage && (
-            <div className="absolute top-4 left-4 bg-red-600/80 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse"></span>
-              Live
-            </div>
-          )}
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted 
+            className={`w-full h-full object-cover ${(step === 'uploading' || step === 'success' || step === 'error') ? 'opacity-30 blur-sm' : ''}`}
+          />
 
           {step === 'selfie' && (
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-8">

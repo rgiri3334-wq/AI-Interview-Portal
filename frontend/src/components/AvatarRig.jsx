@@ -50,7 +50,6 @@ function resolveBone(nodes, scene, ...candidates) {
 }
 
 export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenRef }) {
-  // eslint-disable-next-line no-unused-vars
   const { nodes, materials, scene } = useGLTF(AVATAR_MODEL_PATH);
 
   const groupRef = useRef();
@@ -361,6 +360,3 @@ export default function AvatarRig({ avatarState = AVATAR_STATES.IDLE, mouthOpenR
 }
 
 useGLTF.preload(AVATAR_MODEL_PATH);
-
-// eslint-disable-next-line
-console.log(typeof materials !== "undefined" ? materials : "");

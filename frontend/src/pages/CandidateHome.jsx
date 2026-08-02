@@ -33,7 +33,6 @@ function CountdownTimer({ targetDate, targetTime, onStartReady, onMissed }) {
       let parsedTime = targetTime;
       const ampmMatch = targetTime?.match(/(\d+):(\d+)\s*(AM|PM)/i);
       if (ampmMatch) {
-        // eslint-disable-next-line no-unused-vars
         let [_, h, m, ampm] = ampmMatch;
         h = parseInt(h, 10);
         if (ampm.toUpperCase() === 'PM' && h < 12) h += 12;
@@ -535,6 +534,3 @@ export default function CandidateHome() {
     </PageWrapper>
   );
 }
-
- 
-console.log(typeof TrendingUp !== "undefined" ? TrendingUp : "");

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert } from 'lucide-react';
@@ -26,9 +26,10 @@ import { useWebSocketSTT } from '../hooks/useWebSocketSTT';
 import { useInterviewStore } from '../store/useInterviewStore';
 import { useAudioStream } from '../hooks/useAudioStream';
 import { useHumanBehavior } from '../hooks/useHumanBehavior';
-import { useCodeWorkspace } from '../hooks/useCodeWorkspace';
+import { useCodeWorkspace, SUPPORTED_LANGUAGES } from '../hooks/useCodeWorkspace';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { useVideoRecorder } from '../hooks/useVideoRecorder';
+import { useVAD } from '../hooks/useVAD';
 import { useIntegrityEngine } from '../hooks/useIntegrityEngine'; // Sprint 3
 
 const MAX_QUESTIONS = 10;
@@ -102,6 +103,8 @@ export default function LiveInterview() {
 
   const proctoringLogsRef = useRef([]);
   const [fullscreenLock, setFullscreenLock] = useState(false);
+  const [focusLock, setFocusLock] = useState(false);
+
   // New UI States
   const [theme, setTheme] = useState('dark');
   const [isCodeOpen, setIsCodeOpen] = useState(false);
@@ -119,6 +122,7 @@ export default function LiveInterview() {
 
   const [question, setQuestion] = useState('System Initializing...');
   const [overlayMsg, setOverlayMsg] = useState('');
+  const [postureHint, setPostureHint] = useState('');  // Candidate-facing posture hint
   const postureHintTimerRef = useRef(null);
   const displayedQuestion = useTypewriter(question, 10);
 
@@ -137,7 +141,7 @@ export default function LiveInterview() {
   const streamRef = useRef(null);
   const transcriptEndRef = useRef(null);
 
-  const { language, setLanguage, handleEditorMount, getCode, clearCode } = useCodeWorkspace({ defaultLanguage: 'javascript' });
+  const { editorRef, language, setLanguage, handleEditorMount, getCode, clearCode } = useCodeWorkspace({ defaultLanguage: 'javascript' });
   const { speak, speakChunks, stop: stopVoice, isSpeaking, getAudioFrequency, playActiveListeningCue } = useAudioStream();
   const [nudgePill, setNudgePill] = useState(null);
   const nudgeTimerRef = useRef(null);
@@ -166,6 +170,7 @@ export default function LiveInterview() {
 
   // Sprint 3: Integrity Engine — collects signals throughout the interview
   const {
+    integrityScore,
     recordSignal: recordIntegritySignal,
     checkGptSyntax,
     checkBehavioral,
@@ -177,19 +182,18 @@ export default function LiveInterview() {
     recordIntegritySignal(signalKey, meta);
     
     // Strict Proctoring: Immediately terminate if multiple people detected >10s
-    // BUG-01 FIX: Pass (historyRef.current, reason) instead of just (reason)
     if (signalKey === 'multiple_people_critical') {
-      doEndInterview(historyRef.current, 'Multiple people detected in frame for an extended period.');
+      doEndInterview('Multiple people detected in frame for an extended period.');
     }
   }, [recordIntegritySignal]);
 
   // [STRICT] Candidate-facing posture/gaze hint — phrased as ergonomic guidance, NOT proctoring
   const onPostureHint = useCallback((type, message) => {
     // Only show if interview is active and message is new
-    setOverlayMsg(message);
+    setPostureHint(message);
     // Auto-dismiss after 4 seconds
     if (postureHintTimerRef.current) clearTimeout(postureHintTimerRef.current);
-    postureHintTimerRef.current = setTimeout(() => setOverlayMsg(''), 4000);
+    postureHintTimerRef.current = setTimeout(() => setPostureHint(''), 4000);
   }, []);
 
   const { getMetrics, stop: stopHuman } = useHumanBehavior(
@@ -240,7 +244,7 @@ export default function LiveInterview() {
     stopListening,
     resetTranscript,
     shutdown: shutdownSTT,
-  } = useWebSocketSTT({ onSilenceDetected: handleSilenceDetected, silenceDelayMs: 4500 }); // Silence detection: waits 4.5s
+  } = useWebSocketSTT({ onSilenceDetected: handleSilenceDetected, silenceDelayMs: 4500 }); // Adaptive silence: waits 3.5s to 5.5s depending on answer length
   // isListening is passed to Avatar3D for the LISTENING state display
 
   const lastCueWordCount = useRef(0);
@@ -304,7 +308,7 @@ export default function LiveInterview() {
           setAdminKillReason(res.reason || "Interview terminated by administrator.");
           // We DO NOT call doEndInterview because the backend already handled the termination
         }
-      } catch {
+      } catch (err) {
         // Silently ignore polling errors
       }
     };
@@ -440,47 +444,6 @@ export default function LiveInterview() {
       document.addEventListener('fullscreenchange', handleFullscreenChange, { capture: true });
       window.addEventListener('resize', handleDevTools, { capture: true });
 
-      // ── Advanced DevTools Detection (HIGH-04 fix) ──────────────────────
-      // Layer 2: Debugger timing detection — `debugger` pauses execution
-      // only when DevTools is open with breakpoints enabled.
-      const devtoolsTimingInterval = setInterval(() => {
-        const t0 = performance.now();
-        // eslint-disable-next-line no-debugger
-        debugger;
-        const elapsed = performance.now() - t0;
-        if (elapsed > 100) {
-          addProctoringLog('DevTools detected via debugger timing.');
-          recordIntegritySignal('devtools_detected', { method: 'debugger_timing' });
-          setWarnings(w => {
-            const newW = w + 1;
-            if (newW >= 3) doEndInterview(historyRef.current, 'Developer tools were detected open during the interview');
-            return newW;
-          });
-          setOverlayMsg('PROCTORING WARNING: Developer Tools detected.');
-        }
-      }, 8000);
-
-      // Layer 3: React DevTools global hook detection
-      if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
-        addProctoringLog('React DevTools extension detected.');
-        recordIntegritySignal('devtools_detected', { method: 'react_devtools_hook' });
-      }
-
-      // Layer 4: Console toString trap — inspecting objects in DevTools
-      // triggers toString/valueOf calls
-      const devtoolsTrap = /./;
-      let trapFired = false;
-      devtoolsTrap.toString = function() {
-        if (!trapFired) {
-          trapFired = true;
-          addProctoringLog('DevTools console inspection detected (toString trap).');
-          recordIntegritySignal('devtools_detected', { method: 'toString_trap' });
-        }
-        return '';
-      };
-      // The %c format string causes DevTools to call toString on the second arg
-      console.log('%c', devtoolsTrap);
-
       return () => {
         document.removeEventListener('visibilitychange', handleDefocus, { capture: true });
         window.removeEventListener('blur', handleDefocus, { capture: true });
@@ -496,7 +459,6 @@ export default function LiveInterview() {
         document.removeEventListener('fullscreenchange', handleFullscreenChange, { capture: true });
         window.removeEventListener('resize', handleDevTools, { capture: true });
         clearTimeout(fullscreenExitTimeout);
-        clearInterval(devtoolsTimingInterval);
       };
     }
   }, [phase, addProctoringLog]); // Added addProctoringLog
@@ -526,7 +488,7 @@ export default function LiveInterview() {
       if (isListening) stopListening(false);
       if (isRecording) stopRecordingRef.current();
     }
-     
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [micOn, isListening, phase, isSpeaking, loading, startListening, stopListening, isRecording, startRecording]);
 
   const memoizedVideo = React.useMemo(() => (
@@ -609,17 +571,16 @@ export default function LiveInterview() {
 
   const handleSubmitAnswer = async () => {
     if (isSubmittingRef.current) return;
-    isSubmittingRef.current = true;
 
     console.debug("[State] Transition: Interviewing -> Processing");
     const fullAnswer = (finalTranscript + ' ' + interimTranscript).trim();
     if (!fullAnswer && !getCode().trim() && !textFallback.trim()) {
       setError('Please provide a spoken answer or write code before submitting.');
       console.debug("[State] Reverted: No input detected");
-      isSubmittingRef.current = false;
       return;
     }
 
+    isSubmittingRef.current = true;
     setLoading(true);
     setError('');
 
@@ -632,7 +593,7 @@ export default function LiveInterview() {
     }, 1500);
 
     // ZERO LATENCY BYPASS: If webkitSpeechRecognition already caught the text, don't wait for backend Whisper!
-    let finalWsText;
+    let finalWsText = '';
     if (fullAnswer.length > 3) {
       await stopListening(false); // Instantly turn off mic without triggering slow backend whisper
       finalWsText = fullAnswer;
@@ -918,15 +879,12 @@ export default function LiveInterview() {
     }
 
     try {
-      // BUG-04 FIX: Include roboticStructureCount in behavioral check.
-      // Also compute totalFillerWords from per-answer data instead of hardcoding 0.
+      // Sprint 3: Run behavioral integrity checks before saving
       const avgWpmAll = h.length ? h.reduce((s, x) => s + (x.wpm || 130), 0) / h.length : 130;
-      const allFillerCounts = h.reduce((sum, ans) => sum + ((ans.repeatedWords || []).length), 0);
       checkBehavioral({
         avgWpm: avgWpmAll,
-        totalFillerWords: allFillerCounts,
+        totalFillerWords: 0, // Filler word tracking is per-answer; 0 here = conservative
         totalAnswers: h.length,
-        roboticStructureCount: 0, // Future: track from server-side AI detection
       });
 
       // Compute AI plagiarism
@@ -1111,13 +1069,13 @@ export default function LiveInterview() {
       const blob = new Blob([workerSrc], { type: 'application/javascript' });
       url = URL.createObjectURL(blob);
       const worker = new Worker(url);
-      const cleanup = () => { try { worker.terminate(); } catch { /* ignore */ } try { URL.revokeObjectURL(url); } catch { /* ignore */ } };
+      const cleanup = () => { try { worker.terminate(); } catch (_) {} try { URL.revokeObjectURL(url); } catch (_) {} };
       const timer = setTimeout(() => { cleanup(); resolve({ ok: false, output: 'Execution timed out (5s). Possible infinite loop.' }); }, 5000);
       worker.onmessage = (e) => { clearTimeout(timer); cleanup(); resolve(e.data); };
       worker.onerror = (err) => { clearTimeout(timer); cleanup(); resolve({ ok: false, output: String(err.message || 'Execution error') }); };
       worker.postMessage(code);
-    } catch {
-      if (url) { try { URL.revokeObjectURL(url); } catch { /* ignore */ } }
+    } catch (err) {
+      if (url) { try { URL.revokeObjectURL(url); } catch (_) {} }
       resolve({ ok: false, output: 'Sandbox unavailable in this browser.' });
     }
   });
@@ -1133,7 +1091,7 @@ export default function LiveInterview() {
       try {
         const res = await apiClient.executeCode({ code, language: 'python' });
         setOverlayMsg(res.error ? "Python Execution Error:\n" + res.output : "Python Output:\n" + (res.output || "Execution complete. No output."));
-      } catch {
+      } catch (err) {
         setOverlayMsg("Failed to connect to backend execution engine.");
       }
       setLoading(false);

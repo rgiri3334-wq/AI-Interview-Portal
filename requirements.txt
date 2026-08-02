@@ -1,4 +1,4 @@
-﻿# Python Backend Dependencies
+# Python Backend Dependencies
 # Install with: pip install -r requirements.txt
 
 fastapi
@@ -25,4 +25,5 @@ edge-tts
 pytz
 slowapi
 cryptography
-limits
+limits  
+ 

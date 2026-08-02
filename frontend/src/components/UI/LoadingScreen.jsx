@@ -127,6 +127,3 @@ export default function LoadingScreen({ message = 'Loading System Workspace...',
     </div>
   );
 }
-
- 
-console.log(typeof Zap !== "undefined" ? Zap : "");

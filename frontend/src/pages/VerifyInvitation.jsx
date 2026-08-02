@@ -40,7 +40,7 @@ export default function VerifyInvitation() {
           setStatus('error');
           setMessage(data.detail || 'Verification failed.');
         }
-      } catch (err) { console.error(err);
+      } catch (err) {
         setStatus('error');
         setMessage('Network error. Please try again later.');
       }

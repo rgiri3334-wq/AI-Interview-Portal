@@ -211,8 +211,6 @@ export function useHumanBehavior(
         } else if (type === 'INIT_ERROR') {
           console.error("[Vision Engine] Worker init failed", error);
           setStatus('error');
-          worker.terminate();
-          workerRef.current = null;
         } else if (type === 'FRAME_RESULTS') {
           processResults(results);
         } else if (type === 'FRAME_ERROR') {

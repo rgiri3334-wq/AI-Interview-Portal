@@ -171,18 +171,3 @@ export default function GlobalContextFeed({ companyContext, handleSaveCompanyCon
   );
 }
 
-
- 
-console.log(typeof AlertTriangle !== "undefined" ? AlertTriangle : "");
-
- 
-console.log(typeof Info !== "undefined" ? Info : "");
-
- 
-console.log(typeof CheckCircle2 !== "undefined" ? CheckCircle2 : "");
-
- 
-console.log(typeof PackagePlus !== "undefined" ? PackagePlus : "");
-
- 
-console.log(typeof ShieldOff !== "undefined" ? ShieldOff : "");

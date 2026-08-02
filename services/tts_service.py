@@ -20,27 +20,22 @@ DEFAULT_VOICE = os.environ.get("TTS_VOICE", "en-US-AndrewMultilingualNeural")
 # Slightly measured pace makes it sound composed/formal rather than rushed.
 DEFAULT_RATE = os.environ.get("TTS_RATE", "-3%")
 
-
 async def generate_tts_stream(text: str):
     """
     Generate an audio stream of the given text using Microsoft Edge Neural TTS.
     100% permanently free with highly realistic prosody.
     """
     if not EDGE_TTS_AVAILABLE:
-        logger.warning(
-            "edge-tts missing. Returning 503 so frontend falls back to browser SpeechSynthesis.")
+        logger.warning("edge-tts missing. Returning 503 so frontend falls back to browser SpeechSynthesis.")
         from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=503,
-            content={
-                "error": "TTS service unavailable",
-                "fallback": "browser_speech_synthesis"}
+            content={"error": "TTS service unavailable", "fallback": "browser_speech_synthesis"}
         )
 
     async def stream_generator():
         try:
-            communicate = edge_tts.Communicate(
-                text, DEFAULT_VOICE, rate=DEFAULT_RATE)
+            communicate = edge_tts.Communicate(text, DEFAULT_VOICE, rate=DEFAULT_RATE)
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
                     yield chunk["data"]

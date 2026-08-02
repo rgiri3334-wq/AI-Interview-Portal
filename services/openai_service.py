@@ -43,7 +43,6 @@ except ImportError:
     OPENAI_AVAILABLE = False
     logger.warning("openai SDK not available. Running in MOCK mode.")
 
-
 def _get_client():
     if not OPENAI_AVAILABLE:
         raise RuntimeError("openai not installed.")
@@ -52,21 +51,19 @@ def _get_client():
         raise RuntimeError("OPENAI_API_KEY missing or placeholder.")
     return AsyncOpenAI(api_key=key)
 
-
 @async_retry(max_attempts=3, base_delay=1.0)
 async def _call_openai(client, prompt: str, model: str = OPENAI_MODEL) -> str:
     """Raw OpenAI API call with retry."""
     response = await client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        response_format={"type": "json_object"},
+        response_format={ "type": "json_object" },
         temperature=0.65,
         max_tokens=1024,
     )
     return response.choices[0].message.content or ""
 
 # ── Public API ────────────────────────────────────────────────────────────
-
 
 async def generate_smart_question(
     candidate_id: str,
@@ -81,8 +78,7 @@ async def generate_smart_question(
     stage = min(session.question_index + 1, 5)
 
     from services.gemini_service import _get_admin_question_data
-    _, potential_admin_q, persona, company_context, weights = _get_admin_question_data(
-        job_role, session.asked_questions)
+    _, potential_admin_q, persona, company_context, weights = _get_admin_question_data(job_role, session.asked_questions)
 
     admin_next_q = potential_admin_q if potential_admin_q else None
 
@@ -165,18 +161,18 @@ async def assess_answer(
         raw = await _call_openai(client, prompt, model=OPENAI_MODEL)
         parsed_data = extract_json_from_text(raw or "") or {}
         result = safe_parse_assessment_response(json.dumps(parsed_data))
-
+        
         # Inject action if OpenAI parsed it correctly
         if "action" in parsed_data:
             result["action"] = parsed_data["action"]
-
+            
     except Exception as e:
         logger.error(f"Assessment failed: {e}. Using fallback.")
         result = safe_parse_assessment_response("")
         result["action"] = "normal"
 
     action = result.get("action", "normal")
-
+    
     if action in ["repeat", "small_talk"]:
         # If they are just greeting us at the start, don't repeat the greeting!
         if len(session.conversation_history) == 0 and "welcome to Sterling" in question:
@@ -185,39 +181,25 @@ async def assess_answer(
             if not next_q or len(next_q) < 15:
                 next_q = fallback_q
         else:
-            next_q = result.get(
-                "next_technical_question",
-                f"Let me repeat the question: {question}")
-
+            next_q = result.get("next_technical_question", f"Let me repeat the question: {question}")
+            
         return {
             "action": action,
             "next_technical_question": next_q,
             "answer_quality": "average"
         }
-
+        
     elif action == "skip":
         # They skipped it, we record a 0 score and move on.
         result["technical_score"] = 0
-        result["next_technical_question"] = result.get(
-            "next_technical_question", "Okay, moving on to the next topic.")
+        result["next_technical_question"] = result.get("next_technical_question", "Okay, moving on to the next topic.")
 
-    fluency_score = calculate_speech_fluency(
-        wpm, len(filler_words), len(answer.split()))
+    fluency_score = calculate_speech_fluency(wpm, len(filler_words), len(answer.split()))
     llm_confidence = result.get("confidence_score", 60)
-    final_confidence = compute_overall_confidence(
-        fluency_score, emotion, llm_confidence)
-
-    facial_score = {
-        "Confident": 90,
-        "Focused": 85,
-        "Neutral": 70,
-        "Happy": 85,
-        "Nervous": 40}.get(
-        emotion,
-        60)
-    behavioral_score = result.get(
-        "communication_score",
-        60) * 0.8 + final_confidence * 0.2
+    final_confidence = compute_overall_confidence(fluency_score, emotion, llm_confidence)
+    
+    facial_score = {"Confident": 90, "Focused": 85, "Neutral": 70, "Happy": 85, "Nervous": 40}.get(emotion, 60)
+    behavioral_score = result.get("communication_score", 60) * 0.8 + final_confidence * 0.2
 
     metrics = {
         "technical_score": result["technical_score"] * 10,
@@ -228,7 +210,7 @@ async def assess_answer(
         "fluency_score": fluency_score,
         "action": action,
     }
-
+    
     result.update(metrics)
 
     if action not in ["repeat", "small_talk"]:
@@ -244,8 +226,7 @@ async def assess_answer(
         )
 
     if not result.get("next_technical_question"):
-        result["next_technical_question"] = get_fallback_question(
-            job_role, session.asked_questions)
+        result["next_technical_question"] = get_fallback_question(job_role, session.asked_questions)
 
     return result
 

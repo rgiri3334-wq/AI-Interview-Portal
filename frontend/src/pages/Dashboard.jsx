@@ -34,12 +34,12 @@ function Counter({ target, suffix = '', decimals = 0 }) {
 
 // ── Decision Badge ────────────────────────────────────────────────────────
 const DECISION_STYLE = {
-  HIRED:          { bg: 'bg-emerald-50',  border: 'border-emerald-200',  color: 'text-emerald-700',  icon: <Medal size={12}/> },
-  SHORTLISTED:    { bg: 'bg-red-50',  border: 'border-red-200',  color: 'text-red-700',  icon: <Star size={12}/> },
+  HIRED:          { bg: 'bg-emerald-50',  border: 'border-emerald-200',  color: 'text-emerald-700',  icon: '🏆' },
+  SHORTLISTED:    { bg: 'bg-red-50',  border: 'border-red-200',  color: 'text-red-700',  icon: '⭐' },
   UNDER_REVIEW:   { bg: 'bg-orange-50',  border: 'border-orange-200',  color: 'text-orange-700',  icon: '🔍' },
   REJECTED:       { bg: 'bg-slate-100',  border: 'border-slate-300',  color: 'text-slate-700',  icon: '❌' },
-  PENDING:        { bg: 'bg-slate-50', border: 'border-slate-200', color: 'text-slate-500', icon: <Activity size={12}/> },
-  IN_PROGRESS:    { bg: 'bg-blue-50', border: 'border-blue-200', color: 'text-blue-600', icon: <FileText size={12}/> },
+  PENDING:        { bg: 'bg-slate-50', border: 'border-slate-200', color: 'text-slate-500', icon: '⏳' },
+  IN_PROGRESS:    { bg: 'bg-blue-50', border: 'border-blue-200', color: 'text-blue-600', icon: '📝' },
   PROCTORING_ACT: { bg: 'bg-red-100', border: 'border-red-300',  color: 'text-red-700',  icon: '⛔' },
 };
 
@@ -122,28 +122,22 @@ function ScoreBar({ score, colorClass = 'bg-red-600' }) {
 }
 
 // ── Stat Card ─────────────────────────────────────────────────────────────
-const StatCard = ({ icon: Icon, label, value, suffix = '', decimals = 0, colorHex, trend = 'up', delay = 0, onClick }) => (
+const StatCard = ({ icon: Icon, label, value, suffix = '', decimals = 0, colorHex, delay = 0, onClick }) => (
   <motion.div className="relative bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:border-slate-200 transition-all cursor-pointer group overflow-hidden"
     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
     transition={{ delay }}
     onClick={onClick}>
-    <div 
-      className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity ${!colorHex ? 'bg-red-50' : ''}`}
-      style={colorHex ? { backgroundColor: colorHex, opacity: 0.1 } : {}}
-    />
+    <div className="absolute -right-6 -top-6 w-24 h-24 bg-red-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
     <div className="relative z-10 flex justify-between items-center mb-4">
-      <div 
-        className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center shadow-sm transition-colors"
-        style={colorHex ? { borderColor: colorHex } : {}}
-      >
-        <Icon size={22} className="text-slate-700" style={colorHex ? { color: colorHex } : {}} />
+      <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center shadow-sm group-hover:bg-red-50 group-hover:border-red-100 transition-colors">
+        <Icon size={22} className="text-slate-700 group-hover:text-red-600" />
       </div>
-      <div className={`px-2 py-1 rounded-lg flex items-center gap-1 border ${trend === 'down' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-        {trend === 'down' ? <ChevronDown size={12} strokeWidth={3} /> : <ChevronUp size={12} strokeWidth={3} />}
-        <span className="text-[10px] font-black tracking-wider">{trend === 'down' ? 'DOWN' : 'UP'}</span>
+      <div className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg flex items-center gap-1 border border-emerald-100">
+        <TrendingUp size={12} strokeWidth={3} />
+        <span className="text-[10px] font-black tracking-wider">UP</span>
       </div>
     </div>
-    <div className="relative z-10 text-4xl font-black leading-none mb-1.5 tracking-tight text-slate-900 transition-colors">
+    <div className="relative z-10 text-4xl font-black leading-none mb-1.5 tracking-tight text-slate-900 group-hover:text-red-600 transition-colors">
       <Counter target={typeof value === 'number' ? value : 0} suffix={suffix} decimals={decimals} />
     </div>
     <p className="relative z-10 text-slate-500 text-xs font-bold uppercase tracking-wider">{label}</p>
@@ -285,12 +279,12 @@ function TriageCard({ candidate, onClick }) {
       whileHover={{ scale: 1.02 }}
       onClick={() => onClick(candidate)}
       className={`bg-white border rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all group ${
-        isProctoringAct ? 'border-red-300 hover:border-red-500' : `${INTEGRITY_BANDS[band].border} hover:border-slate-300`
+        isProctoringAct ? 'border-red-300 hover:border-red-500' : 'border-slate-100 hover:border-red-200'
       }`}
     >
       <div className="flex items-center gap-3 mb-4">
         <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-sm font-black shrink-0 transition-colors ${
-          isProctoringAct ? 'bg-red-100 border-red-200 text-red-700' : `${INTEGRITY_BANDS[band].bg} ${INTEGRITY_BANDS[band].border} ${INTEGRITY_BANDS[band].color}`
+          isProctoringAct ? 'bg-red-100 border-red-200 text-red-700' : 'bg-slate-50 border-slate-100 text-red-600 group-hover:bg-red-50 group-hover:border-red-100'
         }`}>
           {isProctoringAct ? '⛔' : candidate.name?.[0]}
         </div>
@@ -492,7 +486,7 @@ export default function Dashboard() {
       try {
         dateObj = new Date(c.created_at);
         if (isNaN(dateObj.getTime())) return;
-      } catch(e) { console.warn("Invalid date format", e); return; }
+      } catch(e) { return; }
 
       const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       if (!groups[dateStr]) groups[dateStr] = { sum: 0, count: 0, timestamp: dateObj.getTime() };
@@ -626,7 +620,7 @@ export default function Dashboard() {
                   <StatCard icon={Target} label="Shortlisted" value={shortlisted} colorHex="#991b1b" delay={0.15} onClick={() => setModalFilter('SHORTLISTED')} />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Radar */}
                   <motion.div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
                     <h3 className="text-xl font-extrabold mb-6 text-slate-900 flex items-center tracking-tight">
@@ -666,29 +660,6 @@ export default function Dashboard() {
                         <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#E2E8F0', borderRadius: '12px', color: '#0F172A', fontWeight: 'bold', boxShadow: '0 8px 30px rgb(0 0 0 / 0.12)' }} itemStyle={{ color: '#ef4444' }} />
                         <Area type="monotone" dataKey="avg" stroke="#ef4444" strokeWidth={4} fill="url(#gradRed)" />
                       </AreaChart>
-                    </ResponsiveContainer>
-                  </motion.div>
-
-                  {/* Bar Chart (Score Distribution) */}
-                  <motion.div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
-                    <h3 className="text-xl font-extrabold mb-6 text-slate-900 flex items-center tracking-tight">
-                      <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mr-4 border border-emerald-100">
-                        <BarChart3 size={20} />
-                      </div>
-                      Score Distribution
-                    </h3>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={realTrendData} margin={{ left: -20 }}>
-                        <CartesianGrid stroke="#f1f5f9" vertical={false} />
-                        <XAxis dataKey="day" tick={{ fill: '#64748B', fontSize: 12, fontWeight: 'bold' }} axisLine={false} tickLine={false} dy={10} />
-                        <YAxis domain={[0, 100]} tick={{ fill: '#64748B', fontSize: 12, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#E2E8F0', borderRadius: '12px', color: '#0F172A', fontWeight: 'bold', boxShadow: '0 8px 30px rgb(0 0 0 / 0.12)' }} itemStyle={{ color: '#10b981' }} />
-                        <Bar dataKey="avg" radius={[6, 6, 0, 0]}>
-                          {realTrendData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.avg >= 75 ? '#10b981' : entry.avg >= 55 ? '#f59e0b' : '#ef4444'} />
-                          ))}
-                        </Bar>
-                      </BarChart>
                     </ResponsiveContainer>
                   </motion.div>
                 </div>

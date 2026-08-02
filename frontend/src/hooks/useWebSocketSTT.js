@@ -118,7 +118,7 @@ export function useWebSocketSTT({ onSilenceDetected, silenceDelayMs = 2000 } = {
       if (recognitionRef.current) {
         recognitionRef.current.onresult = null;
         recognitionRef.current.onerror = null;
-        try { recognitionRef.current.abort(); } catch (e) { console.error(e);console.error(e); }
+        try { recognitionRef.current.abort(); } catch (e) {}
       }
       
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -201,7 +201,7 @@ export function useWebSocketSTT({ onSilenceDetected, silenceDelayMs = 2000 } = {
   const stopListening = useCallback((triggerTranscription = true) => {
     return new Promise((resolve) => {
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) { console.error(e);console.error(e); }
+        try { recognitionRef.current.stop(); } catch (e) {}
       }
       
       const doTrigger = () => {
@@ -265,10 +265,10 @@ export function useWebSocketSTT({ onSilenceDetected, silenceDelayMs = 2000 } = {
           if (globalStreamRef.current) {
             globalStreamRef.current.getTracks().forEach(track => track.stop());
           }
-        } catch (e) { console.error(e);console.error(e); }
+        } catch (e) {}
       }
       if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch (e) { console.error(e);console.error(e); }
+        try { recognitionRef.current.abort(); } catch (e) {}
       }
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);

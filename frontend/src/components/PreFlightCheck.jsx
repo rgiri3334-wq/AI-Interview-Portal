@@ -290,7 +290,7 @@ export default function PreFlightCheck({ onPass, candidateName = 'Candidate', jo
 
     runChecks();
     return () => { cancelled = true; };
-   
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Derive canBegin after each status change ──────────────────────────────

@@ -31,8 +31,7 @@ class RealTimeTranscriber:
     def __init__(self):
         self.active_streams = {}
 
-    def process_audio_chunk(self, candidate_id: str,
-                            chunk: bytes) -> str | None:
+    def process_audio_chunk(self, candidate_id: str, chunk: bytes) -> str | None:
         """
         Process incoming binary audio chunk from WebSocket.
 

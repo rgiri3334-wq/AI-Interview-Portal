@@ -268,6 +268,7 @@ export default function CandidateLogin() {
         otp_code: code,
         purpose: 'login',
       });
+      sessionStorage.setItem('candidateToken', res.token);
       sessionStorage.setItem('candidateId', res.candidate_id);
       sessionStorage.setItem('candidateName', res.name);
       sessionStorage.setItem('isAuthenticated', 'true');

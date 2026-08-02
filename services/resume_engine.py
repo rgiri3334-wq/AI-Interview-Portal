@@ -28,8 +28,7 @@ except ImportError:
     GENAI_AVAILABLE = False
 
 # ── Fix: Correct model constant name ───────────────────────────────────────
-# Previously defined as AI_MODEL, causing NameError
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-2.0-flash"  # Previously defined as AI_MODEL, causing NameError
 
 
 def _get_client():
@@ -298,10 +297,7 @@ def _local_score_resume(resume_text: str, job_role: str) -> dict:
 
     skill_pct = len(matched_skills) / max(len(all_role_skills), 1)
     # Core skills carry 2x weight
-    core_matched = sum(
-        1 for s in matrix.get(
-            "core_skills",
-            []) if s.lower() in text_lower)
+    core_matched = sum(1 for s in matrix.get("core_skills", []) if s.lower() in text_lower)
     core_pct = core_matched / max(len(matrix.get("core_skills", [])), 1)
     skill_score = min(100, int((skill_pct * 0.5 + core_pct * 0.5) * 100))
 
@@ -330,8 +326,7 @@ def _local_score_resume(resume_text: str, job_role: str) -> dict:
         exp_score = 35
     else:
         # No explicit years found — check for "fresher", "entry level" signals
-        if any(w in text_lower for w in [
-               'fresher', 'entry level', 'graduate', 'intern']):
+        if any(w in text_lower for w in ['fresher', 'entry level', 'graduate', 'intern']):
             exp_score = 25 if required_exp <= 1 else 15
         else:
             exp_score = 40  # Unknown experience
@@ -341,8 +336,7 @@ def _local_score_resume(resume_text: str, job_role: str) -> dict:
     bonus_fields = matrix.get("education_bonus_fields", [])
     if any(f.lower() in text_lower for f in bonus_fields):
         edu_score = 85
-    if any(d in text_lower for d in [
-           'phd', 'doctorate', 'm.tech', 'mtech', 'ms ', 'msc ', 'mba']):
+    if any(d in text_lower for d in ['phd', 'doctorate', 'm.tech', 'mtech', 'ms ', 'msc ', 'mba']):
         edu_score = min(100, edu_score + 15)
     elif any(d in text_lower for d in ['b.tech', 'btech', 'b.e', 'b.sc', 'bsc', 'bachelor']):
         edu_score = min(100, edu_score + 5)
@@ -358,14 +352,7 @@ def _local_score_resume(resume_text: str, job_role: str) -> dict:
         'developed', 'built', 'designed', 'implemented', 'architected',
         'led', 'managed', 'deployed', 'optimized', 'created', 'launched',
     ]
-    complexity_indicators = [
-        'million',
-        'billion',
-        'users',
-        'scale',
-        'enterprise',
-        'production',
-        'team']
+    complexity_indicators = ['million', 'billion', 'users', 'scale', 'enterprise', 'production', 'team']
     tech_depth_indicators = [
         'microservices', 'kubernetes', 'machine learning', 'real-time',
         'distributed', 'cloud', 'api', 'database', 'neural network', 'model'
@@ -376,12 +363,7 @@ def _local_score_resume(resume_text: str, job_role: str) -> dict:
     tech_depth = sum(1 for w in tech_depth_indicators if w in text_lower)
 
     # Has project section?
-    has_projects = any(
-        h in text_lower for h in [
-            'project',
-            'portfolio',
-            'github',
-            'gitlab'])
+    has_projects = any(h in text_lower for h in ['project', 'portfolio', 'github', 'gitlab'])
     project_score = 30  # Baseline
     if has_projects:
         project_score += 20
@@ -396,17 +378,10 @@ def _local_score_resume(resume_text: str, job_role: str) -> dict:
     if re.search(r'[\w.]+@[\w.]+\.\w+', text_lower):
         quality_score += 10
     # Has quantifiable achievements
-    if re.search(
-            r'\d+%|\d+x|\$\d+|\d+\s*(users?|customers?|clients?)', text_lower):
+    if re.search(r'\d+%|\d+x|\$\d+|\d+\s*(users?|customers?|clients?)', text_lower):
         quality_score += 15
     # Has proper sections
-    sections = [
-        'experience',
-        'education',
-        'skills',
-        'projects',
-        'summary',
-        'objective']
+    sections = ['experience', 'education', 'skills', 'projects', 'summary', 'objective']
     quality_score += min(20, sum(5 for s in sections if s in text_lower))
     # Penalize very short resumes
     word_count = len(resume_text.split())
@@ -418,12 +393,12 @@ def _local_score_resume(resume_text: str, job_role: str) -> dict:
 
     # ── Final Weighted Score ────────────────────────────────────────────
     final_score = (
-        skill_score * 0.30 +
-        exp_score * 0.20 +
-        edu_score * 0.10 +
-        keyword_score * 0.15 +
-        project_score * 0.15 +
-        quality_score * 0.10
+        skill_score     * 0.30 +
+        exp_score       * 0.20 +
+        edu_score       * 0.10 +
+        keyword_score   * 0.15 +
+        project_score   * 0.15 +
+        quality_score   * 0.10
     )
     final_score = round(final_score)
     final_score = max(10, min(98, final_score))  # Clamp: 10–98
@@ -443,18 +418,12 @@ def _local_score_resume(resume_text: str, job_role: str) -> dict:
 
     # Basic extraction for fallback
     edu_text = "Education details parsed locally."
-    edu_match = re.search(
-        r'(?i)\b(?:education|academic background|academics)\b\s*[\:\-]?\s*(.*?)(?=\b(?:experience|skills|projects|summary|objective|certifications)\b|$)',
-        resume_text,
-        re.DOTALL)
+    edu_match = re.search(r'(?i)\b(?:education|academic background|academics)\b\s*[\:\-]?\s*(.*?)(?=\b(?:experience|skills|projects|summary|objective|certifications)\b|$)', resume_text, re.DOTALL)
     if edu_match and len(edu_match.group(1).strip()) > 10:
         edu_text = edu_match.group(1).strip()[:200].replace('\n', ' ')
 
     proj_text = ["Projects parsed locally."]
-    proj_match = re.search(
-        r'(?i)\b(?:projects|portfolio|personal projects)\b\s*[\:\-]?\s*(.*?)(?=\b(?:experience|education|skills|summary|objective|certifications)\b|$)',
-        resume_text,
-        re.DOTALL)
+    proj_match = re.search(r'(?i)\b(?:projects|portfolio|personal projects)\b\s*[\:\-]?\s*(.*?)(?=\b(?:experience|education|skills|summary|objective|certifications)\b|$)', resume_text, re.DOTALL)
     if proj_match and len(proj_match.group(1).strip()) > 10:
         proj_text = [proj_match.group(1).strip()[:300].replace('\n', ' ')]
 
@@ -479,17 +448,14 @@ def _local_score_resume(resume_text: str, job_role: str) -> dict:
             "resume_quality_score": quality_score,
         },
         "strengths": (
-            [f"Strong skills coverage: {', '.join(matched_skills[:3])}"] if matched_skills else [
-            ]
+            [f"Strong skills coverage: {', '.join(matched_skills[:3])}"] if matched_skills else []
         ) + (
             [f"{exp_years}+ years of relevant experience"] if exp_years > 0 else []
         ) + (
-            [f"Resume quality: {resume_quality}"] if quality_score >= 60 else [
-            ]
+            [f"Resume quality: {resume_quality}"] if quality_score >= 60 else []
         ),
         "red_flags": (
-            [f"Missing key skills: {', '.join(missing_skills[:3])}"] if len(
-                missing_skills) > len(matched_skills) else []
+            [f"Missing key skills: {', '.join(missing_skills[:3])}"] if len(missing_skills) > len(matched_skills) else []
         ) + (
             [f"Experience gap: {exp_years} years vs {required_exp} required"] if exp_years < required_exp * 0.5 else []
         ),
@@ -612,12 +578,10 @@ CRITICAL RULES:
             )
             return result
         else:
-            logger.error(
-                "AI Engine response missing resume_score or invalid JSON. Using local scorer.")
+            logger.error("AI Engine response missing resume_score or invalid JSON. Using local scorer.")
 
     except Exception as e:
-        logger.error(
-            f"Resume AI parsing failed: {e}. Using advanced local scorer.")
+        logger.error(f"Resume AI parsing failed: {e}. Using advanced local scorer.")
 
     # ── Fallback: Advanced local 6-category scorer ────────────────────────
     return _local_score_resume(resume_text, job_role)

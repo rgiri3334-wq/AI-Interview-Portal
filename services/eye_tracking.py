@@ -45,8 +45,6 @@ def compute_eye_contact_score(
     return round(max(0.0, min(100.0, base_score)), 1)
 
 
-import warnings
-
 def process_eye_contact(frame_data: bytes) -> float:
     """
     Legacy placeholder — retained for API compatibility.
@@ -54,10 +52,4 @@ def process_eye_contact(frame_data: bytes) -> float:
     via MediaPipe FaceLandmarker (hooks/useHumanBehavior.js).
     Use compute_eye_contact_score() instead.
     """
-    warnings.warn(
-        "process_eye_contact is deprecated and will be removed in a future version. "
-        "Eye tracking is now handled by the frontend via MediaPipe.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
     return 85.0

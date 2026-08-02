@@ -75,7 +75,6 @@ export function useAIVoice({ rate = 0.95, pitch = 0.95, volume = 1.0 } = {}) {
     if (!synthRef.current) return;
 
     processingRef.current = true;
-    // eslint-disable-next-line no-unused-vars
     const { text, resolve, reject } = queueRef.current.shift();
 
     const utterance         = new SpeechSynthesisUtterance(text);
@@ -173,6 +172,3 @@ export function useAIVoice({ rate = 0.95, pitch = 0.95, volume = 1.0 } = {}) {
 
   return { speak, enqueue, stop, isSpeaking, isReady };
 }
-
-// eslint-disable-next-line
-console.log(typeof reject !== "undefined" ? reject : "");

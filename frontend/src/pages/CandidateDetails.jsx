@@ -44,7 +44,6 @@ const Field = ({ label, icon: Icon, value, disabled, alwaysFloat, children }) =>
 );
 
 // ── Countdown Timer ───────────────────────────────────────────────────────────
-// eslint-disable-next-line no-unused-vars
 function CountdownTimer({ targetDate, targetTime, timezone, onExpire }) {
   const [timeLeft, setTimeLeft] = useState(null);
 
@@ -54,7 +53,6 @@ function CountdownTimer({ targetDate, targetTime, timezone, onExpire }) {
       let parsedTime = targetTime;
       const ampmMatch = targetTime?.match(/(\d+):(\d+)\s*(AM|PM)/i);
       if (ampmMatch) {
-        // eslint-disable-next-line no-unused-vars
         let [_, h, m, ampm] = ampmMatch;
         h = parseInt(h, 10);
         if (ampm.toUpperCase() === 'PM' && h < 12) h += 12;
@@ -143,7 +141,7 @@ export default function CandidateDetails() {
           const data = await res.json();
           if (data.value) setCompanyStructure(JSON.parse(data.value));
         }
-      } catch (err) { console.error(err);
+      } catch (err) {
         if (retries > 0) {
           retries -= 1;
           setTimeout(fetchStructure, 1000);
@@ -172,14 +170,10 @@ export default function CandidateDetails() {
           setBooking(b);
           setStage(app.stage || 'REGISTERED');
           
-          const assignedRole = app.job_role || c.role_id;
-          const assignedDept = c.department_id;
-
           // Pre-populate fields
           setForm(prev => ({
             ...prev,
-            job_role: assignedRole || '',
-            department: assignedDept || '',
+            job_role: app.job_role || '',
             experience: c.experience_level || '',
             skills: c.key_skills || '',
             github_url: c.github_url || '',
@@ -190,15 +184,13 @@ export default function CandidateDetails() {
             phone_number: c.phone_number || ''
           }));
           
-          if (assignedRole) {
+          if (app.job_role) {
             setHasAppliedRole(true);
-            // Reverse lookup department if only role was provided
-            if (!assignedDept) {
-              for (const [dept, roles] of Object.entries(DEFAULT_STRUCTURE)) {
-                if (roles.includes(assignedRole)) {
-                  setForm(prev => ({ ...prev, department: dept }));
-                  break;
-                }
+            // Reverse lookup department
+            for (const [dept, roles] of Object.entries(DEFAULT_STRUCTURE)) {
+              if (roles.includes(app.job_role)) {
+                setForm(prev => ({ ...prev, department: dept }));
+                break;
               }
             }
           }
@@ -674,15 +666,3 @@ export default function CandidateDetails() {
     </PageWrapper>
   );
 }
-
- 
-console.log(typeof useLocation !== "undefined" ? useLocation : "");
-
- 
-console.log(typeof Lock !== "undefined" ? Lock : "");
-
- 
-console.log(typeof Calendar !== "undefined" ? Calendar : "");
-
-// eslint-disable-next-line
-console.log(typeof timezone !== "undefined" ? timezone : "");

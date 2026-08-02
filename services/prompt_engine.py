@@ -8,22 +8,19 @@ import json
 
 # ── Role → Domain Focus Mapping ───────────────────────────────────────────
 ROLE_DOMAINS: dict[str, list[str]] = {
-    "frontend developer": ["React", "JavaScript", "TypeScript", "CSS", "State Management", "Performance", "Accessibility", "Component Architecture", "Web APIs", "Build Tools"],
-    "backend developer": ["FastAPI", "Node.js", "REST/GraphQL", "Databases", "Authentication", "Caching", "Microservices", "Async Programming", "API Design", "Security"],
-    "full stack developer": ["React", "Node.js/FastAPI", "Databases", "REST APIs", "Authentication", "Deployment", "System Architecture", "Performance", "Docker", "CI/CD"],
-    "ai/ml engineer": ["Machine Learning", "Deep Learning", "NLP", "LLMs", "Transformers", "Fine-tuning", "Vector Databases", "RAG Pipelines", "Model Evaluation", "MLOps"],
-    # Fix #8: Merged two duplicate 'devops engineer' entries into one
-    # comprehensive list
-    "devops engineer": ["Docker", "Kubernetes", "CI/CD Pipelines", "AWS/GCP/Azure", "Infrastructure as Code", "Monitoring", "Linux", "Security", "Automation", "Networking"],
-    "data engineer": ["ETL Pipelines", "Apache Spark", "Airflow", "SQL/NoSQL", "Data Warehousing", "Kafka", "dbt", "Cloud Storage", "Data Quality", "Streaming"],
-    "data scientist": ["Statistical Analysis", "ML Algorithms", "Feature Engineering", "Python", "Pandas/NumPy", "Model Deployment", "A/B Testing", "Visualization", "SQL", "Deep Learning"],
-    "mobile developer": ["React Native / Flutter", "iOS/Android APIs", "State Management", "Performance", "Push Notifications", "App Store", "Native Modules", "Testing", "UI/UX", "Offline-first"],
-    "qa engineer": ["Test Strategy", "Automation Frameworks", "Selenium/Playwright", "API Testing", "Performance Testing", "CI Integration", "Bug Lifecycle", "TDD/BDD", "Regression", "Load Testing"],
+    "frontend developer":  ["React", "JavaScript", "TypeScript", "CSS", "State Management", "Performance", "Accessibility", "Component Architecture", "Web APIs", "Build Tools"],
+    "backend developer":   ["FastAPI", "Node.js", "REST/GraphQL", "Databases", "Authentication", "Caching", "Microservices", "Async Programming", "API Design", "Security"],
+    "full stack developer":["React", "Node.js/FastAPI", "Databases", "REST APIs", "Authentication", "Deployment", "System Architecture", "Performance", "Docker", "CI/CD"],
+    "ai/ml engineer":      ["Machine Learning", "Deep Learning", "NLP", "LLMs", "Transformers", "Fine-tuning", "Vector Databases", "RAG Pipelines", "Model Evaluation", "MLOps"],
+    # Fix #8: Merged two duplicate 'devops engineer' entries into one comprehensive list
+    "devops engineer":     ["Docker", "Kubernetes", "CI/CD Pipelines", "AWS/GCP/Azure", "Infrastructure as Code", "Monitoring", "Linux", "Security", "Automation", "Networking"],
+    "data engineer":       ["ETL Pipelines", "Apache Spark", "Airflow", "SQL/NoSQL", "Data Warehousing", "Kafka", "dbt", "Cloud Storage", "Data Quality", "Streaming"],
+    "data scientist":      ["Statistical Analysis", "ML Algorithms", "Feature Engineering", "Python", "Pandas/NumPy", "Model Deployment", "A/B Testing", "Visualization", "SQL", "Deep Learning"],
+    "mobile developer":    ["React Native / Flutter", "iOS/Android APIs", "State Management", "Performance", "Push Notifications", "App Store", "Native Modules", "Testing", "UI/UX", "Offline-first"],
+    "qa engineer":         ["Test Strategy", "Automation Frameworks", "Selenium/Playwright", "API Testing", "Performance Testing", "CI Integration", "Bug Lifecycle", "TDD/BDD", "Regression", "Load Testing"],
 }
 
 # ── Experience Tier engine ───────────────────────────────────────
-
-
 def get_experience_tier(experience: str) -> dict:
     """Returns tier details based on candidate experience string."""
     exp = experience.lower().strip()
@@ -37,7 +34,7 @@ def get_experience_tier(experience: str) -> dict:
             "tier_level": 1,
             "focus": "20% Technical, 25% Projects, 20% Communication, 15% Learning Ability, 10% Problem Solving, 10% Professional Behavior",
             "rules": "Avoid: Distributed systems design, Enterprise architecture, Advanced scalability questions, Complex optimization problems, Senior-level design patterns (unless explicitly required). Focus on: Potential, Learning Ability, Communication, Project Understanding, Attitude, Adaptability. Not expert-level technical mastery.",
-            "start_diff": 2,  # Easy
+            "start_diff": 2, # Easy
             "min_diff": 1,
             "max_diff": 3,   # Moderate
         }
@@ -47,7 +44,7 @@ def get_experience_tier(experience: str) -> dict:
             "tier_level": 2,
             "focus": "30% Technical, 20% Projects, 20% Communication, 15% Problem Solving, 15% Professionalism",
             "rules": "Focus on: Practical implementation questions, Basic architecture questions, Role-specific technical questions, Real-world scenarios.",
-            "start_diff": 2,  # Easy
+            "start_diff": 2, # Easy
             "min_diff": 1,
             "max_diff": 4,
         }
@@ -57,7 +54,7 @@ def get_experience_tier(experience: str) -> dict:
             "tier_level": 3,
             "focus": "40% Technical, 20% Problem Solving, 15% Communication, 15% Architecture, 10% Leadership",
             "rules": "Focus on: System design discussions, Technical trade-offs, Project ownership, Cross-team collaboration, Performance optimization.",
-            "start_diff": 3,  # Moderate
+            "start_diff": 3, # Moderate
             "min_diff": 2,
             "max_diff": 5,
         }
@@ -67,7 +64,7 @@ def get_experience_tier(experience: str) -> dict:
             "tier_level": 4,
             "focus": "50% Technical, 20% Architecture, 15% Leadership, 10% Problem Solving, 5% Communication",
             "rules": "Focus on: Architecture decisions, Scalability discussions, Design trade-offs, Team management, Technical leadership.",
-            "start_diff": 4,  # Advanced
+            "start_diff": 4, # Advanced
             "min_diff": 2,
             "max_diff": 5,
         }
@@ -91,7 +88,6 @@ def get_experience_tier(experience: str) -> dict:
         "min_diff": 2,
         "max_diff": 5,
     }
-
 
 # ── Role-specific fallback question banks ─────────────────────────────────
 FALLBACK_QUESTIONS: dict[str, list[str]] = {
@@ -145,8 +141,7 @@ def get_role_domains(job_role: str) -> list[str]:
     for role_key, domains in ROLE_DOMAINS.items():
         if role_key in key or key in role_key:
             return domains
-    return ["Software Engineering", "System Design",
-            "Problem Solving", "Architecture", "Best Practices"]
+    return ["Software Engineering", "System Design", "Problem Solving", "Architecture", "Best Practices"]
 
 
 def get_difficulty_label(index: int) -> str:
@@ -197,20 +192,16 @@ def build_question_prompt(
     if conversation_history:
         for h in conversation_history[-3:]:
             if "question" in h and "answer" in h:
-                history_lines.append(
-                    f"Q: {h['question']}\nA (summary): {h['answer'][:200]}")
+                history_lines.append(f"Q: {h['question']}\nA (summary): {h['answer'][:200]}")
             elif "content" in h:
-                history_lines.append(
-                    f"[{h.get('role', 'context')}]: {h['content'][:200]}")
-    history_str = "\n".join(
-        history_lines) if history_lines else "No prior context."
+                history_lines.append(f"[{h.get('role', 'context')}]: {h['content'][:200]}")
+    history_str = "\n".join(history_lines) if history_lines else "No prior context."
     weak_str = ", ".join(weak_areas) if weak_areas else "None identified yet."
-    exclude_str = "\n- ".join(previous_questions[-5:]
-                              ) if previous_questions else "None"
+    exclude_str = "\n- ".join(previous_questions[-5:]) if previous_questions else "None"
 
     if weights is None:
         weights = {"tech": 40, "comm": 20, "eq": 20, "conf": 20}
-
+        
     tech_w = weights.get("tech", 40)
     comm_w = weights.get("comm", 20)
     eq_w = weights.get("eq", 20)
@@ -270,14 +261,11 @@ Based on these weights, you MUST adapt the category of your next question. If th
     company_instruction = ""
     if company_context:
         # Prevent token overflow by taking only first 500 chars
-        company_instruction = f"**Current Company Context (CRITICAL):**\n{
-            company_context[
-                :500]}\n*You MUST weave this recent company news into your next question if appropriate, asking how their skills apply to this development.*"
+        company_instruction = f"**Current Company Context (CRITICAL):**\n{company_context[:500]}\n*You MUST weave this recent company news into your next question if appropriate, asking how their skills apply to this development.*"
 
     memory_instruction = ""
     if key_insights:
-        memory_instruction = f"**Long-Term Memory Callbacks (CRITICAL):**\nThe candidate previously shared these key insights:\n" + "\n".join(
-            [f"- {k}" for k in key_insights]) + "\n*If relevant, occasionally use one of these insights to tie your next question to something they said earlier (e.g., '15 minutes ago you mentioned X, how does that relate to...'). This proves you are listening deeply.*"
+        memory_instruction = f"**Long-Term Memory Callbacks (CRITICAL):**\nThe candidate previously shared these key insights:\n" + "\n".join([f"- {k}" for k in key_insights]) + "\n*If relevant, occasionally use one of these insights to tie your next question to something they said earlier (e.g., '15 minutes ago you mentioned X, how does that relate to...'). This proves you are listening deeply.*"
 
     lessons_instruction = ""
     if ai_lessons and len(ai_lessons) > 0:
@@ -296,7 +284,7 @@ Their listed skills: {skills or "Not specified"}
 Identified Tier: **{tier_name}**
 Interview Focus Distribution: {tier_focus}
 Strict Rules for this Tier: {tier_rules}
-Current Question Difficulty: **{difficulty_label} (Level {difficulty_index}/5)**
+Current Question Difficulty: **{difficulty_label} (Level {difficulty_index}/5)** 
 
 {weights_instruction}
 
@@ -355,10 +343,8 @@ def build_assessment_prompt(
     tier_name = tier_info["tier_name"]
     fillers_str = ", ".join(filler_words) if filler_words else "none"
     fillers_json_str = json.dumps(filler_words)
-    # BUG-23 fix: session.conversation_history uses 'question' key (set by
-    # add_exchange), not 'q'
-    history_str = "\n".join([f"Q{i + 1}: {h.get('question', h.get('q', 'Unknown Question'))}" for i,
-                            h in enumerate(conversation_history[-3:])]) if conversation_history else "First question."
+    # BUG-23 fix: session.conversation_history uses 'question' key (set by add_exchange), not 'q'
+    history_str = "\n".join([f"Q{i+1}: {h.get('question', h.get('q', 'Unknown Question'))}" for i, h in enumerate(conversation_history[-3:])]) if conversation_history else "First question."
 
     if weights is None:
         weights = {"tech": 40, "comm": 20, "eq": 20, "conf": 20}
@@ -453,8 +439,8 @@ CRITICAL RULE 3: If the candidate gives a partial answer, accept it, ask ONE hig
 CRITICAL RULE 4: ABSOLUTELY NEVER PUT THE NEXT QUESTION INSIDE `eq_feedback`. `eq_feedback` is ONLY for reacting to the PREVIOUS answer. 
 CRITICAL RULE 5: If `next_admin_question` is provided, you MUST output it EXACTLY in `next_technical_question`. Otherwise, generate the next question in `next_technical_question`.
 
-{f'''CRITICAL PIVOT RULE: The candidate previously failed a question in this topic. If they ALSO fail THIS question (score <= 4), this is a repeated failure.
-You MUST gracefully pivot away from this topic. Use their detected emotion ({emotion}) to give a highly empathetic, reassuring `eq_feedback` to ease their frustration.
+{f'''CRITICAL PIVOT RULE: The candidate previously failed a question in this topic. If they ALSO fail THIS question (score <= 4), this is a repeated failure. 
+You MUST gracefully pivot away from this topic. Use their detected emotion ({emotion}) to give a highly empathetic, reassuring `eq_feedback` to ease their frustration. 
 Then, set `action` to "normal" (or "skip") and generate a completely different, easier behavioral or communication question in `next_technical_question`. DO NOT ask about the same technical concept.''' if consecutive_failures >= 1 else ''}
 
 **Highlighting Rule (CRITICAL) - Color Coding the Answer:**
@@ -503,28 +489,15 @@ def build_report_summary_prompt(
 ) -> str:
     transcript = ""
     code_snippets = ""
-
+    
     for i, h in enumerate(history):
         if h.get("role") == "candidate_code":
             code_snippets += f"Code Submission:\n{h.get('content', '')}\n\n"
         else:
-            transcript += f"Q{
-                i +
-                1}: {
-                h.get(
-                    'question',
-                    '')}\nAnswer: {
-                h.get(
-                    'answer',
-                    '')}\nScore: {
-                        h.get(
-                            'score',
-                            0)}/10\n\n"
+            transcript += f"Q{i+1}: {h.get('question', '')}\nAnswer: {h.get('answer', '')}\nScore: {h.get('score', 0)}/10\n\n"
 
     # We approximate telemetry from the session averages
-    telemetry = f"Communication Score: {
-        avg_communication:.0f}/100, Confidence Score: {
-        avg_confidence:.0f}/100"
+    telemetry = f"Communication Score: {avg_communication:.0f}/100, Confidence Score: {avg_confidence:.0f}/100"
 
     return f"""
 System Context:
@@ -532,7 +505,7 @@ You are an elite, highly rigorous Principal Engineering Manager and Technical HR
 You do not write generic summaries. You are evaluating this candidate for a high-performance enterprise team. You must provide a brutal, honest, and highly specific evaluation.
 
 **Self-Reflection Protocol (CRITICAL DIRECTIVE):**
-As an elite AI, you must continuously improve. After evaluating the candidate, you MUST evaluate YOUR OWN performance during this interview transcript.
+As an elite AI, you must continuously improve. After evaluating the candidate, you MUST evaluate YOUR OWN performance during this interview transcript. 
 Ask yourself: Did I talk too much? Did I ask a question they already answered? Did I accidentally give them a hint in my feedback? Was my tone too robotic?
 Identify your single biggest flaw in this interview, and create a strict, 1-sentence command/rule to prevent yourself from making this mistake in future interviews.
 
@@ -564,10 +537,11 @@ You must return the evaluation STRICTLY as a raw JSON object matching the exact 
   "overall_recommendation": "String",
   "reasoning_summary": "String",
   "ai_self_reflection": {
-        "mistake_made": "String - Describe exactly what you did wrong.",
+    "mistake_made": "String - Describe exactly what you did wrong.",
     "lesson_learned": "String - What exactly was learned from this interaction.",
     "future_improvement_areas": "String - What more improvement can be done.",
     "new_rule": "String - A strict, 1-sentence behavioral constraint to fix this."
   }
 }}
 """.strip()
+

@@ -16,15 +16,13 @@ SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
 
-
-def send_otp_email(to_email: str, code: str, purpose: str,
-                   candidate_name: str = "Candidate"):
+def send_otp_email(to_email: str, code: str, purpose: str, candidate_name: str = "Candidate"):
     if not SMTP_USER and not BREVO_API_KEY:
         logger.warning("No Email Credentials configured. Skipping email send.")
         return False
 
     subject = f"{code} is your Sterling E-Mobility OTP"
-
+    
     html_content = f"""
     <html>
       <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px; color: #0f172a;">
@@ -60,16 +58,12 @@ def send_otp_email(to_email: str, code: str, purpose: str,
                 "subject": subject,
                 "htmlContent": html_content
             }
-            req = urllib.request.Request(url, data=json.dumps(
-                data).encode('utf-8'), headers=headers, method='POST')
+            req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers=headers, method='POST')
             with urllib.request.urlopen(req) as response:
-                logger.info(
-                    f"Successfully sent OTP email via Brevo API to {to_email}")
+                logger.info(f"Successfully sent OTP email via Brevo API to {to_email}")
                 return True
         except Exception as e:
-            logger.error(
-                f"Failed to send email via Brevo API to {to_email}: {
-                    str(e)}")
+            logger.error(f"Failed to send email via Brevo API to {to_email}: {str(e)}")
             return False
 
     # --- STANDARD SMTP METHOD ---
@@ -93,21 +87,17 @@ def send_otp_email(to_email: str, code: str, purpose: str,
         logger.error(f"Failed to send email via SMTP to {to_email}: {str(e)}")
         return False
 
-
-def send_invitation_email(
-        to_email: str, candidate_name: str, token: str, role_name: str):
+def send_invitation_email(to_email: str, candidate_name: str, token: str, role_name: str):
     if not SMTP_USER and not BREVO_API_KEY:
-        logger.warning(
-            "No Email Credentials configured. Skipping invite email send.")
+        logger.warning("No Email Credentials configured. Skipping invite email send.")
         return False
 
     # The actual frontend URL (Vercel)
-    frontend_url = os.getenv("FRONTEND_URL",
-                             "https://ai-interview-portal.vercel.app")
+    frontend_url = os.getenv("FRONTEND_URL", "https://ai-interview-portal.vercel.app")
     magic_link = f"{frontend_url}/verify-invitation?token={token}&action=confirm"
 
     subject = f"Invitation: Interview for {role_name} at Sterling E-Mobility"
-
+    
     html_content = f"""
     <html>
       <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px; color: #0f172a;">
@@ -142,16 +132,12 @@ def send_invitation_email(
                 "subject": subject,
                 "htmlContent": html_content
             }
-            req = urllib.request.Request(url, data=json.dumps(
-                data).encode('utf-8'), headers=headers, method='POST')
+            req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers=headers, method='POST')
             with urllib.request.urlopen(req) as response:
-                logger.info(
-                    f"Successfully sent Invite email via Brevo API to {to_email}")
+                logger.info(f"Successfully sent Invite email via Brevo API to {to_email}")
                 return True
         except Exception as e:
-            logger.error(
-                f"Failed to send Invite email via Brevo API to {to_email}: {
-                    str(e)}")
+            logger.error(f"Failed to send Invite email via Brevo API to {to_email}: {str(e)}")
             return False
 
     msg = MIMEMultipart("alternative")
@@ -169,20 +155,16 @@ def send_invitation_email(
         logger.info(f"Successfully sent Invite email via SMTP to {to_email}")
         return True
     except Exception as e:
-        logger.error(
-            f"Failed to send Invite email via SMTP to {to_email}: {
-                str(e)}")
+        logger.error(f"Failed to send Invite email via SMTP to {to_email}: {str(e)}")
         return False
-
 
 def send_registration_success_email(to_email: str, candidate_name: str):
     if not SMTP_USER and not BREVO_API_KEY:
-        logger.warning(
-            "No Email Credentials configured. Skipping success email send.")
+        logger.warning("No Email Credentials configured. Skipping success email send.")
         return False
 
     subject = "Registration Successful: Sterling E-Mobility"
-
+    
     html_content = f"""
     <html>
       <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px; color: #0f172a;">
@@ -213,16 +195,12 @@ def send_registration_success_email(to_email: str, candidate_name: str):
                 "subject": subject,
                 "htmlContent": html_content
             }
-            req = urllib.request.Request(url, data=json.dumps(
-                data).encode('utf-8'), headers=headers, method='POST')
+            req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers=headers, method='POST')
             with urllib.request.urlopen(req) as response:
-                logger.info(
-                    f"Successfully sent Success email via Brevo API to {to_email}")
+                logger.info(f"Successfully sent Success email via Brevo API to {to_email}")
                 return True
         except Exception as e:
-            logger.error(
-                f"Failed to send Success email via Brevo API to {to_email}: {
-                    str(e)}")
+            logger.error(f"Failed to send Success email via Brevo API to {to_email}: {str(e)}")
             return False
 
     msg = MIMEMultipart("alternative")
@@ -240,18 +218,12 @@ def send_registration_success_email(to_email: str, candidate_name: str):
         logger.info(f"Successfully sent Success email via SMTP to {to_email}")
         return True
     except Exception as e:
-        logger.error(
-            f"Failed to send Success email via SMTP to {to_email}: {
-                str(e)}")
+        logger.error(f"Failed to send Success email via SMTP to {to_email}: {str(e)}")
         return False
-
-
-def send_notification_email(
-        to_email: str, candidate_name: str, subject: str, html_body: str):
+def send_notification_email(to_email: str, candidate_name: str, subject: str, html_body: str):
     """Reuses the existing email infrastructure to send any notification."""
     if not SMTP_USER and not BREVO_API_KEY:
-        logger.warning(
-            "No Email Credentials configured. Skipping notification email send.")
+        logger.warning("No Email Credentials configured. Skipping notification email send.")
         return False
 
     if BREVO_API_KEY:
@@ -268,11 +240,9 @@ def send_notification_email(
                 "subject": subject,
                 "htmlContent": html_body
             }
-            req = urllib.request.Request(url, data=json.dumps(
-                data).encode("utf-8"), headers=headers, method="POST")
+            req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST")
             with urllib.request.urlopen(req):
-                logger.info(
-                    f"Successfully sent notification email via Brevo API to {to_email}")
+                logger.info(f"Successfully sent notification email via Brevo API to {to_email}")
                 return True
         except Exception as e:
             logger.error(f"Notification email failed via Brevo API: {e}")
@@ -290,11 +260,8 @@ def send_notification_email(
         server.login(SMTP_USER, SMTP_PASS)
         server.sendmail(SMTP_USER, to_email, msg.as_string())
         server.quit()
-        logger.info(
-            f"Successfully sent notification email via SMTP to {to_email}")
+        logger.info(f"Successfully sent notification email via SMTP to {to_email}")
         return True
     except Exception as e:
-        logger.error(
-            f"Failed to send notification email via SMTP to {to_email}: {
-                str(e)}")
+        logger.error(f"Failed to send notification email via SMTP to {to_email}: {str(e)}")
         return False

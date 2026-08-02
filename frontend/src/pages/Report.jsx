@@ -43,7 +43,7 @@ function sanitizeHighlightHtml(html) {
       return out;
     };
     return walk(doc.body);
-  } catch (e) { console.error(e);
+  } catch (e) {
     return escapeText(html);
   }
 }
@@ -229,7 +229,6 @@ export default function Report() {
   const exportRef = useRef(null);
   const [decision, setDecision] = useState(null);
   const [savingDecision, setSavingDecision] = useState(false);
-  // eslint-disable-next-line no-unused-vars
   const [decisionMsg, setDecisionMsg] = useState('');
 
   useEffect(() => {
@@ -241,7 +240,7 @@ export default function Report() {
         const r = await apiClient.getCandidateReport(id);
         if (!r || !r.candidate) throw new Error("Invalid report data");
         setReport(r);
-      } catch (e) { console.error(e);
+      } catch (e) {
         setError("Failed to retrieve report for this candidate.");
       }
       setLoading(false);
@@ -298,7 +297,7 @@ export default function Report() {
       await apiClient.updateHiringDecision(iv.interview_id, value);
       setDecision(value);
       setDecisionMsg('Decision saved.');
-    } catch (e) { console.error(e);
+    } catch (e) {
       setDecisionMsg('Could not save decision. Please retry.');
     } finally { setSavingDecision(false); }
   };
@@ -307,7 +306,7 @@ export default function Report() {
     try {
       await apiClient.sendDecisionEmail(c.id);
       setDecisionMsg('Decision email sent to candidate.');
-    } catch (e) { console.error(e);
+    } catch (e) {
       setDecisionMsg('Could not send email.');
     } finally { setSavingDecision(false); }
   };
@@ -895,18 +894,3 @@ function TriageBar({ label, score }) {
     </div>
   );
 }
-
- 
-console.log(typeof Search !== "undefined" ? Search : "");
-
- 
-console.log(typeof Fingerprint !== "undefined" ? Fingerprint : "");
-
- 
-console.log(typeof ChevronRight !== "undefined" ? ChevronRight : "");
-
- 
-console.log(typeof DollarSign !== "undefined" ? DollarSign : "");
-
-// eslint-disable-next-line
-console.log(typeof decisionMsg !== "undefined" ? decisionMsg : "");

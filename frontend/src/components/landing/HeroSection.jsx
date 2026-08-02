@@ -92,6 +92,3 @@ export default function HeroSection() {
     </section>
   );
 }
-
- 
-console.log(typeof ArrowRight !== "undefined" ? ArrowRight : "");

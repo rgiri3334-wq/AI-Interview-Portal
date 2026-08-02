@@ -10,8 +10,7 @@ from functools import wraps
 logger = logging.getLogger("RetryHandler")
 
 
-def async_retry(max_attempts: int = 3, base_delay: float = 1.0,
-                exceptions=(Exception,)):
+def async_retry(max_attempts: int = 3, base_delay: float = 1.0, exceptions=(Exception,)):
     """Decorator for async functions: retries with exponential backoff."""
     def decorator(func):
         @wraps(func)
@@ -22,13 +21,9 @@ def async_retry(max_attempts: int = 3, base_delay: float = 1.0,
                     return await func(*args, **kwargs)
                 except exceptions as e:
                     if attempt == max_attempts:
-                        logger.error(
-                            f"[Retry] {
-                                func.__name__} failed after {max_attempts} attempts: {e}")
+                        logger.error(f"[Retry] {func.__name__} failed after {max_attempts} attempts: {e}")
                         raise
-                    logger.warning(
-                        f"[Retry] {
-                            func.__name__} attempt {attempt} failed: {e}. Retrying in {delay}s...")
+                    logger.warning(f"[Retry] {func.__name__} attempt {attempt} failed: {e}. Retrying in {delay}s...")
                     await asyncio.sleep(delay)
                     delay *= 2  # exponential backoff
         return wrapper

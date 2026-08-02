@@ -374,7 +374,7 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
            const err = await res.json().catch(() => ({}));
            showToast(`Failed to delete ${id}: ${err.detail || 'Server error'}`, 'error');
          }
-      } catch(e) { console.error(e);
+      } catch(e) {
          showToast(`Network error while deleting ${id}`, 'error');
       }
     }
@@ -591,7 +591,6 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
               {filteredPipeline.length === 0 ? (
                 <tr><td colSpan="7" className="p-16 text-center text-slate-400 font-bold">No candidates match your criteria.</td></tr>
               ) : (
-                // eslint-disable-next-line no-unused-vars
                 filteredPipeline.map((c, rowIdx) => {
                   const isProctoringAct = c.termination_reason === 'PROCTORING_ACT' || c.hiring_decision === 'PROCTORING_ACT';
                   const isCompleted = c.interview_status === 'completed' || isProctoringAct;
@@ -779,9 +778,3 @@ export default function PipelineDashboard({ pipeline, setPipeline, showToast, ha
   );
 }
 
-
- 
-console.log(typeof RefreshCw !== "undefined" ? RefreshCw : "");
-
-// eslint-disable-next-line
-console.log(typeof rowIdx !== "undefined" ? rowIdx : "");

@@ -57,7 +57,7 @@ function supportsWebGL() {
   try {
     const c = document.createElement('canvas');
     return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl')));
-  } catch (e) { console.error(e);
+  } catch (e) {
     return false;
   }
 }
@@ -256,9 +256,3 @@ export default function Avatar3D({
     </div>
   );
 }
-
- 
-console.log(typeof ContactShadows !== "undefined" ? ContactShadows : "");
-
- 
-console.log(typeof useGLTF !== "undefined" ? useGLTF : "");

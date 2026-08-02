@@ -1,4 +1,4 @@
-
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Mic, MicOff, Code2, Moon, Sun, PhoneOff, Video, VideoOff, Send } from 'lucide-react';
 
@@ -18,27 +18,27 @@ export default function BottomControlBar({
   const isDark = theme === 'dark';
 
   const barClasses = isDark
-    ? "bg-[#020617]/50 backdrop-blur-3xl border border-sky-500/20 shadow-[0_0_40px_rgba(14,165,233,0.15)]"
-    : "bg-white/60 backdrop-blur-3xl border border-sky-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.1)]";
+    ? "bg-black/80 backdrop-blur-3xl border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+    : "bg-white/95 backdrop-blur-3xl border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]";
 
   const btnClasses = isDark
-    ? "bg-[#0f172a]/80 hover:bg-sky-500/10 text-sky-100 border border-sky-500/30 hover:border-sky-400/50 hover:shadow-[0_0_15px_rgba(14,165,233,0.3)]"
-    : "bg-white hover:bg-sky-50 text-slate-800 border-slate-200 shadow-sm";
+    ? "bg-transparent hover:bg-white/10 text-white border-white/10"
+    : "bg-white hover:bg-slate-100 text-slate-800 border-slate-200 shadow-sm";
 
   const activeBtnClasses = isDark
-    ? "bg-sky-500/20 text-sky-300 border border-sky-400/60 shadow-[0_0_25px_rgba(14,165,233,0.5)]"
-    : "bg-sky-50 text-sky-600 border-sky-300 shadow-[0_0_20px_rgba(14,165,233,0.2)]";
+    ? "bg-red-500/20 text-red-500 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+    : "bg-red-50 text-red-600 border-red-200 shadow-[0_0_15px_rgba(220,38,38,0.15)]";
 
   const errorBtnClasses = isDark
-    ? "bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 hover:border-red-500/50 hover:shadow-[0_0_15px_rgba(239,68,68,0.4)]"
-    : "bg-red-50 text-red-600 border-red-200 shadow-sm";
+    ? "bg-red-500/20 text-red-500 border-red-500/50"
+    : "bg-red-100 text-red-600 border-red-300 shadow-sm";
 
   return (
     <motion.div 
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       transition={{ type: 'spring', damping: 25, stiffness: 200, delay: 0.2 }}
-      className={`absolute bottom-36 left-1/2 -translate-x-1/2 px-8 py-4 rounded-full border flex items-center gap-6 z-40 ${barClasses}`}
+      className={`absolute bottom-6 left-1/2 -translate-x-1/2 px-8 py-4 rounded-[2rem] border flex items-center gap-6 z-40 ${barClasses}`}
     >
       {/* Mic Status */}
       <div className="flex flex-col items-center gap-1 group relative">
@@ -46,7 +46,7 @@ export default function BottomControlBar({
           onClick={toggleMic}
           className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300 ${micOn ? btnClasses : errorBtnClasses}`}
         >
-          {micOn ? <Mic size={20} className={isListening ? 'animate-pulse text-sky-400 drop-shadow-[0_0_8px_rgba(14,165,233,0.8)]' : ''} /> : <MicOff size={20} />}
+          {micOn ? <Mic size={20} className={isListening ? 'animate-pulse text-emerald-500' : ''} /> : <MicOff size={20} />}
         </button>
         <span className="absolute -top-8 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
           Mic {micOn ? 'Active' : 'Muted'}

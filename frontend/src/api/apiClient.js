@@ -28,14 +28,26 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   config.headers['X-Request-ID'] = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
   
-  // Tokens are now handled primarily by HttpOnly cookies (withCredentials: true),
-  // but due to cross-site cookie blocking in modern browsers (e.g. Safari, Chrome without CHIPS),
-  // we restore the Bearer token fallback for cross-origin deployments (Vercel -> Render).
-  const token = sessionStorage.getItem('adminToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (config.url?.startsWith('/api/admin')) {
+    // Admin-only endpoints: always use the admin token.
+    const token = sessionStorage.getItem('adminToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } else {
+    // Shared / generic endpoints (e.g. /api/reports/* accept admin OR candidate).
+    // Use whichever token the current session holds — prefer the admin token when
+    // an admin is logged in, otherwise fall back to the candidate token. Without
+    // this, an admin opening a report sent no valid token and got a 401.
+    const role = sessionStorage.getItem('role');
+    const token = role === 'admin' 
+      ? sessionStorage.getItem('adminToken') 
+      : (sessionStorage.getItem('candidateToken') || sessionStorage.getItem('adminToken'));
+      
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
-
   // #19: only log requests in dev — avoids noisy/info-leaking console in production.
   if (import.meta.env?.DEV) {
     console.log(
@@ -246,7 +258,7 @@ export const createInterviewSocket = (candidateId, onMessage) => {
   const wsUrl = (import.meta.env.VITE_WS_URL || 'ws://localhost:8000');
   const ws = new WebSocket(`${wsUrl}/ws/interview/${candidateId}`);
   ws.onopen    = () => console.log('%c[WS] Connection established', 'color: #00ff88;');
-  ws.onmessage = (e) => { try { onMessage(JSON.parse(e.data)); } catch (err) { console.error('[WS Parse Error]', err); } };
+  ws.onmessage = (e) => { try { onMessage(JSON.parse(e.data)); } catch {} };
   ws.onerror   = (e) => console.error('%c[WS Error]', 'color: #ff6b35;', e);
   ws.onclose   = () => console.log('%c[WS] Connection closed', 'color: #8B949E;');
   return ws;

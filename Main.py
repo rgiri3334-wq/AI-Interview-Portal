@@ -8,20 +8,7 @@ Database:     Supabase PostgreSQL (21 tables) via SQLAlchemy ORM
 =============================================================================
 """
 
-from services.email_service import send_otp_email, send_notification_email
-from supabase import create_client, Client
-import os
-import re
-import json
-import time
-import uuid
-import logging
-import sqlite3
-import io
-import csv
-import hashlib
-import secrets
-import asyncio
+import os, re, json, time, uuid, logging, sqlite3, io, csv, hashlib, secrets, asyncio
 import bcrypt
 import jwt
 import pytesseract
@@ -34,7 +21,7 @@ from thefuzz import fuzz
 from collections import Counter
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
-import pytz  # type: ignore
+import pytz # type: ignore
 from utils.ist_time import ist_now, ist_isoformat, IST
 from typing import Literal
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form, BackgroundTasks, Request, Depends, Header
@@ -71,6 +58,7 @@ from services.tts_service import generate_tts_stream
 
 load_dotenv()
 
+from supabase import create_client, Client
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 supabase_client: Client | None = None
@@ -78,11 +66,9 @@ if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
     except Exception as e:
-        logging.getLogger("EnterpriseInterviewAPI").error(
-            f"Error initializing Supabase client: {e}")
+        logging.getLogger("EnterpriseInterviewAPI").error(f"Error initializing Supabase client: {e}")
 
-BACKEND_URL = os.environ.get("BACKEND_URL",
-                             "https://ai-interview-portal-1.onrender.com")
+BACKEND_URL = os.environ.get("BACKEND_URL", "https://ai-interview-portal-1.onrender.com")
 
 # Branding: logo used in transactional emails. Configurable via LOGO_URL so we don't
 # hardcode a raw GitHub URL (which can break on repo rename / branch changes and is
@@ -101,13 +87,11 @@ logging.basicConfig(
 logger = logging.getLogger("EnterpriseInterviewAPI")
 
 # ── JWT Config ───────────────────────────────────────────────
-_IS_PROD = os.environ.get("RENDER", "") or os.environ.get(
-    "VERCEL", "") or os.environ.get("NODE_ENV") == "production"
+_IS_PROD = os.environ.get("RENDER", "") or os.environ.get("VERCEL", "") or os.environ.get("NODE_ENV") == "production"
 
 JWT_SECRET_ENV = os.environ.get("JWT_SECRET")
 if _IS_PROD and not JWT_SECRET_ENV:
-    raise RuntimeError(
-        "CRITICAL SECURITY ERROR: JWT_SECRET must be set in production.")
+    raise RuntimeError("CRITICAL SECURITY ERROR: JWT_SECRET must be set in production.")
 
 JWT_SECRET: str = JWT_SECRET_ENV or secrets.token_hex(32)
 if not JWT_SECRET_ENV:
@@ -119,19 +103,13 @@ if not JWT_SECRET_ENV:
 # ── Cookie Configuration ─────────────────────────────────────────────────
 # HttpOnly cookies are invisible to JavaScript (immune to XSS token theft).
 # In production (HTTPS), Secure=True prevents transmission over plain HTTP.
-_IS_PROD = os.environ.get("RENDER", "") or os.environ.get(
-    "VERCEL", "") or os.environ.get("NODE_ENV") == "production"
+_IS_PROD = os.environ.get("RENDER", "") or os.environ.get("VERCEL", "") or os.environ.get("NODE_ENV") == "production"
 COOKIE_SECURE: bool = bool(_IS_PROD)
 COOKIE_SAMESITE: Literal["none", "lax"] = "none" if COOKIE_SECURE else "lax"
-COOKIE_DOMAIN: str | None = os.environ.get(
-    "COOKIE_DOMAIN", None)  # e.g. ".sterling-emobility.com"
+COOKIE_DOMAIN: str | None = os.environ.get("COOKIE_DOMAIN", None)  # e.g. ".sterling-emobility.com"
 
 # ── Database ──────────────────────────────────────────────────────────────
-DB_PATH = os.path.join(
-    os.path.dirname(
-        os.path.abspath(__file__)),
-    "database.db")
-
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
 
 def init_db():
     Base.metadata.create_all(bind=engine)
@@ -145,7 +123,6 @@ def init_db():
         _seed_initial_data(db)
     finally:
         db.close()
-
 
 def _seed_initial_data(db):
     default_statuses = [
@@ -161,84 +138,74 @@ def _seed_initial_data(db):
     ]
     for sid, name, desc in default_statuses:
         if not db.query(StatusLookup).filter_by(status_id=sid).first():
-            db.add(
-                StatusLookup(
-                    status_id=sid,
-                    status_name=name,
-                    description=desc))
-
+            db.add(StatusLookup(status_id=sid, status_name=name, description=desc))
+            
     # Seed Company Structure
     full_structure = {
-        "Human Resources": ["HR Specialist", "Talent Acquisition Specialist", "HR Manager", "Learning and Development Specialist", "Payroll Specialist"],
-        "Engineering": ["Embedded Systems Engineer", "BMS Engineer", "Motor Control Engineer", "Power Electronics Engineer", "Software Engineer", "Frontend Developer", "Backend Developer", "DevOps Engineer", "Data Scientist", "AI/ML Engineer"],
-        "Customer Support": ["Customer Success Manager"],
-        "Finance": ["Financial Analyst", "Accounts Manager"],
-        "IT": ["Cybersecurity Analyst", "System Administrator"],
-        "Marketing": ["Marketing Specialist", "Brand Manager"],
-        "Operations": ["Operations Manager", "Supply Chain Analyst"],
-        "Sales": ["Sales Executive", "Sales Manager"]
+      "Human Resources": ["HR Specialist", "Talent Acquisition Specialist", "HR Manager", "Learning and Development Specialist", "Payroll Specialist"],
+      "Engineering": ["Embedded Systems Engineer", "BMS Engineer", "Motor Control Engineer", "Power Electronics Engineer", "Software Engineer", "Frontend Developer", "Backend Developer", "DevOps Engineer", "Data Scientist", "AI/ML Engineer"],
+      "Customer Support": ["Customer Success Manager"],
+      "Finance": ["Financial Analyst", "Accounts Manager"],
+      "IT": ["Cybersecurity Analyst", "System Administrator"],
+      "Marketing": ["Marketing Specialist", "Brand Manager"],
+      "Operations": ["Operations Manager", "Supply Chain Analyst"],
+      "Sales": ["Sales Executive", "Sales Manager"]
     }
-
+    
     # Ensure departments and roles exist
-    # BUG-12 fix: Use generate_enterprise_id instead of hardcoded DEPT{idx} to
-    # avoid collisions
+    # BUG-12 fix: Use generate_enterprise_id instead of hardcoded DEPT{idx} to avoid collisions
     for dept_name, roles in full_structure.items():
-        dept = db.query(Department).filter_by(
-            department_name=dept_name).first()
+        dept = db.query(Department).filter_by(department_name=dept_name).first()
         if not dept:
             dept_id = generate_enterprise_id(db, "DEPT")
             dept = Department(department_id=dept_id, department_name=dept_name)
             db.add(dept)
             db.commit()
             db.refresh(dept)
-
+            
         for role_name in roles:
-            role = db.query(JobRole).filter_by(
-                role_name=role_name, department_id=dept.department_id).first()
+            role = db.query(JobRole).filter_by(role_name=role_name, department_id=dept.department_id).first()
             if not role:
                 role_id = generate_enterprise_id(db, "ROLE")
-                db.add(
-                    JobRole(
-                        role_id=role_id,
-                        department_id=dept.department_id,
-                        role_name=role_name))
+                db.add(JobRole(role_id=role_id, department_id=dept.department_id, role_name=role_name))
                 db.commit()
-
-    # ── Owner Master Admin (first-boot seeding only) ────────────────────────
-    # SECURITY FIX: Password is sourced ONLY from MASTER_ADMIN_PASSWORD env var.
-    # The admin account is created on first boot only. On subsequent boots, the
-    # existing password is NEVER overwritten — the admin can change it freely.
+                
+    # ── Owner Master Admin (fixed password) ──────────────────────────────────
+    # The single owner account `sparkhire.sterling@gmail.com` is always kept at the
+    # fixed password below. This is an UPSERT: it creates the account on first boot
+    # and, on every subsequent boot, force-resets the password ONLY if it has drifted
+    # from MASTER_PASSWORD (so it self-heals even on an already-seeded database).
+    # NOTE: all OTHER master/sub admins are created via POST /api/admin/users with
+    # their OWN passwords and are never modified here.
+    # SECURITY: this hardcodes a plaintext credential in source — anyone with repo
+    # access can log in as the owner. Keep the repo private.
     master_admin_email = "sparkhire.sterling@gmail.com".lower()
-    MASTER_PASSWORD = os.environ.get("MASTER_ADMIN_PASSWORD", "")
-    if not MASTER_PASSWORD:
-        logger.warning(
-            "MASTER_ADMIN_PASSWORD not set in environment. "
-            "Master admin account will NOT be seeded/updated."
-        )
-    master_admin = db.query(AdminUser).filter_by(
-        email=master_admin_email).first()
-    if not master_admin and MASTER_PASSWORD:
-        # First boot: seed the master admin account
+    MASTER_PASSWORD = "Betheonly@1"
+    master_admin = db.query(AdminUser).filter_by(email=master_admin_email).first()
+    if not master_admin:
         db.add(AdminUser(
             admin_id=f"ADMIN-{uuid.uuid4().hex[:8].upper()}",
             email=master_admin_email,
-            password_hash=bcrypt.hashpw(
-                MASTER_PASSWORD.encode(),
-                bcrypt.gensalt()).decode(),
+            password_hash=bcrypt.hashpw(MASTER_PASSWORD.encode(), bcrypt.gensalt()).decode(),
             role="master_admin",
         ))
         db.commit()
-        logger.info("Master admin account seeded from MASTER_ADMIN_PASSWORD env var.")
-    elif master_admin and master_admin.role != "master_admin":
-        # Ensure master role is correct, but never overwrite password
-        master_admin.role = "master_admin"  # type: ignore
-        db.commit()
-        logger.info("Master admin role corrected.")
+    else:
+        # Only rewrite if the stored password isn't already MASTER_PASSWORD
+        # (avoids a needless DB write + new hash on every restart).
+        try:
+            already_set = bcrypt.checkpw(MASTER_PASSWORD.encode(), master_admin.password_hash.encode("utf-8"))
+        except Exception:
+            already_set = False
+        if not already_set or master_admin.role != "master_admin":
+            master_admin.password_hash = bcrypt.hashpw(MASTER_PASSWORD.encode(), bcrypt.gensalt()).decode()  # type: ignore
+            master_admin.role = "master_admin"  # type: ignore
+            db.commit()
+            logger.info("Owner master admin password/role re-synced to fixed value.")
 
     logger.info("Database synchronized (SQLAlchemy 14-table schema).")
 
 # ── Background Workers ──────────────────────────────────────────────────────
-
 
 async def invitation_expiry_worker():
     while True:
@@ -255,26 +222,22 @@ async def invitation_expiry_worker():
                     cand.invitation_token = None  # type: ignore
                 if expired:
                     db.commit()
-                    logger.info(
-                        f"Auto-canceled {len(expired)} expired invitations.")
+                    logger.info(f"Auto-canceled {len(expired)} expired invitations.")
             except Exception as e:
                 logger.error(f"Invitation expiry worker error: {e}")
             finally:
                 db.close()
         except Exception as e:
-            pass  # nosec
-        await asyncio.sleep(300)  # Run every 5 minutes
-
+            pass
+        await asyncio.sleep(300) # Run every 5 minutes
 
 async def telemetry_worker():
-    import asyncio
-    import time
-    import random
+    import asyncio, time, random
     from datetime import datetime, timezone
     from sqlalchemy import text
     from database.database import SessionLocal
     from database.models import InterviewSession, SystemTelemetryLog
-
+    
     while True:
         try:
             db = SessionLocal()
@@ -286,27 +249,23 @@ async def telemetry_worker():
                     latency = int((time.time() - start_time) * 1000)
                 except Exception:
                     latency = -1
-
+                    
                 # 2. Count Active Sessions (exclude abandoned > 2 hours)
                 now = datetime.now(timezone.utc)
-                uncompleted = db.query(InterviewSession).filter(
-                    InterviewSession.completed_at.is_(None)).all()
+                uncompleted = db.query(InterviewSession).filter(InterviewSession.completed_at == None).all()
                 active_sessions = 0
                 for s in uncompleted:
                     try:
-                        started = datetime.fromisoformat(
-                            s.started_at.replace('Z', '+00:00'))
+                        started = datetime.fromisoformat(s.started_at.replace('Z', '+00:00'))
                         if (now - started).total_seconds() < 7200:
                             active_sessions += 1
                     except Exception:
-                        pass  # nosec
-
+                        pass
+                
                 # 3. Base Platform Traffic on Real Interviews Started Today
-                today_start = now.replace(
-                    hour=0, minute=0, second=0, microsecond=0).isoformat()
-                total_interviews = db.query(InterviewSession).filter(
-                    InterviewSession.started_at >= today_start).count()
-
+                today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+                total_interviews = db.query(InterviewSession).filter(InterviewSession.started_at >= today_start).count()
+                
                 # 4. Save to DB
                 # Telemetry must reflect REAL measurements, never fabricated random
                 # numbers. api_requests_count is the real count of interviews started
@@ -314,12 +273,7 @@ async def telemetry_worker():
                 # usage stats (0 if unavailable).
                 try:
                     orch_stats = get_orchestrator_stats() or {}
-                    ai_tokens = int(
-                        orch_stats.get(
-                            "total_tokens",
-                            orch_stats.get(
-                                "tokens_generated",
-                                0)) or 0)
+                    ai_tokens = int(orch_stats.get("total_tokens", orch_stats.get("tokens_generated", 0)) or 0)
                 except Exception:
                     ai_tokens = 0
                 log = SystemTelemetryLog(
@@ -336,9 +290,8 @@ async def telemetry_worker():
                 db.close()
         except Exception as e:
             logger.error(f"Telemetry worker critical error: {e}")
-
+            
         await asyncio.sleep(300)  # Wait 5 minutes before next ping
-
 
 async def reminder_worker():
     """Background worker that runs every 1 minute to check for upcoming interviews and send 24-hour reminders."""
@@ -347,74 +300,67 @@ async def reminder_worker():
             db = SessionLocal()
             try:
                 # Find bookings that are in BOOKED state and reminder_stage < 4
-                bookings = db.query(SlotBooking).filter(
-                    SlotBooking.status == "BOOKED", SlotBooking.reminder_stage < 4).all()
+                bookings = db.query(SlotBooking).filter(SlotBooking.status == "BOOKED", SlotBooking.reminder_stage < 4).all()
                 for b in bookings:
                     slot = b.slot
                     candidate = b.candidate
                     if not slot or not candidate or not candidate.email:
                         continue
-
+                    
                     try:
                         from datetime import datetime, timedelta, timezone
                         dt_str = f"{slot.date} {slot.start_time}"
                         # Parse time with AM/PM or 24-hour format
                         if "AM" in slot.start_time or "PM" in slot.start_time:
-                            slot_dt_naive = datetime.strptime(
-                                dt_str, "%Y-%m-%d %I:%M %p")
+                            slot_dt_naive = datetime.strptime(dt_str, "%Y-%m-%d %I:%M %p")
                         else:
-                            slot_dt_naive = datetime.strptime(
-                                dt_str, "%Y-%m-%d %H:%M")
-
-                        # Localize to slot's timezone (default to IST if
-                        # missing)
+                            slot_dt_naive = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+                        
+                        # Localize to slot's timezone (default to IST if missing)
                         tz = pytz.timezone(slot.timezone or "Asia/Kolkata")
                         slot_dt_aware = tz.localize(slot_dt_naive)
-
+                        
                         # Calculate absolute time diff using UTC
                         now_utc = datetime.now(timezone.utc)
                         time_diff = slot_dt_aware - now_utc
                         time_diff_mins = time_diff.total_seconds() / 60
-
+                        
                         try:
-                            booked_at_dt = datetime.fromisoformat(
-                                b.booked_at.replace('Z', '+00:00'))
+                            booked_at_dt = datetime.fromisoformat(b.booked_at.replace('Z', '+00:00'))
                             now_utc = datetime.now(timezone.utc)
-                            time_since_booking_mins = (
-                                now_utc - booked_at_dt).total_seconds() / 60
+                            time_since_booking_mins = (now_utc - booked_at_dt).total_seconds() / 60
                         except Exception:
-                            time_since_booking_mins = 120  # fallback
-
+                            time_since_booking_mins = 120 # fallback
+                            
                         msg_time = None
                         new_stage = b.reminder_stage
-
+                        
                         # Stage 0: 12 Hours (between 12h and 1h)
                         if b.reminder_stage < 1 and 60 < time_diff_mins <= 12 * 60:
-                            if time_since_booking_mins >= 5:  # 5 min cooldown
+                            if time_since_booking_mins >= 5: # 5 min cooldown
                                 msg_time = "12 Hours"
                                 new_stage = 1
-
+                        
                         # Stage 1: 1 Hour (between 60m and 10m)
                         elif b.reminder_stage < 2 and 10 < time_diff_mins <= 60:
-                            if time_since_booking_mins >= 3:  # 3 min cooldown
+                            if time_since_booking_mins >= 3: # 3 min cooldown
                                 msg_time = "1 Hour"
                                 new_stage = 2
-
+                        
                         # Stage 2: 10 Minutes (between 10m and 5m)
                         elif b.reminder_stage < 3 and 5 < time_diff_mins <= 10:
-                            if time_since_booking_mins >= 1:  # 1 min cooldown
+                            if time_since_booking_mins >= 1: # 1 min cooldown
                                 msg_time = "10 Minutes"
                                 new_stage = 3
-
+                        
                         # Stage 3: 5 Minutes Fallback (between 5m and 1m)
                         elif b.reminder_stage < 4 and 1 < time_diff_mins <= 5:
                             # Strict condition: don't send 5-min if they booked at < 5 mins left
-                            # Require at least 2 minutes remaining, and 1 min
-                            # since booking
+                            # Require at least 2 minutes remaining, and 1 min since booking
                             if time_diff_mins >= 2 and time_since_booking_mins >= 1:
                                 msg_time = "5 Minutes"
                                 new_stage = 4
-
+                        
                         if msg_time:
                             html = f"""
                             <html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:20px;color:#0f172a;">
@@ -435,14 +381,12 @@ async def reminder_worker():
                               <p style="font-size:12px;color:#94a3b8;text-align:center;margin-top:30px;">Thanks,<br/>Sterling HR Team</p>
                             </div></body></html>
                             """
-                            send_notification_email(str(candidate.email), str(
-                                candidate.name), f"⏰ Reminder: Interview in {msg_time}", html)
-
+                            send_notification_email(str(candidate.email), str(candidate.name), f"⏰ Reminder: Interview in {msg_time}", html)
+                            
                             b.reminder_stage = new_stage  # type: ignore
                             db.commit()
                         else:
-                            # Fast-forward expired stages instantly so they
-                            # don't block subsequent reminders
+                            # Fast-forward expired stages instantly so they don't block subsequent reminders
                             target_stage = b.reminder_stage
                             if time_diff_mins <= 1:
                                 target_stage = max(target_stage, 4)
@@ -452,45 +396,40 @@ async def reminder_worker():
                                 target_stage = max(target_stage, 2)
                             elif time_diff_mins <= 60:
                                 target_stage = max(target_stage, 1)
-
+                                
                             if target_stage != b.reminder_stage:
                                 b.reminder_stage = target_stage  # type: ignore
                                 db.commit()
                     except Exception as parse_err:
                         # Log and skip if parsing fails
-                        logger.error(
-                            f"Error parsing date/time for slot {slot.slot_id}: {parse_err}")
+                        logger.error(f"Error parsing date/time for slot {slot.slot_id}: {parse_err}")
                         continue
             finally:
                 db.close()
         except Exception as e:
             logger.error(f"Reminder worker error: {e}")
-
+            
         await asyncio.sleep(60)  # Check every 1 minute
 
 # ── Lifespan ──────────────────────────────────────────────────────────────
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     import asyncio
     logger.info("Booting Enterprise AI Interview Engine v4.0...")
     init_db()
-
+    
     # Start the background workers
     asyncio.create_task(invitation_expiry_worker())
     asyncio.create_task(telemetry_worker())
     asyncio.create_task(reminder_worker())
     logger.info("Telemetry Engine Started. Pinging database every 5 minutes.")
-    logger.info(
-        "Reminder Engine Started. Checking for upcoming interviews every 1 minute.")
+    logger.info("Reminder Engine Started. Checking for upcoming interviews every 1 minute.")
 
     key = os.getenv("GEMINI_API_KEY", "")
     if not key or key == "your_sterling ai_api_key_here":
         logger.warning("AI_API_KEY missing — running in MOCK / Fallback mode.")
     else:
-        logger.info(
-            "AI Subsystem ONLINE — Sterling Assessment Engine + Context Memory Active.")
+        logger.info("AI Subsystem ONLINE — Sterling Assessment Engine + Context Memory Active.")
     yield
     logger.info("Graceful shutdown complete.")
 
@@ -504,36 +443,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore
-
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     response = await call_next(request)
-    # ── Security Headers (hardened) ──────────────────────────────────────
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = (
-        "camera=(self), microphone=(self), geolocation=(), "
-        "payment=(), usb=(), magnetometer=(), gyroscope=()"
-    )
-    # CSP: 'unsafe-inline' is unfortunately required for React's runtime style injection
-    # and inline event handlers, but 'unsafe-eval' is removed to block eval()-based XSS.
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self' https:; "
-        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://storage.googleapis.com; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data: https: blob:; "
-        "media-src 'self' blob: https:; "
-        "connect-src 'self' https: wss:; "
-        "worker-src 'self' blob:;"
-    )
+    response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; img-src 'self' data: https: blob:; media-src 'self' blob: https:;"
     return response
-# ── CORS ────────────────────────────────────────────────────────────────
+# ── CORS ──────────────────────────────────────────────────────────────────────
 # A wildcard origin ("*") combined with allow_credentials=True is both invalid per
 # the CORS spec and a security hole, so we use an explicit allow-list.
 # Origins are collected from several env vars (comma-separated) so it works with
@@ -563,26 +483,22 @@ logger.info(f"CORS allow-list: {ALLOWED_ORIGINS}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_origin_regex=r"https://ai-interview-portal(-[a-z0-9]+)?\.vercel\.app",
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 def _apply_cors_headers(resp: JSONResponse, origin: str) -> JSONResponse:
     """Inject CORS headers on manually-built responses, but only for origins we
     actually allow. Reflecting an arbitrary origin would defeat the CORS policy."""
-    if origin and (origin in ALLOWED_ORIGINS or re.match(
-            r"^https://.*\.vercel\.app$", origin)):
+    if origin and (origin in ALLOWED_ORIGINS or re.match(r"^https://.*\.vercel\.app$", origin)):
         resp.headers["Access-Control-Allow-Origin"] = origin
         resp.headers["Access-Control-Allow-Credentials"] = "true"
         resp.headers["Access-Control-Allow-Methods"] = "*"
         resp.headers["Access-Control-Allow-Headers"] = "*"
     return resp
 
-
-# ── Static Files (Recordings Fallback) ──────────────────────────────────
+# ── Static Files (Recordings Fallback) ──────────────────────────────────────────
 # NOTE: KYC images (Aadhaar scans, selfies) and interview recordings contain
 # sensitive PII and are intentionally NOT served via an unauthenticated
 # StaticFiles mount. They are served through the authenticated /api/recordings/{filename}
@@ -590,26 +506,6 @@ def _apply_cors_headers(resp: JSONResponse, origin: str) -> JSONResponse:
 # backup/cache.
 os.makedirs("recordings", exist_ok=True)
 
-
-@app.middleware("http")
-async def csrf_protection_middleware(request: Request, call_next):
-    """CSRF Protection: For state-changing /api/ requests that use SameSite=none cookies,
-    ensure they have a custom header (X-Request-ID) or use application/json, both of which 
-    force a CORS preflight and thus prevent simple CSRF attacks."""
-    if request.method in ["POST", "PUT", "PATCH", "DELETE"] and request.url.path.startswith("/api/"):
-        content_type = request.headers.get("content-type", "")
-        # Allow requests with X-Request-ID (set by our frontend) OR JSON requests
-        if not request.headers.get("X-Request-ID") and "application/json" not in content_type:
-            origin = request.headers.get("origin", "")
-            resp = JSONResponse(
-                status_code=403, 
-                content={"detail": "CSRF verification failed. Missing required custom headers."}
-            )
-            if origin and (origin in ALLOWED_ORIGINS or re.match(r"^https://.*\.vercel\.app$", origin)):
-                resp.headers["Access-Control-Allow-Origin"] = origin
-                resp.headers["Access-Control-Allow-Credentials"] = "true"
-            return resp
-    return await call_next(request)
 
 @app.middleware("http")
 async def verify_admin_jwt(request: Request, call_next):
@@ -622,10 +518,8 @@ async def verify_admin_jwt(request: Request, call_next):
         resp = JSONResponse(status_code=401, content={"detail": detail})
         return _apply_cors_headers(resp, origin)
 
-    if request.url.path.startswith(
-            "/api/admin") and request.method != "OPTIONS":
-        # Allow public read access to company structure for candidate
-        # registration
+    if request.url.path.startswith("/api/admin") and request.method != "OPTIONS":
+        # Allow public read access to company structure for candidate registration
         if request.url.path == "/api/admin/config/global/company_structure" and request.method == "GET":
             return await call_next(request)
 
@@ -644,10 +538,8 @@ async def verify_admin_jwt(request: Request, call_next):
 
 # ── Global Exception Handlers ─────────────────────────────────────────────
 
-
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(
-        request: Request, exc: RequestValidationError):
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Return clean JSON for Pydantic validation errors instead of HTML traceback."""
     origin = request.headers.get("origin", "")
     resp = JSONResponse(
@@ -659,7 +551,6 @@ async def validation_exception_handler(
         },
     )
     return _apply_cors_headers(resp, origin)
-
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -689,19 +580,16 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Admin tokens carry sub="admin"; candidate tokens carry role="candidate" and
 # sub=<candidate_id> (see admin_login / verify_otp).
 
-
-def _decode_bearer(authorization: str | None,
-                   request: Request | None = None) -> dict:
+def _decode_bearer(authorization: str | None, request: Request | None = None) -> dict:
     """Decode JWT from HttpOnly cookie first, then fall back to Bearer header."""
     # Priority 1: HttpOnly cookie (XSS-immune)
     if request:
         cookie_token = request.cookies.get("session_token")
         if cookie_token:
             try:
-                return jwt.decode(cookie_token, JWT_SECRET,
-                                  algorithms=["HS256"])
+                return jwt.decode(cookie_token, JWT_SECRET, algorithms=["HS256"])
             except Exception:
-                pass  # Fall through to Bearer header  # nosec
+                pass  # Fall through to Bearer header
     # Priority 2: Authorization header (backward compat)
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -711,42 +599,28 @@ def _decode_bearer(authorization: str | None,
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-
-def require_admin(request: Request, authorization: str |
-                  None = Header(default=None)) -> dict:
+def require_admin(request: Request, authorization: str | None = Header(default=None)) -> dict:
     """Require a valid admin JWT."""
     payload = _decode_bearer(authorization, request)
-    if payload.get("sub") != "admin" and payload.get(
-            "role") not in ("master_admin", "sub_admin", "admin"):
-        raise HTTPException(
-            status_code=403,
-            detail="Admin privileges required")
+    if payload.get("sub") != "admin" and payload.get("role") not in ("master_admin", "sub_admin", "admin"):
+        raise HTTPException(status_code=403, detail="Admin privileges required")
     return payload
 
-
-def require_candidate_or_admin(candidate_id: str, request: Request,
-                               authorization: str | None = Header(default=None)) -> dict:
+def require_candidate_or_admin(candidate_id: str, request: Request, authorization: str | None = Header(default=None)) -> dict:
     """Allow an admin, or the candidate who owns `candidate_id`, to access a resource."""
     payload = _decode_bearer(authorization, request)
-    is_admin = payload.get("sub") == "admin" or payload.get(
-        "role") in ("master_admin", "sub_admin", "admin")
+    is_admin = payload.get("sub") == "admin" or payload.get("role") in ("master_admin", "sub_admin", "admin")
     if is_admin:
         return payload
-    if payload.get("role") == "candidate" and payload.get(
-            "sub") == candidate_id:
+    if payload.get("role") == "candidate" and payload.get("sub") == candidate_id:
         return payload
-    raise HTTPException(
-        status_code=403,
-        detail="Not authorized for this candidate's data")
+    raise HTTPException(status_code=403, detail="Not authorized for this candidate's data")
 
 # ── Authenticated media (recordings / KYC images) ─────────────────────────
 # Replaces the previous public StaticFiles mount. Aadhaar scans, selfies and
 # interview recordings are PII and require an admin token to retrieve.
-
-
 @app.get("/api/recordings/{filename}", tags=["Data"])
-async def get_protected_recording(
-        filename: str, _admin: dict = Depends(require_admin)):
+async def get_protected_recording(filename: str, _admin: dict = Depends(require_admin)):
     from pathlib import Path
     # Prevent path traversal — only allow plain filenames within recordings/.
     safe_name = os.path.basename(filename)
@@ -758,25 +632,20 @@ async def get_protected_recording(
     return FileResponse(str(file_path))
 
 # ── NLP Utilities ─────────────────────────────────────────────────────────
-FILLER_WORDS = {"um", "uh", "like", "basically", "literally", "actually", "so", "right",
-                "you know", "kind of", "sort of", "i mean", "honestly", "clearly"}
-
+FILLER_WORDS = {"um","uh","like","basically","literally","actually","so","right",
+                "you know","kind of","sort of","i mean","honestly","clearly"}
 
 def detect_filler_words(text: str) -> list[str]:
-    if not text:
-        return []
+    if not text: return []
     clean = re.sub(r"[^\w\s]", "", text.lower())
     counts = Counter(clean.split())
     return [w for w, n in counts.items() if w in FILLER_WORDS and n >= 2]
 
-
 def words_per_minute(text: str, duration_sec: float) -> float:
-    if duration_sec <= 0 or not text:
-        return 0.0
+    if duration_sec <= 0 or not text: return 0.0
     return round((len(text.split()) / duration_sec) * 60, 1)
 
 # ── Pydantic Schemas ──────────────────────────────────────────────────────
-
 
 class CandidateRegister(BaseModel):
     name: str = Field(..., min_length=1)
@@ -784,14 +653,11 @@ class CandidateRegister(BaseModel):
     phone: str = Field(default="")
     password: str = Field(..., min_length=6)
 
-
 class CandidateLogin(BaseModel):
     email: str
     password: str
 
 # ── OTP Auth Schemas (Sprint 1) ───────────────────────────────────────────
-
-
 class SendOTPRequest(BaseModel):
     identifier: str = Field(..., description="Candidate email or phone number")
     purpose: str = Field(..., description="'registration' or 'login'")
@@ -804,11 +670,9 @@ class InviteCandidateRequest(BaseModel):
     department_id: str
     role_id: str
 
-
 class VerifyInvitationRequest(BaseModel):
     token: str
     action: str  # 'confirm' or 'cancel'
-
 
 class CompleteProfileRequest(BaseModel):
     experience_level: str
@@ -820,7 +684,6 @@ class CompleteProfileRequest(BaseModel):
     github: str
     portfolio: str
 
-
 class VerifyOTPRequest(BaseModel):
     identifier: str
     otp_code: str = Field(..., min_length=6, max_length=6)
@@ -828,11 +691,9 @@ class VerifyOTPRequest(BaseModel):
     name: str = Field(default="", description="Required only for registration")
     phone: str = Field(default="")
 
-
 class ProfilePhotoUploadRequest(BaseModel):
     candidate_id: str
     selfie_image: str
-
 
 class ApplicationCreate(BaseModel):
     job_role: str
@@ -845,102 +706,75 @@ class ApplicationCreate(BaseModel):
     work_mode: str = Field(default="")
     phone_number: str = Field(default="")
 
-
 class CandidateResponse(BaseModel):
-    id: str
-    name: str
-    email: str
-    phone: str
-    created_at: str
-
+    id: str; name: str; email: str; phone: str; created_at: str
 
 class QuestionRequest(BaseModel):
-    job_role: str = Field(...)
-    experience: str = Field(default="Fresher (0 years)")
-    skills: str = Field(default="")
-    candidate_id: str = Field(default="anonymous")
-    candidate_name: str = Field(default="Candidate")
+    job_role:           str = Field(...)
+    experience:         str = Field(default="Fresher (0 years)")
+    skills:             str = Field(default="")
+    candidate_id:       str = Field(default="anonymous")
+    candidate_name:     str = Field(default="Candidate")
     previous_questions: list[str] = Field(default_factory=list)
-    personality: str = Field(default="strict")  # strict|friendly|hr|architect
-
+    personality:        str = Field(default="strict")  # strict|friendly|hr|architect
 
 class QuestionResponse(BaseModel):
-    question: str
-    topic: str
-    difficulty: str
-    category: str
-    follow_up_hint: str
-
+    question: str; topic: str; difficulty: str
+    category: str; follow_up_hint: str
 
 class AssessRequest(BaseModel):
-    candidate_id: str
-    job_role: str = Field(default="Software Engineer")
-    experience: str = Field(default="Fresher (0 years)")
-    skills: str = Field(default="")
-    spoken_answer: str
-    detected_emotion: str = Field(default="Neutral")
-    current_question: str = Field(default="Tell me about yourself.")
+    candidate_id:          str
+    job_role:              str   = Field(default="Software Engineer")
+    experience:            str   = Field(default="Fresher (0 years)")
+    skills:                str   = Field(default="")
+    spoken_answer:         str
+    detected_emotion:      str   = Field(default="Neutral")
+    current_question:      str   = Field(default="Tell me about yourself.")
     # ── New fields added for Human.js + Monaco integration ──────────────
-    wpm: float = Field(
-        default=130.0,
-        description="Words per minute from speech analysis")
-    behavioral_telemetry: dict = Field(
-        default_factory=dict,
-        description="Human.js client-side behavioral metrics")
-    workspace_code: str = Field(
-        default="",
-        description="Candidate's Monaco editor code submission")
+    wpm:                   float = Field(default=130.0, description="Words per minute from speech analysis")
+    behavioral_telemetry:  dict  = Field(default_factory=dict, description="Human.js client-side behavioral metrics")
+    workspace_code:        str   = Field(default="", description="Candidate's Monaco editor code submission")
     # ── BUG-07 fix: Sprint 3 fields — were being silently stripped by Pydantic ──
-    interview_memory: list[dict] = Field(
-        default_factory=list,
-        description="Prior Q&A pairs for contextual follow-up generation")
-    question_index: int = Field(
-        default=0, description="Current question number for pacing logic")
-
+    interview_memory:      list[dict] = Field(default_factory=list, description="Prior Q&A pairs for contextual follow-up generation")
+    question_index:        int   = Field(default=0, description="Current question number for pacing logic")
 
 class AssessResponse(BaseModel):
-    action: str = Field(default="normal", description="repeat | skip | normal")
-    technical_score: int = Field(default=0, ge=0, le=100)  # 0-100 scale
-    communication_score: int = Field(default=60, ge=0, le=100)
-    confidence_score: int = Field(default=60, ge=0, le=100)
-    problem_solving_score: int = Field(default=60, ge=0, le=100)
-    role_alignment_score: int = Field(default=60, ge=0, le=100)
-    professionalism_score: int = Field(default=60, ge=0, le=100)
-    learning_potential_score: int = Field(default=60, ge=0, le=100)
-    behavioral_score: int = Field(default=60, ge=0, le=100)
-    fluency_score: int = Field(default=60, ge=0, le=100)
-    plagiarism_score: int = Field(default=0, ge=0, le=100)
-    plagiarism_reasoning: str = Field(default="")
-    eq_feedback: str = Field(default="")
+    action:                  str   = Field(default="normal", description="repeat | skip | normal")
+    technical_score:         int   = Field(default=0, ge=0, le=100)  # 0-100 scale
+    communication_score:     int   = Field(default=60, ge=0, le=100)
+    confidence_score:        int   = Field(default=60, ge=0, le=100)
+    problem_solving_score:   int   = Field(default=60, ge=0, le=100)
+    role_alignment_score:    int   = Field(default=60, ge=0, le=100)
+    professionalism_score:   int   = Field(default=60, ge=0, le=100)
+    learning_potential_score:int   = Field(default=60, ge=0, le=100)
+    behavioral_score:        int   = Field(default=60, ge=0, le=100)
+    fluency_score:           int   = Field(default=60, ge=0, le=100)
+    plagiarism_score:        int   = Field(default=0, ge=0, le=100)
+    plagiarism_reasoning:    str   = Field(default="")
+    eq_feedback:             str   = Field(default="")
     repeated_words_detected: list[str] = Field(default_factory=list)
-    next_technical_question: str = Field(default="")
-    follow_up_question: str = Field(default="")
-    next_topic: str = Field(default="")
-    answer_quality: str = Field(default="average")
-    final_verdict: str = Field(default="")
-    model_used: str = Field(default="sterling ai")
+    next_technical_question: str   = Field(default="")
+    follow_up_question:      str   = Field(default="")
+    next_topic:              str   = Field(default="")
+    answer_quality:          str   = Field(default="average")
+    final_verdict:           str   = Field(default="")
+    model_used:              str   = Field(default="sterling ai")
     # ── Silent AI/Plagiarism Detection (invisible to candidate) ──────────
-    ai_detection: dict = Field(
-        default_factory=dict,
-        description="Multi-layer silent AI/plagiarism analysis result")
+    ai_detection:            dict  = Field(default_factory=dict, description="Multi-layer silent AI/plagiarism analysis result")
 
 # NOTE: A second, older SaveInterviewRequest({interview_data, overall_score}) used
-# to be defined here. It was shadowed by the fuller definition below and
-# is removed.
-
+# to be defined here. It was shadowed by the fuller definition below and is removed.
 
 class AdminUserCreate(BaseModel):
     email: str
     password: str
     role: str = "sub_admin"
 
-
 class AdminUserResponse(BaseModel):
     admin_id: str
     email: str
     role: str
     created_at: str
-
 
 class AdminQuestion(BaseModel):
     department: str
@@ -949,11 +783,9 @@ class AdminQuestion(BaseModel):
     keywords: str
     difficulty: str = Field(default="Medium")
 
-
 class GlobalConfigSet(BaseModel):
     key: str
     value: str
-
 
 class RoleConfigSet(BaseModel):
     job_role: str
@@ -963,48 +795,39 @@ class RoleConfigSet(BaseModel):
     eq_weight: int = 20
     conf_weight: int = 20
 
-
 class SaveInterviewRequest(BaseModel):
-    candidate_id: str
-    technical_score: int = Field(default=0, ge=0, le=100)
-    eq_score: int = Field(default=0, ge=0, le=100)
-    confidence: int = Field(default=0, ge=0, le=100)
-    communication: int = Field(default=0, ge=0, le=100)
-    problem_solving_score: int = Field(default=0, ge=0, le=100)
-    role_alignment_score: int = Field(default=0, ge=0, le=100)
-    professionalism_score: int = Field(default=0, ge=0, le=100)
-    learning_potential_score: int = Field(default=0, ge=0, le=100)
-    behavioral_score: int = Field(default=0, ge=0, le=100)
-    fluency_score: int = Field(default=0, ge=0, le=100)
-    facial_score: int = Field(default=0, ge=0, le=100)
-    summary: str = Field(default="Interview completed.")
-    strengths: list[str] = Field(default_factory=list)
-    weaknesses: list[str] = Field(default_factory=list)
-    overall_rating: str = Field(default="Average")
-    hiring_recommendation: str = Field(default="Neutral")
-    readiness_score: int = Field(default=0, ge=0, le=100)
-    proctoring_warnings: int = Field(default=0)
-    proctoring_logs: list[dict] = Field(default_factory=list)
-    # Sprint 3: Integrity Engine fields (optional — backend computes if not
-    # sent)
-    integrity_score: int = Field(
-        default=100,
-        ge=0,
-        le=100,
-        description="Integrity score 0-100 from client-side signal tracking")
-    integrity_data: dict = Field(
-        default_factory=dict,
-        description="Full signal log from IntegrityEngine.compute_final()")
+    candidate_id:            str
+    technical_score:         int   = Field(default=0, ge=0, le=100)
+    eq_score:                int   = Field(default=0, ge=0, le=100)
+    confidence:              int   = Field(default=0, ge=0, le=100)
+    communication:           int   = Field(default=0, ge=0, le=100)
+    problem_solving_score:   int   = Field(default=0, ge=0, le=100)
+    role_alignment_score:    int   = Field(default=0, ge=0, le=100)
+    professionalism_score:   int   = Field(default=0, ge=0, le=100)
+    learning_potential_score:int   = Field(default=0, ge=0, le=100)
+    behavioral_score:        int   = Field(default=0, ge=0, le=100)
+    fluency_score:           int   = Field(default=0, ge=0, le=100)
+    facial_score:            int   = Field(default=0, ge=0, le=100)
+    summary:                 str   = Field(default="Interview completed.")
+    strengths:               list[str] = Field(default_factory=list)
+    weaknesses:              list[str] = Field(default_factory=list)
+    overall_rating:          str   = Field(default="Average")
+    hiring_recommendation:   str   = Field(default="Neutral")
+    readiness_score:         int   = Field(default=0, ge=0, le=100)
+    proctoring_warnings:     int   = Field(default=0)
+    proctoring_logs:         list[dict] = Field(default_factory=list)
+    # Sprint 3: Integrity Engine fields (optional — backend computes if not sent)
+    integrity_score:         int   = Field(default=100, ge=0, le=100, description="Integrity score 0-100 from client-side signal tracking")
+    integrity_data:          dict  = Field(default_factory=dict, description="Full signal log from IntegrityEngine.compute_final()")
     # Phase 1: Integrity Triage Matrix Sub-Scores
-    posture_score: float = Field(default=100.0)
-    movement_score: float = Field(default=100.0)
-    eye_tracking_score: float = Field(default=100.0)
-    authenticity_score: float = Field(default=100.0)
-    environment_score: float = Field(default=100.0)
-
-    plagiarism_score: int = Field(default=0)
-    plagiarism_reasoning: str = Field(default="")
-
+    posture_score:           float = Field(default=100.0)
+    movement_score:          float = Field(default=100.0)
+    eye_tracking_score:      float = Field(default=100.0)
+    authenticity_score:      float = Field(default=100.0)
+    environment_score:       float = Field(default=100.0)
+    
+    plagiarism_score:        int   = Field(default=0)
+    plagiarism_reasoning:    str   = Field(default="")
 
 class DecisionUpdateRequest(BaseModel):
     decision: str
@@ -1012,14 +835,12 @@ class DecisionUpdateRequest(BaseModel):
 # NOTE: A duplicate AdminQuestion model (identical to the one defined above) was
 # removed from here.
 
-
 class DashboardData(BaseModel):
-    total_candidates: int = Field(default=0)
-    interviews_completed: int = Field(default=0)
+    total_candidates:    int   = Field(default=0)
+    interviews_completed: int  = Field(default=0)
     avg_technical_score: float = Field(default=0.0)
-    avg_confidence: float = Field(default=0.0)
-    recent_candidates: list[dict] = Field(default_factory=list)
-
+    avg_confidence:      float = Field(default=0.0)
+    recent_candidates:   list[dict] = Field(default_factory=list)
 
 class ExecuteCodeRequest(BaseModel):
     code: str
@@ -1027,22 +848,14 @@ class ExecuteCodeRequest(BaseModel):
 
 # ── Endpoints ─────────────────────────────────────────────────────────────
 
-
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     # Serve the Sterling logo bundled relative to this file
-    logo_path = os.path.join(
-        os.path.dirname(
-            os.path.abspath(__file__)),
-        "frontend",
-        "src",
-        "assets",
-        "sterling_logo.png")
+    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "src", "assets", "sterling_logo.png")
     if os.path.exists(logo_path):
         return FileResponse(logo_path, media_type="image/png")
     from fastapi.responses import Response
     return Response(status_code=204)  # No Content — graceful fallback
-
 
 @app.get("/", tags=["System"])
 def health_check():
@@ -1055,14 +868,10 @@ def health_check():
         "orchestrator_mode": "ACTIVE"
     }
 
-
 @app.post("/api/execute-code", tags=["Interview"])
 async def execute_code(req: ExecuteCodeRequest):
     """Securely compile and execute candidate Python code in a restricted sandbox."""
-    import sys
-    import io
-    import traceback
-    import threading
+    import sys, io, traceback, threading
 
     # ── Guard 1: Language check ──
     if req.language.lower() not in ["python", "python3"]:
@@ -1083,23 +892,18 @@ async def execute_code(req: ExecuteCodeRequest):
     code_lower = req.code.lower()
     for kw in BLOCKED_KEYWORDS:
         if kw.lower() in code_lower:
-            return {
-                "output": f"Blocked: '{kw.strip()}' is not allowed in the sandbox.", "error": True}
+            return {"output": f"Blocked: '{kw.strip()}' is not allowed in the sandbox.", "error": True}
 
     # ── Guard 4: Safe builtins only ──
-    # SECURITY: `type`, `id`, `hash` removed — they enable sandbox escape via
-    # type introspection (type.__subclasses__), memory address leaks (id), and
-    # __hash__ overrides. `chr`/`ord` retained but monitored (needed for basic
-    # string manipulation in interview coding questions).
     SAFE_BUILTINS = {
         "print": print, "range": range, "len": len, "enumerate": enumerate,
         "zip": zip, "map": map, "filter": filter, "sorted": sorted,
         "reversed": reversed, "sum": sum, "min": min, "max": max,
         "abs": abs, "round": round, "int": int, "float": float, "str": str,
         "bool": bool, "list": list, "dict": dict, "set": set, "tuple": tuple,
-        "isinstance": isinstance, "repr": repr, "chr": chr,
+        "isinstance": isinstance, "type": type, "repr": repr, "chr": chr,
         "ord": ord, "hex": hex, "bin": bin, "oct": oct, "pow": pow,
-        "divmod": divmod, "any": any, "all": all,
+        "divmod": divmod, "hash": hash, "id": id, "any": any, "all": all,
         "input": lambda *a: "",  # Neutered input() — returns empty string
         "Exception": Exception, "ValueError": ValueError, "TypeError": TypeError,
         "KeyError": KeyError, "IndexError": IndexError, "StopIteration": StopIteration,
@@ -1114,7 +918,7 @@ async def execute_code(req: ExecuteCodeRequest):
         redirected = sys.stdout = io.StringIO()
         try:
             allowed_globals = {"__builtins__": SAFE_BUILTINS}
-            exec(req.code, allowed_globals)  # nosec
+            exec(req.code, allowed_globals)
             output_capture["stdout"] = redirected.getvalue()
         except Exception:
             output_capture["stdout"] = traceback.format_exc()
@@ -1127,12 +931,9 @@ async def execute_code(req: ExecuteCodeRequest):
     thread.join(timeout=5.0)  # 5 second hard timeout
 
     if thread.is_alive():
-        return {
-            "output": "Execution timed out (5 second limit).", "error": True}
+        return {"output": "Execution timed out (5 second limit).", "error": True}
 
-    return {"output": output_capture["stdout"]
-            or "(No output)", "error": output_capture["error"]}
-
+    return {"output": output_capture["stdout"] or "(No output)", "error": output_capture["error"]}
 
 @app.get("/api/system/status", tags=["System"])
 def system_status():
@@ -1147,44 +948,32 @@ def system_status():
 
 # ── Candidates ────────────────────────────────────────────────────────────
 
-
 # --- Rate Limiting Setup ---
 _register_rate_limit = {}
 
-
-@app.post("/api/auth/register",
-          response_model=CandidateResponse, tags=["Auth"])
-async def register_candidate(
-        request: Request, data: CandidateRegister, db: Session = Depends(get_db)):
+@app.post("/api/auth/register", response_model=CandidateResponse, tags=["Auth"])
+async def register_candidate(request: Request, data: CandidateRegister, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else "127.0.0.1"
     now = time.time()
-
+    
     # Prune old entries
     if ip in _register_rate_limit:
-        _register_rate_limit[ip] = [
-            ts for ts in _register_rate_limit[ip] if now - ts < 60]
+        _register_rate_limit[ip] = [ts for ts in _register_rate_limit[ip] if now - ts < 60]
     else:
         _register_rate_limit[ip] = []
-
+        
     if len(_register_rate_limit[ip]) >= 50:
-        raise HTTPException(
-            status_code=429,
-            detail="Too many registration attempts. Please wait a minute.")
-
+        raise HTTPException(status_code=429, detail="Too many registration attempts. Please wait a minute.")
+        
     _register_rate_limit[ip].append(now)
 
-    existing = db.query(Candidate).filter(
-        Candidate.email == data.email.lower()).first()
+    existing = db.query(Candidate).filter(Candidate.email == data.email.lower()).first()
     if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="An account with this email already exists. Please login.")
-
+        raise HTTPException(status_code=400, detail="An account with this email already exists. Please login.")
+    
     cid = generate_enterprise_id(db, "CAN")
-    pwd_hash = bcrypt.hashpw(
-        data.password.encode(),
-        bcrypt.gensalt()).decode('utf-8')
-
+    pwd_hash = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode('utf-8')
+    
     new_cand = Candidate(
         candidate_id=cid,
         name=data.name,
@@ -1194,59 +983,34 @@ async def register_candidate(
     )
     db.add(new_cand)
     db.commit()
-
-    return CandidateResponse(id=cid, name=data.name, email=data.email,
-                             phone=data.phone, created_at=str(new_cand.registration_date))
-
+    
+    return CandidateResponse(id=cid, name=data.name, email=data.email, phone=data.phone, created_at=str(new_cand.registration_date))
 
 @app.post("/api/auth/login", tags=["Auth"])
 @limiter.limit("10/minute")
-async def login_candidate(
-        request: Request, data: CandidateLogin, db: Session = Depends(get_db)):
+async def login_candidate(request: Request, data: CandidateLogin, db: Session = Depends(get_db)):
 
-    cand = db.query(Candidate).filter(
-        Candidate.email == data.email.lower()).first()
-    if not cand or not bcrypt.checkpw(
-            data.password.encode(), cand.password_hash.encode('utf-8')):
+    cand = db.query(Candidate).filter(Candidate.email == data.email.lower()).first()
+    if not cand or not bcrypt.checkpw(data.password.encode(), cand.password_hash.encode('utf-8')):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    return {"status": "success",
-            "candidate_id": cand.candidate_id, "name": cand.name}
-
+    
+    return {"status": "success", "candidate_id": cand.candidate_id, "name": cand.name}
 
 @app.post("/api/auth/admin-login", tags=["Auth"])
 @limiter.limit("5/minute")
-async def admin_login(request: Request, data: CandidateLogin,
-                      db: Session = Depends(get_db)):
-    admin = db.query(AdminUser).filter(
-        AdminUser.email == data.email.lower()).first()
-
-    if admin and bcrypt.checkpw(
-            data.password.encode(), admin.password_hash.encode('utf-8')):
+async def admin_login(request: Request, data: CandidateLogin, db: Session = Depends(get_db)):
+    admin = db.query(AdminUser).filter(AdminUser.email == data.email.lower()).first()
+    
+    if admin and bcrypt.checkpw(data.password.encode(), admin.password_hash.encode('utf-8')):
         # Token expires in 2 hours
-        payload = {
-            "sub": "admin",
-            "email": admin.email,
-            "role": admin.role,
-            "exp": int(
-                time.time()) +
-            7200}
+        payload = {"sub": "admin", "email": admin.email, "role": admin.role, "exp": int(time.time()) + 7200}
         token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
-
-        db.add(
-            AdminActivityLog(
-                admin_email=admin.email,
-                action_type="LOGIN",
-                target="Admin Portal"))
+        
+        db.add(AdminActivityLog(admin_email=admin.email, action_type="LOGIN", target="Admin Portal"))
         db.commit()
 
         # Set HttpOnly Secure cookie (invisible to JavaScript / XSS-immune)
-        response = JSONResponse(
-            content={
-                "status": "success",
-                "token": token,
-                "email": admin.email,
-                "role": admin.role})
+        response = JSONResponse(content={"status": "success", "token": token, "email": admin.email, "role": admin.role})
         response.set_cookie(
             key="session_token",
             value=token,
@@ -1258,18 +1022,13 @@ async def admin_login(request: Request, data: CandidateLogin,
             domain=COOKIE_DOMAIN,
         )
         return response
-
-    db.add(
-        SecurityEventLog(
-            event_type="FAILED_LOGIN",
-            target_email=data.email))
+        
+    db.add(SecurityEventLog(event_type="FAILED_LOGIN", target_email=data.email))
     db.commit()
     raise HTTPException(status_code=401, detail="Invalid admin credentials")
 
-
 @app.post("/api/admin/users", response_model=AdminUserResponse, tags=["Admin"])
-async def create_admin_user(data: AdminUserCreate,
-                            req: Request, db: Session = Depends(get_db)):
+async def create_admin_user(data: AdminUserCreate, req: Request, db: Session = Depends(get_db)):
     # Simple auth extraction if present
     auth_header = req.headers.get("Authorization")
     actor_email = "SYSTEM"
@@ -1281,26 +1040,24 @@ async def create_admin_user(data: AdminUserCreate,
             actor_email = payload.get("email", "SYSTEM")
             actor_role = payload.get("role", "sub_admin")
         except Exception:
-            pass  # nosec
+            pass
 
     email_lower = data.email.lower()
     if db.query(AdminUser).filter(AdminUser.email == email_lower).first():
-        raise HTTPException(status_code=400,
-                            detail="Admin with this email already exists")
-
+        raise HTTPException(status_code=400, detail="Admin with this email already exists")
+    
     # ── Password Policy Enforcement ──
-    if not re.match(
-            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", data.password):
+    if not re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", data.password):
         raise HTTPException(
-            status_code=400,
+            status_code=400, 
             detail="Password must be at least 8 characters long, contain one uppercase letter, one lowercase letter, one number, and one special character."
         )
-
+    
     # Force role to sub_admin if creator is not a master_admin
     new_role = "sub_admin"
     if actor_role == "master_admin" and data.role == "master_admin":
         new_role = "master_admin"
-
+        
     # Give the first ever created user master_admin access automatically
     if db.query(AdminUser).count() == 0:
         new_role = "master_admin"
@@ -1313,25 +1070,17 @@ async def create_admin_user(data: AdminUserCreate,
         role=new_role
     )
     db.add(new_admin)
-    db.add(
-        AdminActivityLog(
-            admin_email=actor_email,
-            action_type="GRANT_ACCESS",
-            target=email_lower))
+    db.add(AdminActivityLog(admin_email=actor_email, action_type="GRANT_ACCESS", target=email_lower))
     db.commit()
     db.refresh(new_admin)
     return new_admin
 
-
-@app.get("/api/admin/users",
-         response_model=list[AdminUserResponse], tags=["Admin"])
+@app.get("/api/admin/users", response_model=list[AdminUserResponse], tags=["Admin"])
 async def get_admin_users(db: Session = Depends(get_db)):
     return db.query(AdminUser).all()
 
-
 @app.delete("/api/admin/users/{admin_id}", tags=["Admin"])
-async def delete_admin_user(admin_id: str, req: Request,
-                            db: Session = Depends(get_db)):
+async def delete_admin_user(admin_id: str, req: Request, db: Session = Depends(get_db)):
     auth_header = req.headers.get("Authorization")
     actor_email = "SYSTEM"
     if auth_header and auth_header.startswith("Bearer "):
@@ -1340,23 +1089,18 @@ async def delete_admin_user(admin_id: str, req: Request,
             payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
             actor_email = payload.get("email", "SYSTEM")
         except Exception:
-            pass  # nosec
+            pass
 
     admin = db.query(AdminUser).filter(AdminUser.admin_id == admin_id).first()
     if not admin:
         raise HTTPException(status_code=404, detail="Admin not found")
-
+    
     # Prevent deleting the master admin
     if admin.email == "sparkhire.sterling@gmail.com":
-        raise HTTPException(status_code=403,
-                            detail="Cannot delete the master admin")
-
+        raise HTTPException(status_code=403, detail="Cannot delete the master admin")
+        
     db.delete(admin)
-    db.add(
-        AdminActivityLog(
-            admin_email=actor_email,
-            action_type="REVOKE_ACCESS",
-            target=admin.email))
+    db.add(AdminActivityLog(admin_email=actor_email, action_type="REVOKE_ACCESS", target=admin.email))
     db.commit()
     return {"status": "success", "message": "Admin deleted"}
 
@@ -1366,11 +1110,9 @@ async def delete_admin_user(admin_id: str, req: Request,
 
 _otp_rate_limit: dict[str, list[float]] = {}
 
-
 def _hash_otp(raw_code: str) -> str:
     """SHA-256 hash of the raw OTP. Never store the raw 6-digit code."""
     return hashlib.sha256(raw_code.encode()).hexdigest()
-
 
 def _mask_identifier(identifier: str) -> str:
     """Mask email/phone for safe inclusion in API responses."""
@@ -1378,7 +1120,6 @@ def _mask_identifier(identifier: str) -> str:
         parts = identifier.split("@")
         return parts[0][:2] + "****@" + parts[1]
     return identifier[:3] + "****" + identifier[-2:]
-
 
 def _invalidate_existing_otps(db: Session, identifier: str, purpose: str):
     """Mark all existing unexpired OTPs for this identifier+purpose as used.
@@ -1393,7 +1134,6 @@ def _invalidate_existing_otps(db: Session, identifier: str, purpose: str):
     for otp in existing:
         otp.is_used = True  # type: ignore
     db.commit()
-
 
 @app.post("/api/auth/candidate/send-otp", tags=["Candidate Auth"])
 def send_candidate_otp(
@@ -1423,30 +1163,24 @@ def send_candidate_otp(
     purpose = data.purpose.strip()
 
     if purpose not in ("registration", "login"):
-        raise HTTPException(
-            status_code=400,
-            detail="purpose must be 'registration' or 'login'")
+        raise HTTPException(status_code=400, detail="purpose must be 'registration' or 'login'")
 
     # ── Guard: check candidate existence matches purpose ─────────────────
     from sqlalchemy import or_
     existing_candidate = db.query(Candidate).filter(
-        or_(Candidate.email == identifier,
-            Candidate.candidate_id == identifier.upper())
+        or_(Candidate.email == identifier, Candidate.candidate_id == identifier.upper())
     ).first()
 
     if purpose == "registration":
-        raise HTTPException(
-            status_code=403,
-            detail="Candidate self-registration is disabled. Contact Admin.")
+        raise HTTPException(status_code=403, detail="Candidate self-registration is disabled. Contact Admin.")
 
     if not existing_candidate:
         raise HTTPException(
             status_code=404,
             detail="No candidate found with this email. Please ask an Admin to invite you."
         )
-
-    if getattr(existing_candidate, "invitation_status",
-               "Confirmed") != "Confirmed":
+    
+    if getattr(existing_candidate, "invitation_status", "Confirmed") != "Confirmed":
         raise HTTPException(
             status_code=403,
             detail="You must confirm your registration via email before logging in."
@@ -1456,14 +1190,11 @@ def send_candidate_otp(
     _invalidate_existing_otps(db, identifier, purpose)
 
     # ── Generate and store the new OTP ───────────────────────────────────
-    # Always 6 digits: 100000–999999
-    raw_code = str(secrets.randbelow(900000) + 100000)
+    raw_code = str(secrets.randbelow(900000) + 100000)  # Always 6 digits: 100000–999999
     otp_hash = _hash_otp(raw_code)
     expires_iso = datetime.fromtimestamp(
         time.time() + 600, tz=timezone.utc
-        # 10 minutes — matches the "expires in 10 minutes" text in the OTP
-        # email
-    ).isoformat()
+    ).isoformat()  # 10 minutes — matches the "expires in 10 minutes" text in the OTP email
 
     otp_id = generate_enterprise_id(db, "OTP")
     db.add(OTPStore(
@@ -1480,14 +1211,11 @@ def send_candidate_otp(
     # ── Send OTP via email ────────────────────────────────────────────────
     # SECURITY: never log the raw OTP. Anyone with log access could read it and
     # bypass verification. Log only the masked identifier and purpose.
-    logger.info(
-        f"[OTP] Generated code for {
-            _mask_identifier(identifier)} ({purpose}).")
+    logger.info(f"[OTP] Generated code for {_mask_identifier(identifier)} ({purpose}).")
 
     # Send via email service in the background to prevent API timeouts
     from services.email_service import send_otp_email
-    candidate_name = str(
-        existing_candidate.name) or data.name.strip() or "Candidate"
+    candidate_name = str(existing_candidate.name) or data.name.strip() or "Candidate"
     background_tasks.add_task(
         send_otp_email,
         to_email=identifier,
@@ -1575,16 +1303,11 @@ def verify_candidate_otp(
     # ── Handle registration vs login ──────────────────────────────────────
     if purpose == "registration":
         if not data.name.strip():
-            raise HTTPException(status_code=400,
-                                detail="Name is required for registration.")
-        # Double-check the candidate doesn't already exist (race condition
-        # guard)
-        existing = db.query(Candidate).filter(
-            Candidate.email == identifier).first()
+            raise HTTPException(status_code=400, detail="Name is required for registration.")
+        # Double-check the candidate doesn't already exist (race condition guard)
+        existing = db.query(Candidate).filter(Candidate.email == identifier).first()
         if existing:
-            raise HTTPException(
-                status_code=409,
-                detail="This email is already registered. Please login.")
+            raise HTTPException(status_code=409, detail="This email is already registered. Please login.")
 
         cid = generate_enterprise_id(db, "CAN")
         candidate = Candidate(
@@ -1598,8 +1321,7 @@ def verify_candidate_otp(
         db.add(candidate)
         db.commit()
     else:  # login
-        candidate = db.query(Candidate).filter(
-            Candidate.email == identifier).first()
+        candidate = db.query(Candidate).filter(Candidate.email == identifier).first()
         if not candidate:
             raise HTTPException(status_code=404, detail="Candidate not found.")
         if not candidate.is_verified:  # type: ignore
@@ -1616,9 +1338,7 @@ def verify_candidate_otp(
     }
     token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
-    logger.info(
-        f"[OTP Auth] Candidate {
-            candidate.candidate_id} authenticated via OTP ({purpose}).")
+    logger.info(f"[OTP Auth] Candidate {candidate.candidate_id} authenticated via OTP ({purpose}).")
 
     # Set HttpOnly Secure cookie (invisible to JavaScript / XSS-immune)
     response = JSONResponse(content={
@@ -1641,42 +1361,33 @@ def verify_candidate_otp(
     return response
 
 
+
+
 @app.get("/api/admin/candidates", tags=["Admin Candidate Management"])
 def admin_get_candidates(db: Session = Depends(get_db)):
-    candidates = db.query(Candidate).order_by(
-        Candidate.registration_date.desc()).all()
+    candidates = db.query(Candidate).order_by(Candidate.registration_date.desc()).all()
     return candidates
 
-
 @app.post("/api/admin/candidates/invite", tags=["Admin Candidate Management"])
-def admin_invite_candidate(data: InviteCandidateRequest,
-                           background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def admin_invite_candidate(data: InviteCandidateRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     # 1. Check if email exists
-    existing = db.query(Candidate).filter(
-        Candidate.email == data.email.strip().lower()).first()
+    existing = db.query(Candidate).filter(Candidate.email == data.email.strip().lower()).first()
     if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="A candidate with this email already exists.")
+        raise HTTPException(status_code=400, detail="A candidate with this email already exists.")
 
     # 2. Generate secure token
     token = secrets.token_urlsafe(32)
     expires_at = time.time() + (3 * 3600)  # 3 hours
 
-    # 2.5 Resolve department/role names to actual DB IDs (frontend passes
-    # names)
-    dept = db.query(Department).filter(
-        Department.department_name == data.department_id).first()
+    # 2.5 Resolve department/role names to actual DB IDs (frontend passes names)
+    dept = db.query(Department).filter(Department.department_name == data.department_id).first()
     real_dept_id = dept.department_id if dept else data.department_id
 
     role = None
     if dept:
-        role = db.query(JobRole).filter(
-            JobRole.role_name == data.role_id,
-            JobRole.department_id == dept.department_id).first()
+        role = db.query(JobRole).filter(JobRole.role_name == data.role_id, JobRole.department_id == dept.department_id).first()
     else:
-        role = db.query(JobRole).filter(
-            JobRole.role_name == data.role_id).first()
+        role = db.query(JobRole).filter(JobRole.role_name == data.role_id).first()
     real_role_id = role.role_id if role else data.role_id
 
     # 3. Create Candidate
@@ -1694,7 +1405,7 @@ def admin_invite_candidate(data: InviteCandidateRequest,
     )
     db.add(cand)
     db.commit()
-
+    
     # 4. Send Email via FastAPI's request-lifecycle background tasks (not a raw
     # threading.Thread). Capture ORM values before scheduling to avoid
     # DetachedInstanceError once the session is closed.
@@ -1715,24 +1426,16 @@ def admin_invite_candidate(data: InviteCandidateRequest,
             logger.error(f"Failed to send invite email: {e}")
     background_tasks.add_task(email_task)
 
-    return {"status": "success",
-            "message": "Invitation sent successfully", "candidate_id": cid}
+    return {"status": "success", "message": "Invitation sent successfully", "candidate_id": cid}
 
-
-@app.post("/api/admin/candidates/invite/resend",
-          tags=["Admin Candidate Management"])
-def admin_resend_candidate_invite(
-        data: InviteCandidateRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    cand = db.query(Candidate).filter(
-        Candidate.email == data.email.strip().lower()).first()
+@app.post("/api/admin/candidates/invite/resend", tags=["Admin Candidate Management"])
+def admin_resend_candidate_invite(data: InviteCandidateRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    cand = db.query(Candidate).filter(Candidate.email == data.email.strip().lower()).first()
     if not cand:
         raise HTTPException(status_code=404, detail="Candidate not found.")
-
+        
     if cand.invitation_status != "Pending":
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot resend. Status is currently {
-                cand.invitation_status}")
+        raise HTTPException(status_code=400, detail=f"Cannot resend. Status is currently {cand.invitation_status}")
 
     # Generate new token
     token = secrets.token_urlsafe(32)
@@ -1759,12 +1462,9 @@ def admin_resend_candidate_invite(
 
     return {"status": "success", "message": "Invitation resent successfully"}
 
-
-@app.delete("/api/admin/candidates/{candidate_id}",
-            tags=["Admin Candidate Management"])
+@app.delete("/api/admin/candidates/{candidate_id}", tags=["Admin Candidate Management"])
 def admin_delete_candidate(candidate_id: str, db: Session = Depends(get_db)):
-    cand = db.query(Candidate).filter(
-        Candidate.candidate_id == candidate_id).first()
+    cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
     if not cand:
         raise HTTPException(status_code=404, detail="Candidate not found.")
 
@@ -1772,43 +1472,34 @@ def admin_delete_candidate(candidate_id: str, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success", "message": "Candidate deleted successfully"}
 
-
 @app.get("/api/candidates/verify", tags=["Candidate Auth"])
-def verify_invitation(token: str, action: str,
-                      background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    cand = db.query(Candidate).filter(
-        Candidate.invitation_token == token).first()
+def verify_invitation(token: str, action: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    cand = db.query(Candidate).filter(Candidate.invitation_token == token).first()
     if not cand:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid or expired token.")
-
+        raise HTTPException(status_code=404, detail="Invalid or expired token.")
+        
     if time.time() > (cand.invitation_expires_at or 0):
         cand.invitation_status = "Auto-Canceled"  # type: ignore
         db.commit()
-        raise HTTPException(
-            status_code=400,
-            detail="This invitation has expired.")
-
+        raise HTTPException(status_code=400, detail="This invitation has expired.")
+        
     if action == "confirm":
         cand.invitation_status = "Confirmed"  # type: ignore
         cand.invitation_token = None  # type: ignore # Prevent reuse
         db.commit()
         # Trigger success email via FastAPI background tasks
         from services.email_service import send_registration_success_email
-        assert cand is not None  # nosec
+        assert cand is not None
         c_email = str(cand.email)
         c_name = str(cand.name)
-
         def success_email_task():
             try:
                 send_registration_success_email(c_email, c_name)
             except Exception as e:
                 logger.error(f"Failed to send registration success email: {e}")
         background_tasks.add_task(success_email_task)
-        return {"status": "success",
-                "message": "Registration Confirmed. You may now log in."}
-
+        return {"status": "success", "message": "Registration Confirmed. You may now log in."}
+        
     elif action == "cancel":
         cand.invitation_status = "Canceled"  # type: ignore
         cand.invitation_token = None  # type: ignore
@@ -1817,9 +1508,7 @@ def verify_invitation(token: str, action: str,
     else:
         raise HTTPException(status_code=400, detail="Invalid action.")
 
-
-@app.post("/api/candidates/{candidate_id}/complete-profile",
-          tags=["Candidates"])
+@app.post("/api/candidates/{candidate_id}/complete-profile", tags=["Candidates"])
 async def complete_candidate_profile(
     candidate_id: str,
     experience_level: str = Form(...),
@@ -1833,11 +1522,10 @@ async def complete_candidate_profile(
     resume: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    cand = db.query(Candidate).filter(
-        Candidate.candidate_id == candidate_id).first()
+    cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
     if not cand:
         raise HTTPException(status_code=404, detail="Candidate not found")
-
+        
     cand.experience_level = experience_level  # type: ignore
     cand.key_skills = key_skills  # type: ignore
     cand.work_mode = work_mode  # type: ignore
@@ -1846,27 +1534,26 @@ async def complete_candidate_profile(
     cand.linkedin = linkedin  # type: ignore
     cand.github = github  # type: ignore
     cand.portfolio = portfolio  # type: ignore
-
+    
     # Process resume upload
     upload_dir = "uploads/resumes"
     os.makedirs(upload_dir, exist_ok=True)
-
+    
     # Security: Sanitize candidate_id and filename to prevent path traversal
     safe_cid = candidate_id.replace("/", "").replace("\\", "").replace(".", "")
-    safe_filename = os.path.basename(
-        resume.filename) if resume.filename else "resume.pdf"
+    safe_filename = os.path.basename(resume.filename) if resume.filename else "resume.pdf"
     file_path = os.path.join(upload_dir, f"{safe_cid}_{safe_filename}")
-
+    
     raw_resume_bytes = await resume.read()
     encrypted_resume = encrypt_data(raw_resume_bytes)
     with open(file_path, "wb") as buffer:
         buffer.write(encrypted_resume)
-
+        
     # Temporary file for ATS parsing since parser needs raw file on disk
     tmp_path = os.path.join(upload_dir, f"tmp_{safe_cid}_{safe_filename}")
     with open(tmp_path, "wb") as tmp_buffer:
         tmp_buffer.write(raw_resume_bytes)
-
+        
     # ATS Parsing
     from services.resume_engine import parse_and_score_resume
     res_id = generate_enterprise_id(db, "RES")
@@ -1881,12 +1568,11 @@ async def complete_candidate_profile(
     db.add(new_resume)
     db.commit()
     db.refresh(new_resume)
-
+    
     # Run parsing silently
     try:
         # Assuming job role text is fetched
-        role_record = db.query(JobRole).filter(
-            JobRole.role_id == cand.role_id).first()
+        role_record = db.query(JobRole).filter(JobRole.role_id == cand.role_id).first()
         role_desc = role_record.role_name if role_record else "General"
         score, skills, txt = await parse_and_score_resume(tmp_path, str(role_desc))
         new_resume.resume_score = score
@@ -1901,18 +1587,15 @@ async def complete_candidate_profile(
                 os.remove(tmp_path)
             except Exception as e:
                 logger.error(f"Failed to delete temporary resume file: {e}")
-
+        
+        
     return {"status": "success", "message": "Profile completed successfully"}
 
-
 @app.get("/api/candidates/{candidate_id}", tags=["Candidates"])
-async def get_candidate(candidate_id: str, db: Session = Depends(
-        get_db), _auth: dict = Depends(require_candidate_or_admin)):
-    cand = db.query(Candidate).filter(
-        Candidate.candidate_id == candidate_id).first()
-    if not cand:
-        raise HTTPException(status_code=404, detail="Candidate not found")
-
+async def get_candidate(candidate_id: str, db: Session = Depends(get_db), _auth: dict = Depends(require_candidate_or_admin)):
+    cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
+    if not cand: raise HTTPException(status_code=404, detail="Candidate not found")
+    
     interviews = []
     for i in cand.interviews:
         interviews.append({
@@ -1923,7 +1606,7 @@ async def get_candidate(candidate_id: str, db: Session = Depends(
             "status_id": i.status_id,
             "score": i.overall_score
         })
-
+        
     return {
         "id": cand.candidate_id,
         "name": cand.name,
@@ -1937,71 +1620,56 @@ async def get_candidate(candidate_id: str, db: Session = Depends(
 # the Admin section (with require_admin auth and rollback handling). A duplicate
 # definition that previously lived here was removed.
 
-
 @app.post("/api/profile-photo/upload", tags=["Candidates"])
-async def upload_profile_photo(
-        data: ProfilePhotoUploadRequest, db: Session = Depends(get_db)):
-    cand = db.query(Candidate).filter(
-        Candidate.candidate_id == data.candidate_id).first()
+async def upload_profile_photo(data: ProfilePhotoUploadRequest, db: Session = Depends(get_db)):
+    cand = db.query(Candidate).filter(Candidate.candidate_id == data.candidate_id).first()
     if not cand:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
     if not data.selfie_image:
         raise HTTPException(status_code=400, detail="Missing Selfie image.")
-
+        
     try:
         # 1. Decode Selfie image
-        selfie_data = data.selfie_image.split(
-            ',')[1] if ',' in data.selfie_image else data.selfie_image
+        selfie_data = data.selfie_image.split(',')[1] if ',' in data.selfie_image else data.selfie_image
         selfie_bytes = base64.b64decode(selfie_data)
-
+            
         # 2. Encrypt and Save images
         encrypted_selfie_bytes = encrypt_data(selfie_bytes)
-
+        
         upload_dir = "recordings"
         os.makedirs(upload_dir, exist_ok=True)
-
+        
         # Security: Sanitize candidate_id to prevent path traversal
-        safe_cid = data.candidate_id.replace(
-            "/",
-            "").replace(
-            "\\",
-            "").replace(
-            ".",
-            "")
+        safe_cid = data.candidate_id.replace("/", "").replace("\\", "").replace(".", "")
         selfie_path = os.path.join(upload_dir, f"selfie_{safe_cid}.jpg")
-
+        
         with open(selfie_path, "wb") as f:
             f.write(encrypted_selfie_bytes)
-
+            
         selfie_url = ""
         if supabase_client:
             try:
                 # Upload to Supabase bucket
-                supabase_client.storage.from_("kyc-images").upload(
-                    f"selfie_{safe_cid}.jpg", encrypted_selfie_bytes, file_options={
-                        "content-type": "application/octet-stream", "upsert": "true"})
-
+                supabase_client.storage.from_("kyc-images").upload(f"selfie_{safe_cid}.jpg", encrypted_selfie_bytes, file_options={"content-type": "application/octet-stream", "upsert": "true"})
+                
                 # Get public URLs
-                selfie_url = supabase_client.storage.from_(
-                    "kyc-images").get_public_url(f"selfie_{safe_cid}.jpg")
+                selfie_url = supabase_client.storage.from_("kyc-images").get_public_url(f"selfie_{safe_cid}.jpg")
             except Exception as e:
-                logger.error(
-                    f"Failed to upload Profile Photo to Supabase: {e}")
-
+                logger.error(f"Failed to upload Profile Photo to Supabase: {e}")
+        
         # Fallback to local API serving if Supabase is missing/fails
         if not selfie_url:
             selfie_url = f"{BACKEND_URL}/api/recordings/selfie_{safe_cid}.jpg"
 
-        cand.selfie_url = selfie_url  # type: ignore
-        cand.aadhar_image_url = ""  # type: ignore
-        cand.aadhar_name = cand.name  # type: ignore
-        cand.aadhar_number_masked = ""  # type: ignore
-        # type: ignore (Hack to let frontend proceed without KYC flags)
-        cand.kyc_verified = True
-
+        cand.selfie_url = selfie_url # type: ignore
+        cand.aadhar_image_url = "" # type: ignore
+        cand.aadhar_name = cand.name # type: ignore
+        cand.aadhar_number_masked = "" # type: ignore
+        cand.kyc_verified = True # type: ignore (Hack to let frontend proceed without KYC flags)
+        
         db.commit()
-
+        
         return {
             "verified": True,
             "detail": "Profile photo uploaded successfully.",
@@ -2009,34 +1677,27 @@ async def upload_profile_photo(
         }
     except Exception as e:
         logger.error(f"Photo Upload Error: {str(e)}")
-        raise HTTPException(status_code=500,
-                            detail="Failed to process profile photo.")
-
+        raise HTTPException(status_code=500, detail="Failed to process profile photo.")
 
 @app.post("/api/candidates/{candidate_id}/apply", tags=["Candidates"])
-async def apply_for_role(candidate_id: str, data: ApplicationCreate, db: Session = Depends(
-        get_db), _auth: dict = Depends(require_candidate_or_admin)):
-    cand = db.query(Candidate).filter(
-        Candidate.candidate_id == candidate_id).first()
-    if not cand:
-        raise HTTPException(status_code=404, detail="Candidate not found")
-
+async def apply_for_role(candidate_id: str, data: ApplicationCreate, db: Session = Depends(get_db), _auth: dict = Depends(require_candidate_or_admin)):
+    cand = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
+    if not cand: raise HTTPException(status_code=404, detail="Candidate not found")
+    
     role = db.query(JobRole).filter(JobRole.role_name == data.job_role).first()
     if not role:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid job role. Role not found in database.")
-
-    cand.experience_level = data.experience  # type: ignore
-    cand.key_skills = data.skills  # type: ignore
-    cand.github = data.github_url  # type: ignore
-    cand.linkedin = data.linkedin_url  # type: ignore
-    cand.portfolio = data.portfolio_url  # type: ignore
-    cand.expected_salary = data.expected_salary  # type: ignore
-    cand.work_mode = data.work_mode  # type: ignore
-    cand.phone = data.phone_number  # type: ignore
-    cand.role_id = role.role_id  # type: ignore
-
+        raise HTTPException(status_code=400, detail="Invalid job role. Role not found in database.")
+    
+    cand.experience_level = data.experience # type: ignore
+    cand.key_skills = data.skills # type: ignore
+    cand.github = data.github_url # type: ignore
+    cand.linkedin = data.linkedin_url # type: ignore
+    cand.portfolio = data.portfolio_url # type: ignore
+    cand.expected_salary = data.expected_salary # type: ignore
+    cand.work_mode = data.work_mode # type: ignore
+    cand.phone = data.phone_number # type: ignore
+    cand.role_id = role.role_id # type: ignore
+    
     rid = generate_enterprise_id(db, "RES")
     new_resume = Resume(
         resume_id=rid,
@@ -2045,7 +1706,7 @@ async def apply_for_role(candidate_id: str, data: ApplicationCreate, db: Session
         skills_detected=data.skills
     )
     db.add(new_resume)
-
+    
     iid = generate_enterprise_id(db, "INT")
     new_interview = InterviewSession(
         interview_id=iid,
@@ -2054,15 +1715,14 @@ async def apply_for_role(candidate_id: str, data: ApplicationCreate, db: Session
         status_id=100
     )
     db.add(new_interview)
-
+    
     db.commit()
-
+    
     # Pre-warm AI session logic usually here
-
+    
     return {"status": "success", "interview_id": iid, "resume_id": rid}
 
 # ── Admin Panel ───────────────────────────────────────────────────────────
-
 
 @app.get("/api/admin/questions", tags=["Admin"])
 async def get_admin_questions(db: Session = Depends(get_db)):
@@ -2078,19 +1738,14 @@ async def get_admin_questions(db: Session = Depends(get_db)):
         "created_at": r.created_at
     } for r in rows]
 
-
 @app.post("/api/admin/questions", tags=["Admin"])
-async def add_admin_question(data: AdminQuestion,
-                             db: Session = Depends(get_db)):
+async def add_admin_question(data: AdminQuestion, db: Session = Depends(get_db)):
     """Add a new question to the admin question bank."""
-    dept = db.query(Department).filter(
-        Department.department_name == data.department).first()
+    dept = db.query(Department).filter(Department.department_name == data.department).first()
     role = db.query(JobRole).filter(JobRole.role_name == data.role).first()
     if not dept or not role:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid department or role")
-
+        raise HTTPException(status_code=400, detail="Invalid department or role")
+    
     qid = generate_enterprise_id(db, "Q")
     new_q = QuestionBank(
         question_id=qid,
@@ -2104,47 +1759,33 @@ async def add_admin_question(data: AdminQuestion,
     db.commit()
     return {"status": "success", "id": qid}
 
-
 @app.post("/api/admin/questions/bulk", tags=["Admin"])
-async def add_admin_questions_bulk(
-        file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def add_admin_questions_bulk(file: UploadFile = File(...), db: Session = Depends(get_db)):
     """Bulk import questions from a CSV file."""
     if not file.filename or not file.filename.endswith(".csv"):
-        raise HTTPException(
-            status_code=400,
-            detail="Only CSV files are supported")
-
+        raise HTTPException(status_code=400, detail="Only CSV files are supported")
+        
     content = await file.read()
     try:
         text_content = content.decode("utf-8")
     except UnicodeDecodeError:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid file encoding. Please upload a UTF-8 CSV.")
-
-    import csv
-    import io
+        raise HTTPException(status_code=400, detail="Invalid file encoding. Please upload a UTF-8 CSV.")
+        
+    import csv, io
     reader = csv.DictReader(io.StringIO(text_content))
     if not reader.fieldnames:
-        raise HTTPException(status_code=400,
-                            detail="CSV is empty or missing headers")
-
+        raise HTTPException(status_code=400, detail="CSV is empty or missing headers")
+        
     fields = [f.strip().lower() for f in reader.fieldnames]
-    col_map = {
-        f_lower: f_orig for f_lower,
-        f_orig in zip(
-            fields,
-            reader.fieldnames)}
-
+    col_map = {f_lower: f_orig for f_lower, f_orig in zip(fields, reader.fieldnames)}
+    
     def find_col(possible_names):
         for p in possible_names:
             for f in fields:
-                if p == f:
-                    return col_map[f]
+                if p == f: return col_map[f]
         for p in possible_names:
             for f in fields:
-                if p in f:
-                    return col_map[f]
+                if p in f: return col_map[f]
         return None
 
     dept_key = find_col(["department", "dept"])
@@ -2152,61 +1793,49 @@ async def add_admin_questions_bulk(
     question_key = find_col(["question", "ask"])
     keywords_key = find_col(["keyword", "tags"])
     difficulty_key = find_col(["difficulty", "level"])
-
-    if not all([dept_key, role_key, question_key,
-               keywords_key, difficulty_key]):
-        raise HTTPException(
-            status_code=400,
-            detail="CSV missing required semantic columns. Ensure it roughly contains: Department, Role, Question, Keywords, Difficulty.")
-
+    
+    if not all([dept_key, role_key, question_key, keywords_key, difficulty_key]):
+        raise HTTPException(status_code=400, detail="CSV missing required semantic columns. Ensure it roughly contains: Department, Role, Question, Keywords, Difficulty.")
+    
     imported_count = 0
     skipped_count = 0
     failed_count = 0
     failed_reasons = []
-
+    
     new_structure_map = {}
     ts = ist_isoformat()
-
+    
     for idx, row in enumerate(reader, start=1):
         try:
             dept_name = row[dept_key].strip() if dept_key else "General"
             role_name = row[role_key].strip() if role_key else "Any"
             question_text = row[question_key].strip() if question_key else ""
             keywords = row[keywords_key].strip() if keywords_key else ""
-            difficulty = row[difficulty_key].strip(
-            ) if difficulty_key else "Medium"
-
+            difficulty = row[difficulty_key].strip() if difficulty_key else "Medium"
+            
             if not question_text:
                 skipped_count += 1
                 continue
-
+                
             # Ensure Dept exists
-            dept = db.query(Department).filter_by(
-                department_name=dept_name).first()
+            dept = db.query(Department).filter_by(department_name=dept_name).first()
             if not dept:
-                # BUG-08 fix: Use generate_enterprise_id instead of max_dept+1
-                # to prevent ID collisions
+                # BUG-08 fix: Use generate_enterprise_id instead of max_dept+1 to prevent ID collisions
                 dept_id = generate_enterprise_id(db, "DEPT")
-                dept = Department(
-                    department_id=dept_id,
-                    department_name=dept_name)
+                dept = Department(department_id=dept_id, department_name=dept_name)
                 db.add(dept)
                 db.commit()
                 db.refresh(dept)
-
+                
             # Ensure Role exists
-            role = db.query(JobRole).filter_by(
-                role_name=role_name, department_id=dept.department_id).first()
+            role = db.query(JobRole).filter_by(role_name=role_name, department_id=dept.department_id).first()
             if not role:
                 role_id = generate_enterprise_id(db, "ROLE")
-                role = JobRole(
-                    role_id=role_id,
-                    department_id=dept.department_id,
-                    role_name=role_name)
+                role = JobRole(role_id=role_id, department_id=dept.department_id, role_name=role_name)
                 db.add(role)
                 db.commit()
                 db.refresh(role)
-
+                
             # Check if question already exists for this role
             existing_q = db.query(QuestionBank).filter_by(
                 department_id=dept.department_id,
@@ -2234,48 +1863,40 @@ async def add_admin_questions_bulk(
                 db.add(new_q)
                 db.commit()
                 imported_count += 1
-
+            
             if dept_name not in new_structure_map:
                 new_structure_map[dept_name] = set()
             new_structure_map[dept_name].add(role_name)
-
+            
         except Exception as e:
             db.rollback()
             failed_count += 1
             failed_reasons.append(f"Row {idx}: {str(e)}")
-
+            
     # Merge with existing company structure
     try:
-        curr_struct = db.query(GlobalConfig).filter_by(
-            key="company_structure").first()
-        company_structure = json.loads(
-            str(curr_struct.value)) if curr_struct else {}
-
+        curr_struct = db.query(GlobalConfig).filter_by(key="company_structure").first()
+        company_structure = json.loads(str(curr_struct.value)) if curr_struct else {}
+        
         for dept_str, roles in new_structure_map.items():
             if dept_str not in company_structure:
                 company_structure[dept_str] = []
             for r_str in roles:
                 if r_str not in company_structure[dept_str]:
                     company_structure[dept_str].append(r_str)
-
+                    
         struct_json = json.dumps(company_structure)
         if curr_struct:
             curr_struct.value = struct_json  # type: ignore
             curr_struct.updated_at = ts  # type: ignore
         else:
             import uuid
-            db.add(
-                GlobalConfig(
-                    id=str(
-                        uuid.uuid4()),
-                    key="company_structure",
-                    value=struct_json,
-                    updated_at=ts))
-
+            db.add(GlobalConfig(id=str(uuid.uuid4()), key="company_structure", value=struct_json, updated_at=ts))
+        
         db.commit()
     except Exception as e:
         db.rollback()
-
+        
     return {
         "status": "success",
         "imported": imported_count,
@@ -2283,7 +1904,6 @@ async def add_admin_questions_bulk(
         "failed": failed_count,
         "errors": failed_reasons[:10]  # Return up to 10 errors
     }
-
 
 @app.delete("/api/admin/questions/{q_id}", tags=["Admin"])
 async def delete_admin_question(q_id: str, db: Session = Depends(get_db)):
@@ -2294,168 +1914,83 @@ async def delete_admin_question(q_id: str, db: Session = Depends(get_db)):
         db.commit()
     return {"status": "success"}
 
-
 @app.post("/api/admin/seed", tags=["Admin"])
 async def seed_admin_questions(db: Session = Depends(get_db)):
     """Seed the database with Sterling AI default roles and questions."""
     seed_data = [
         # EV Engineering
-        ("EV Engineering",
-         "Battery Management System (BMS) Engineer",
-         "How do you design a passive cell balancing circuit, and what are the trade-offs compared to active balancing?",
-         "Passive balancing, Active balancing, Resistors, Heat dissipation, Cell state of charge (SoC), Cell life, Efficiency",
-         "Hard"),
-        ("EV Engineering",
-         "Battery Management System (BMS) Engineer",
-         "Explain the algorithm used for State of Charge (SoC) estimation using Kalman filters.",
-         "Kalman filter, State of Charge, Extended Kalman Filter (EKF), Battery model, Voltage measurement, Current integration",
-         "Hard"),
-        ("EV Engineering",
-         "Firmware Engineer",
-         "Describe a scenario where Priority Inversion can occur in an RTOS and how you would prevent it.",
-         "Priority Inversion, RTOS, Mutex, Priority Inheritance, Semaphores, Deadlock",
-         "Medium"),
-        ("EV Engineering", "Firmware Engineer", "How do you handle hard faults on a Cortex-M series microcontroller?",
-         "Hard fault, Cortex-M, Fault registers, Stack pointer, Debugging, Watchdog, LR (Link Register)", "Hard"),
-        ("EV Engineering",
-         "Motor Control Engineer",
-         "What is Field Oriented Control (FOC) for a PMSM, and what are the Clarke and Park transformations used for?",
-         "Field Oriented Control, FOC, PMSM, Clarke transformation, Park transformation, Alpha-beta, d-q axis, Stator current",
-         "Hard"),
-        ("EV Engineering",
-         "CAN Protocol Engineer",
-         "Explain the arbitration process in a CAN bus network and how message priority is determined.",
-         "CAN bus, Arbitration, CSMA/CD, Message ID, Dominant bit, Recessive bit, Priority",
-         "Medium"),
-        ("EV Engineering",
-         "Power Electronics Engineer",
-         "Explain the working principle of a bidirectional DC-DC converter used in electric vehicles.",
-         "DC-DC converter, Bidirectional, Buck-boost, MOSFET, IGBT, Switching frequency, Duty cycle",
-         "Hard"),
-
+        ("EV Engineering", "Battery Management System (BMS) Engineer", "How do you design a passive cell balancing circuit, and what are the trade-offs compared to active balancing?", "Passive balancing, Active balancing, Resistors, Heat dissipation, Cell state of charge (SoC), Cell life, Efficiency", "Hard"),
+        ("EV Engineering", "Battery Management System (BMS) Engineer", "Explain the algorithm used for State of Charge (SoC) estimation using Kalman filters.", "Kalman filter, State of Charge, Extended Kalman Filter (EKF), Battery model, Voltage measurement, Current integration", "Hard"),
+        ("EV Engineering", "Firmware Engineer", "Describe a scenario where Priority Inversion can occur in an RTOS and how you would prevent it.", "Priority Inversion, RTOS, Mutex, Priority Inheritance, Semaphores, Deadlock", "Medium"),
+        ("EV Engineering", "Firmware Engineer", "How do you handle hard faults on a Cortex-M series microcontroller?", "Hard fault, Cortex-M, Fault registers, Stack pointer, Debugging, Watchdog, LR (Link Register)", "Hard"),
+        ("EV Engineering", "Motor Control Engineer", "What is Field Oriented Control (FOC) for a PMSM, and what are the Clarke and Park transformations used for?", "Field Oriented Control, FOC, PMSM, Clarke transformation, Park transformation, Alpha-beta, d-q axis, Stator current", "Hard"),
+        ("EV Engineering", "CAN Protocol Engineer", "Explain the arbitration process in a CAN bus network and how message priority is determined.", "CAN bus, Arbitration, CSMA/CD, Message ID, Dominant bit, Recessive bit, Priority", "Medium"),
+        ("EV Engineering", "Power Electronics Engineer", "Explain the working principle of a bidirectional DC-DC converter used in electric vehicles.", "DC-DC converter, Bidirectional, Buck-boost, MOSFET, IGBT, Switching frequency, Duty cycle", "Hard"),
+        
         # Human Resources
-        ("Human Resources",
-         "HR Specialist",
-         "How do you handle a situation where two employees have a significant conflict that is affecting team morale?",
-         "Conflict resolution, Mediation, Active listening, Empathy, Company policy, De-escalation",
-         "Medium"),
-        ("Human Resources",
-         "HR Specialist",
-         "Describe your approach to sourcing and recruiting candidates for highly specialized technical roles.",
-         "Sourcing, Boolean search, Passive candidates, Talent pipeline, Technical screening, LinkedIn Recruiter",
-         "Medium"),
-        ("Human Resources",
-         "Talent Acquisition Specialist",
-         "What metrics do you use to measure the success of a recruiting campaign?",
-         "Time to fill, Cost per hire, Quality of hire, Offer acceptance rate, Source of hire",
-         "Medium"),
-        ("Human Resources",
-         "Talent Acquisition Specialist",
-         "How do you ensure a fair and unbiased interview process for all candidates?",
-         "Unconscious bias, Structured interviews, Standardized rubrics, Diverse panels, Objective criteria",
-         "Medium"),
-        ("Human Resources",
-         "Learning and Development Specialist",
-         "Explain your process for identifying training needs within an organization.",
-         "Needs assessment, Skills gap analysis, Employee feedback, Performance reviews, Organizational goals",
-         "Medium"),
-
+        ("Human Resources", "HR Specialist", "How do you handle a situation where two employees have a significant conflict that is affecting team morale?", "Conflict resolution, Mediation, Active listening, Empathy, Company policy, De-escalation", "Medium"),
+        ("Human Resources", "HR Specialist", "Describe your approach to sourcing and recruiting candidates for highly specialized technical roles.", "Sourcing, Boolean search, Passive candidates, Talent pipeline, Technical screening, LinkedIn Recruiter", "Medium"),
+        ("Human Resources", "Talent Acquisition Specialist", "What metrics do you use to measure the success of a recruiting campaign?", "Time to fill, Cost per hire, Quality of hire, Offer acceptance rate, Source of hire", "Medium"),
+        ("Human Resources", "Talent Acquisition Specialist", "How do you ensure a fair and unbiased interview process for all candidates?", "Unconscious bias, Structured interviews, Standardized rubrics, Diverse panels, Objective criteria", "Medium"),
+        ("Human Resources", "Learning and Development Specialist", "Explain your process for identifying training needs within an organization.", "Needs assessment, Skills gap analysis, Employee feedback, Performance reviews, Organizational goals", "Medium"),
+        
         # Finance
-        ("Finance", "Financial Analyst", "Walk me through the three main financial statements and how they are linked.",
-         "Income statement, Balance sheet, Cash flow statement, Net income, Retained earnings, Assets, Liabilities", "Hard"),
-        ("Finance",
-         "Financial Analyst",
-         "What is WACC (Weighted Average Cost of Capital), and how is it calculated?",
-         "WACC, Cost of equity, Cost of debt, Tax rate, Capital structure, Discount rate, NPV",
-         "Hard"),
-        ("Finance",
-         "Accounts Manager",
-         "How do you ensure accuracy and compliance in month-end close procedures?",
-         "Month-end close, Reconciliation, Accruals, GAAP, Financial reporting, Audit trails",
-         "Medium"),
-
+        ("Finance", "Financial Analyst", "Walk me through the three main financial statements and how they are linked.", "Income statement, Balance sheet, Cash flow statement, Net income, Retained earnings, Assets, Liabilities", "Hard"),
+        ("Finance", "Financial Analyst", "What is WACC (Weighted Average Cost of Capital), and how is it calculated?", "WACC, Cost of equity, Cost of debt, Tax rate, Capital structure, Discount rate, NPV", "Hard"),
+        ("Finance", "Accounts Manager", "How do you ensure accuracy and compliance in month-end close procedures?", "Month-end close, Reconciliation, Accruals, GAAP, Financial reporting, Audit trails", "Medium"),
+        
         # Customer Support
-        ("Customer Support",
-         "Customer Success Manager",
-         "Describe a time you turned around a highly dissatisfied client.",
-         "De-escalation, Active listening, Root cause analysis, Action plan, Empathy, Follow-up, Retention",
-         "Medium"),
-        ("Customer Support",
-         "Customer Success Manager",
-         "What strategies do you use to increase product adoption and reduce churn?",
-         "Onboarding, User training, Proactive outreach, Health scores, QBRs, Feedback loops, Value proposition",
-         "Medium"),
-
+        ("Customer Support", "Customer Success Manager", "Describe a time you turned around a highly dissatisfied client.", "De-escalation, Active listening, Root cause analysis, Action plan, Empathy, Follow-up, Retention", "Medium"),
+        ("Customer Support", "Customer Success Manager", "What strategies do you use to increase product adoption and reduce churn?", "Onboarding, User training, Proactive outreach, Health scores, QBRs, Feedback loops, Value proposition", "Medium"),
+        
         # Sales
-        ("Sales", "Sales Executive", "What is your framework for qualifying a new lead?",
-         "BANT, Budget, Authority, Need, Timeline, MEDDIC, Qualification, Discovery", "Medium"),
-        ("Sales", "Sales Executive", "How do you handle objections regarding price from a potential client?",
-         "Value selling, ROI, Empathy, Negotiation, Objection handling, Total cost of ownership, Competitive advantage", "Hard"),
-        ("Sales", "Sales Manager", "How do you go about building and forecasting a sales pipeline?",
-         "Forecasting, Pipeline velocity, Conversion rates, CRM, Quota, Deal stages, Sales cycle", "Medium"),
-
+        ("Sales", "Sales Executive", "What is your framework for qualifying a new lead?", "BANT, Budget, Authority, Need, Timeline, MEDDIC, Qualification, Discovery", "Medium"),
+        ("Sales", "Sales Executive", "How do you handle objections regarding price from a potential client?", "Value selling, ROI, Empathy, Negotiation, Objection handling, Total cost of ownership, Competitive advantage", "Hard"),
+        ("Sales", "Sales Manager", "How do you go about building and forecasting a sales pipeline?", "Forecasting, Pipeline velocity, Conversion rates, CRM, Quota, Deal stages, Sales cycle", "Medium"),
+        
         # IT
-        ("IT", "Cybersecurity Analyst", "What is the difference between a vulnerability assessment and a penetration test?",
-         "Vulnerability assessment, Penetration test, Exploitation, False positives, Scanning, Remediation, Ethical hacking", "Medium"),
-        ("IT", "Cybersecurity Analyst", "Explain the concept of Zero Trust Architecture.",
-         "Zero Trust, Principle of least privilege, Micro-segmentation, Multi-factor authentication (MFA), Continuous verification", "Hard"),
-        ("IT",
-         "System Administrator",
-         "How do you troubleshoot a server that has suddenly become unresponsive?",
-         "Ping, SSH, Resource monitoring, Top, Logs, dmesg, Network routing, Reboot",
-         "Medium"),
-
+        ("IT", "Cybersecurity Analyst", "What is the difference between a vulnerability assessment and a penetration test?", "Vulnerability assessment, Penetration test, Exploitation, False positives, Scanning, Remediation, Ethical hacking", "Medium"),
+        ("IT", "Cybersecurity Analyst", "Explain the concept of Zero Trust Architecture.", "Zero Trust, Principle of least privilege, Micro-segmentation, Multi-factor authentication (MFA), Continuous verification", "Hard"),
+        ("IT", "System Administrator", "How do you troubleshoot a server that has suddenly become unresponsive?", "Ping, SSH, Resource monitoring, Top, Logs, dmesg, Network routing, Reboot", "Medium"),
+        
         # Marketing
-        ("Marketing", "Brand Manager", "How do you measure the ROI of a brand awareness campaign?",
-         "Brand recall, Social listening, Web traffic, Impressions, Share of voice, Surveys, Search volume", "Medium"),
-        ("Marketing", "Marketing Specialist", "What is your approach to A/B testing a new email marketing campaign?",
-         "A/B testing, Control group, Variables, Subject line, CTR, Open rate, Statistical significance", "Medium"),
-
+        ("Marketing", "Brand Manager", "How do you measure the ROI of a brand awareness campaign?", "Brand recall, Social listening, Web traffic, Impressions, Share of voice, Surveys, Search volume", "Medium"),
+        ("Marketing", "Marketing Specialist", "What is your approach to A/B testing a new email marketing campaign?", "A/B testing, Control group, Variables, Subject line, CTR, Open rate, Statistical significance", "Medium"),
+        
         # Operations
-        ("Operations", "Supply Chain Analyst", "Explain the concept of Just-in-Time (JIT) manufacturing and its risks.",
-         "JIT, Inventory management, Lean manufacturing, Supply chain disruption, Lead times, Supplier relationships, Cost reduction", "Hard"),
-        ("Operations", "Operations Manager", "How do you approach bottleneck analysis in a production process?",
-         "Bottleneck, Throughput, Six Sigma, Process mapping, Capacity planning, Cycle time, Efficiency", "Medium")
+        ("Operations", "Supply Chain Analyst", "Explain the concept of Just-in-Time (JIT) manufacturing and its risks.", "JIT, Inventory management, Lean manufacturing, Supply chain disruption, Lead times, Supplier relationships, Cost reduction", "Hard"),
+        ("Operations", "Operations Manager", "How do you approach bottleneck analysis in a production process?", "Bottleneck, Throughput, Six Sigma, Process mapping, Capacity planning, Cycle time, Efficiency", "Medium")
     ]
-
+    
     seeded_count = 0
     new_structure_map = {}
     ts = ist_isoformat()
-
+    
     try:
         for dept_str, role_str, q, keys, diff in seed_data:
             # Ensure Dept exists
-            dept = db.query(Department).filter_by(
-                department_name=dept_str).first()
+            dept = db.query(Department).filter_by(department_name=dept_str).first()
             if not dept:
                 max_dept = db.query(Department).count()
-                dept = Department(
-                    department_id=f"DEPT{
-                        max_dept + 1}",
-                    department_name=dept_str)
+                dept = Department(department_id=f"DEPT{max_dept+1}", department_name=dept_str)
                 db.add(dept)
                 db.commit()
                 db.refresh(dept)
-
+                
             # Ensure Role exists
-            role = db.query(JobRole).filter_by(
-                role_name=role_str, department_id=dept.department_id).first()
+            role = db.query(JobRole).filter_by(role_name=role_str, department_id=dept.department_id).first()
             if not role:
                 role_id = generate_enterprise_id(db, "ROLE")
-                role = JobRole(
-                    role_id=role_id,
-                    department_id=dept.department_id,
-                    role_name=role_str)
+                role = JobRole(role_id=role_id, department_id=dept.department_id, role_name=role_str)
                 db.add(role)
                 db.commit()
                 db.refresh(role)
-
+            
             # Check if exists
-            existing = db.query(QuestionBank).filter_by(
-                question_text=q).first()
+            existing = db.query(QuestionBank).filter_by(question_text=q).first()
             if existing:
                 continue
-
+                
             qid = generate_enterprise_id(db, "Q")
             db.add(QuestionBank(
                 question_id=qid,
@@ -2466,77 +2001,57 @@ async def seed_admin_questions(db: Session = Depends(get_db)):
                 difficulty=diff
             ))
             seeded_count += 1
-
+            
             if dept_str not in new_structure_map:
                 new_structure_map[dept_str] = set()
             new_structure_map[dept_str].add(role_str)
-
-        curr_struct = db.query(GlobalConfig).filter_by(
-            key="company_structure").first()
-        company_structure = json.loads(
-            str(curr_struct.value)) if curr_struct else {}
-
+            
+        curr_struct = db.query(GlobalConfig).filter_by(key="company_structure").first()
+        company_structure = json.loads(str(curr_struct.value)) if curr_struct else {}
+        
         for d, roles in new_structure_map.items():
             if d not in company_structure:
                 company_structure[d] = []
             for r in roles:
                 if r not in company_structure[d]:
                     company_structure[d].append(r)
-
+                    
         struct_json = json.dumps(company_structure)
         if curr_struct:
             curr_struct.value = struct_json  # type: ignore
             curr_struct.updated_at = ts  # type: ignore
         else:
-            db.add(
-                GlobalConfig(
-                    id=str(
-                        uuid.uuid4()),
-                    key="company_structure",
-                    value=struct_json,
-                    updated_at=ts))
-
+            db.add(GlobalConfig(id=str(uuid.uuid4()), key="company_structure", value=struct_json, updated_at=ts))
+        
         db.commit()
     except Exception as e:
         db.rollback()
         logger.error(f"Seed failed: {e}")
         return {"status": "error", "message": str(e)}
-
+    
     if seeded_count > 0:
-        return {"status": "success",
-                "message": f"Seeded {seeded_count} new questions."}
+        return {"status": "success", "message": f"Seeded {seeded_count} new questions."}
     else:
-        return {"status": "skipped",
-                "message": "Defaults are already fully seeded."}
+        return {"status": "skipped", "message": "Defaults are already fully seeded."}
 
 # ── Admin Config ──────────────────────────────────────────────────────────
-
 
 @app.get("/api/admin/config/global/{key}", tags=["Admin"])
 async def get_global_config(key: str, db: Session = Depends(get_db)):
     row = db.query(GlobalConfig).filter_by(key=key).first()
     return {"value": row.value if row else ""}
 
-
 @app.post("/api/admin/config/global", tags=["Admin"])
-async def set_global_config(req: GlobalConfigSet,
-                            db: Session = Depends(get_db)):
+async def set_global_config(req: GlobalConfigSet, db: Session = Depends(get_db)):
     ts = ist_isoformat()
     row = db.query(GlobalConfig).filter_by(key=req.key).first()
     if row:
         row.value = req.value  # type: ignore
         row.updated_at = ts  # type: ignore
     else:
-        db.add(
-            GlobalConfig(
-                id=str(
-                    uuid.uuid4()),
-                key=req.key,
-                value=req.value,
-                updated_at=ts))
+        db.add(GlobalConfig(id=str(uuid.uuid4()), key=req.key, value=req.value, updated_at=ts))
     db.commit()
     return {"status": "success"}
-
 
 @app.get("/api/admin/config/role/{job_role:path}", tags=["Admin"])
 async def get_role_config(job_role: str, db: Session = Depends(get_db)):
@@ -2556,7 +2071,6 @@ async def get_role_config(job_role: str, db: Session = Depends(get_db)):
         "conf_weight": row.conf_weight
     }
 
-
 @app.post("/api/admin/config/role", tags=["Admin"])
 async def set_role_config(req: RoleConfigSet, db: Session = Depends(get_db)):
     row = db.query(JobRole).filter_by(role_name=req.job_role).first()
@@ -2572,7 +2086,6 @@ async def set_role_config(req: RoleConfigSet, db: Session = Depends(get_db)):
 # ── Live Session Monitor (Sprint 5) ─────────────────────────────────────────
 # Returns all currently active in-memory interview sessions with candidate
 # details for the admin live monitoring panel.
-
 
 @app.get("/api/admin/live-sessions", tags=["Admin"])
 async def get_live_sessions(db: Session = Depends(get_db)):
@@ -2603,8 +2116,7 @@ async def get_live_sessions(db: Session = Depends(get_db)):
         if iv and iv.started_at:
             try:
                 from datetime import datetime
-                started = datetime.fromisoformat(
-                    iv.started_at.replace("Z", "+00:00"))
+                started = datetime.fromisoformat(iv.started_at.replace("Z", "+00:00"))
                 now = datetime.now(timezone.utc)
                 # Handle IST timestamps
                 if started.tzinfo is None:
@@ -2617,12 +2129,7 @@ async def get_live_sessions(db: Session = Depends(get_db)):
                 duration_str = "00:00"
 
         # Determine current phase name
-        stage_map = {
-            1: "Warm-up",
-            2: "Resume Deep Dive",
-            3: "Technical",
-            4: "System Design",
-            5: "Behavioral/HR"}
+        stage_map = {1: "Warm-up", 2: "Resume Deep Dive", 3: "Technical", 4: "System Design", 5: "Behavioral/HR"}
         current_phase = stage_map.get(session.current_stage, "Unknown")
 
         results.append({
@@ -2648,16 +2155,13 @@ async def get_live_sessions(db: Session = Depends(get_db)):
 
     return results
 
-
 class AdminKillRequest(BaseModel):
     candidate_id: str
     interview_id: str = Field(default="")
     reason: str = Field(default="Interview terminated by administrator")
 
-
 @app.post("/api/admin/kill-interview", tags=["Admin"])
-async def admin_kill_interview(
-        req: AdminKillRequest, db: Session = Depends(get_db)):
+async def admin_kill_interview(req: AdminKillRequest, db: Session = Depends(get_db)):
     """Admin forcefully terminates an interview."""
     ts = ist_isoformat()
 
@@ -2667,16 +2171,14 @@ async def admin_kill_interview(
 
     iv = None
     if req.interview_id:
-        iv = db.query(InterviewSession).filter_by(
-            interview_id=req.interview_id).first()
+        iv = db.query(InterviewSession).filter_by(interview_id=req.interview_id).first()
     if not iv:
         iv = db.query(InterviewSession).filter_by(candidate_id=req.candidate_id).order_by(
             InterviewSession.started_at.desc()
         ).first()
 
     if not iv:
-        raise HTTPException(status_code=404,
-                            detail="No active interview session found")
+        raise HTTPException(status_code=404, detail="No active interview session found")
 
     # Mark as terminated by admin
     iv.status_id = 500  # type: ignore
@@ -2694,8 +2196,7 @@ async def admin_kill_interview(
         }
     ])
 
-    existing_report = db.query(FinalReport).filter_by(
-        interview_id=iv.interview_id).first()
+    existing_report = db.query(FinalReport).filter_by(interview_id=iv.interview_id).first()
     if existing_report:
         existing_report.grade = "F"  # type: ignore
         existing_report.overall_score = 0.0  # type: ignore
@@ -2716,8 +2217,7 @@ async def admin_kill_interview(
             recommendation="ADMIN_TERMINATED",
             strengths=json.dumps([]),
             weaknesses=json.dumps([req.reason]),
-            summary=f"Interview terminated by administrator. Reason: {
-                req.reason}",
+            summary=f"Interview terminated by administrator. Reason: {req.reason}",
             hiring_decision="ADMIN_TERMINATED",
             integrity_score=0,
             integrity_verdict="HIGH_RISK",
@@ -2732,16 +2232,10 @@ async def admin_kill_interview(
 
     try:
         db.commit()
-        logger.info(
-            f"[Admin] Interview {
-                iv.interview_id} manually terminated. Reason: {
-                req.reason}")
+        logger.info(f"[Admin] Interview {iv.interview_id} manually terminated. Reason: {req.reason}")
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to save admin termination: {
-                str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to save admin termination: {str(e)}")
 
     from services.interview_memory import clear_session
     clear_session(req.candidate_id)
@@ -2752,16 +2246,13 @@ async def admin_kill_interview(
         "reason": req.reason,
     }
 
-
 @app.get("/api/interviews/{interview_id}/check-kill", tags=["Data"])
-async def check_interview_kill(
-        interview_id: str, db: Session = Depends(get_db)):
+async def check_interview_kill(interview_id: str, db: Session = Depends(get_db)):
     """Lightweight endpoint for candidate to poll if admin killed their interview."""
-    iv = db.query(InterviewSession).filter_by(
-        interview_id=interview_id).first()
+    iv = db.query(InterviewSession).filter_by(interview_id=interview_id).first()
     if not iv:
         raise HTTPException(status_code=404, detail="Interview not found")
-
+    
     if iv.admin_termination_reason:
         return {"killed": True, "reason": iv.admin_termination_reason}
     return {"killed": False}
@@ -2770,30 +2261,16 @@ async def check_interview_kill(
 @app.get("/api/admin/pipeline", tags=["Admin"])
 async def get_candidate_pipeline(db: Session = Depends(get_db)):
     """Returns all candidates joined with their interview scores for the HR Dashboard."""
-    cands = db.query(Candidate).order_by(
-        Candidate.registration_date.desc()).all()
+    cands = db.query(Candidate).order_by(Candidate.registration_date.desc()).all()
     results = []
     for c in cands:
-        interviews = sorted(
-            list(c.interviews),  # type: ignore
-            key=lambda i: i.started_at,
-            reverse=True)
+        interviews = sorted(c.interviews, key=lambda i: i.started_at, reverse=True)  # type: ignore
         latest = interviews[0] if interviews else None
-        resume = db.query(Resume).filter_by(
-            candidate_id=c.candidate_id).order_by(
-            Resume.resume_id.desc()).first()
-        # Get hiring_decision from FinalReport (single source of truth, same as
-        # dashboard)
-        report = db.query(FinalReport).filter_by(
-            interview_id=latest.interview_id).first() if latest else None
-        hiring_decision = getattr(
-            report,
-            "hiring_decision",
-            "PENDING") if report else "PENDING"
-        is_completed = bool(
-            latest and (
-                latest.completed_at or (
-                    latest.overall_score or 0) > 0 or hiring_decision == "PROCTORING_ACT"))
+        resume = db.query(Resume).filter_by(candidate_id=c.candidate_id).order_by(Resume.resume_id.desc()).first()
+        # Get hiring_decision from FinalReport (single source of truth, same as dashboard)
+        report = db.query(FinalReport).filter_by(interview_id=latest.interview_id).first() if latest else None
+        hiring_decision = getattr(report, "hiring_decision", "PENDING") if report else "PENDING"
+        is_completed = bool(latest and (latest.completed_at or (latest.overall_score or 0) > 0 or hiring_decision == "PROCTORING_ACT"))
 
         results.append({
             "id": c.candidate_id,
@@ -2814,8 +2291,7 @@ async def get_candidate_pipeline(db: Session = Depends(get_db)):
         })
     return results
 
-# ── Resume Upload & AI Screening ────────────────────────────────────────
-
+# ── Resume Upload & AI Screening ──────────────────────────────────────────────────
 
 @app.post("/api/resumes/{resume_id}/upload", tags=["Resume Intelligence"])
 async def upload_resume(
@@ -2828,16 +2304,12 @@ async def upload_resume(
     resume = db.query(Resume).filter_by(resume_id=resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
-
-    interview = db.query(InterviewSession).filter_by(
-        interview_id=interview_id).first()
-
-    job_role = str(
-        interview.role.role_name) if (
-        interview and interview.role) else ""
+        
+    interview = db.query(InterviewSession).filter_by(interview_id=interview_id).first()
+    
+    job_role = str(interview.role.role_name) if (interview and interview.role) else ""
     skills = str(resume.skills_detected) if resume.skills_detected else ""
-    experience = str(
-        resume.experience_years) if resume.experience_years else ""
+    experience = str(resume.experience_years) if resume.experience_years else ""
     candidate_id = str(interview.candidate_id) if interview else "UNKNOWN"
 
     # Read file content
@@ -2854,27 +2326,22 @@ async def upload_resume(
         try:
             import PyPDF2
             reader = PyPDF2.PdfReader(io.BytesIO(raw_bytes))
-            resume_text = " ".join(
-                page.extract_text() or "" for page in reader.pages)
+            resume_text = " ".join(page.extract_text() or "" for page in reader.pages)
         except Exception as e:
             logger.error(f"PyPDF2 extraction failed: {e}")
             resume_text = raw_bytes.decode("utf-8", errors="ignore")
     else:
         resume_text = raw_bytes.decode("utf-8", errors="ignore")
 
-    persona = interview.role.persona if (
-        interview and interview.role) else "General Technical Applicant"
-
-    questions = db.query(QuestionBank).filter_by(
-        role_id=interview.role_id).all() if interview else []
-    # BUG-18 fix: Properly deduplicate individual keywords from question bank
-    # (not whole comma-strings)
+    persona = interview.role.persona if (interview and interview.role) else "General Technical Applicant"
+    
+    questions = db.query(QuestionBank).filter_by(role_id=interview.role_id).all() if interview else []
+    # BUG-18 fix: Properly deduplicate individual keywords from question bank (not whole comma-strings)
     all_keywords = []
     for q in questions:
         if q.keywords:
             all_keywords.extend([k.strip() for k in q.keywords.split(',')])
-    # Preserves order, deduplicates
-    role_keywords = ", ".join(dict.fromkeys(all_keywords))
+    role_keywords = ", ".join(dict.fromkeys(all_keywords))  # Preserves order, deduplicates
 
     parsed = await parse_and_score_resume(
         resume_text=resume_text,
@@ -2893,7 +2360,7 @@ async def upload_resume(
     resume.projects_summary = parsed_projects  # type: ignore
     resume.education_summary = education_text  # type: ignore
     resume.resume_score = float(resume_score)  # type: ignore
-
+    
     # Candidate status changes to ready (200) after parsing
     if interview:
         interview.status_id = 200  # type: ignore
@@ -2917,8 +2384,6 @@ async def upload_resume(
     }
 
 # ── Admin System Health ───────────────────────────────────────────────────
-
-
 @app.get("/api/admin/system/health", tags=["Admin"])
 async def get_system_health(db: Session = Depends(get_db)):
     import time
@@ -2927,7 +2392,7 @@ async def get_system_health(db: Session = Depends(get_db)):
     from database.models import InterviewSession, Candidate, JobRole, SystemTelemetryLog, SecurityEventLog
 
     now = datetime.now(timezone.utc)
-
+    
     # 1. DB Latency Ping
     start_time = time.time()
     try:
@@ -2943,28 +2408,27 @@ async def get_system_health(db: Session = Depends(get_db)):
         Candidate, InterviewSession.candidate_id == Candidate.candidate_id
     ).join(
         JobRole, InterviewSession.role_id == JobRole.role_id
-    ).filter(InterviewSession.completed_at.is_(None)).all()
+    ).filter(InterviewSession.completed_at == None).all()
 
     live_sessions_data = []
     role_distribution_map = {}
     active_sessions_count = 0
-
+    
     for session, candidate, role in live_sessions:
         # Calculate duration
         try:
-            started = datetime.fromisoformat(
-                session.started_at.replace('Z', '+00:00'))
+            started = datetime.fromisoformat(session.started_at.replace('Z', '+00:00'))
             dur_seconds = int((now - started).total_seconds())
         except Exception:
             dur_seconds = 0
-
+            
         if dur_seconds > 7200:
             continue
-
+            
         active_sessions_count += 1
         mins, secs = divmod(dur_seconds, 60)
         duration_str = f"{mins}m {secs}s"
-
+        
         stage = "In Progress"
 
         live_sessions_data.append({
@@ -2976,36 +2440,29 @@ async def get_system_health(db: Session = Depends(get_db)):
             "status": "Live"
         })
 
-        role_distribution_map[role.role_name] = role_distribution_map.get(
-            role.role_name, 0) + 1
+        role_distribution_map[role.role_name] = role_distribution_map.get(role.role_name, 0) + 1
 
-    role_distribution = [{"name": k, "value": v}
-                         for k, v in role_distribution_map.items()]
+    role_distribution = [{"name": k, "value": v} for k, v in role_distribution_map.items()]
     if not role_distribution:
         role_distribution = [{"name": "No Active Roles", "value": 1}]
 
     # 4. Telemetry Time Series (Query real DB logs)
-    telemetry_logs = db.query(SystemTelemetryLog).order_by(
-        SystemTelemetryLog.timestamp.desc()).limit(20).all()
-    telemetry_logs.reverse()  # Chronological order
-
+    telemetry_logs = db.query(SystemTelemetryLog).order_by(SystemTelemetryLog.timestamp.desc()).limit(20).all()
+    telemetry_logs.reverse() # Chronological order
+    
     api_telemetry = []
     ai_telemetry = []
-
-    # Pad with empty data if we have less than 20 points so the chart renders
-    # correctly
+    
+    # Pad with empty data if we have less than 20 points so the chart renders correctly
     points_needed = 20 - len(telemetry_logs)
     for i in range(points_needed, 0, -1):
-        t_label = (now - timedelta(minutes=i * 5)).strftime("%H:%M")
-        api_telemetry.append(
-            {"time": t_label, "requests": 0, "latency": 0, "sessions": 0})
+        t_label = (now - timedelta(minutes=i*5)).strftime("%H:%M")
+        api_telemetry.append({"time": t_label, "requests": 0, "latency": 0, "sessions": 0})
         ai_telemetry.append({"time": t_label, "tokens": 0})
-
+        
     for log in telemetry_logs:
         try:
-            t = datetime.fromisoformat(
-                log.timestamp.replace(
-                    'Z', '+00:00')).strftime("%H:%M")
+            t = datetime.fromisoformat(log.timestamp.replace('Z', '+00:00')).strftime("%H:%M")
         except Exception:
             t = "00:00"
         api_telemetry.append({
@@ -3024,10 +2481,10 @@ async def get_system_health(db: Session = Depends(get_db)):
         func.substr(SecurityEventLog.timestamp, 12, 2).label("hour"),
         func.count(SecurityEventLog.event_id).label("count")
     ).filter(SecurityEventLog.event_type == "FAILED_LOGIN").group_by("hour").all()
-
+    
     security_telemetry = []
     sec_map = {hour: count for hour, count in security_events}
-
+    
     # Pad last 4 hours
     for i in range(3, -1, -1):
         h = (now - timedelta(hours=i)).strftime("%H")
@@ -3043,7 +2500,7 @@ async def get_system_health(db: Session = Depends(get_db)):
         func.avg(InterviewSession.communication_score).label('comm'),
         func.avg(InterviewSession.confidence_score).label('conf'),
         func.avg(InterviewSession.overall_score).label('overall'),
-    ).filter(InterviewSession.completed_at.is_not(None)).first()
+    ).filter(InterviewSession.completed_at != None).first()
 
     tech = avg_scores.tech if avg_scores and avg_scores.tech is not None else 80
     comm = avg_scores.comm if avg_scores and avg_scores.comm is not None else 80
@@ -3068,9 +2525,9 @@ async def get_system_health(db: Session = Depends(get_db)):
         "active_sessions": active_sessions_count,
         "telemetry": {
             "api": api_telemetry,
-            "database": [],  # Unused in frontend currently
+            "database": [], # Unused in frontend currently
             "ai": ai_telemetry,
-            "sessions": [],  # Unused
+            "sessions": [], # Unused
             "security": security_telemetry,
             "ai_radar": ai_radar_telemetry,
             "role_distribution": role_distribution,
@@ -3078,26 +2535,20 @@ async def get_system_health(db: Session = Depends(get_db)):
         }
     }
 
-
 @app.get("/api/admin/audit-logs", tags=["Admin"])
 async def get_audit_logs(db: Session = Depends(get_db)):
     from database.models import AdminActivityLog
-    logs = db.query(AdminActivityLog).order_by(
-        AdminActivityLog.timestamp.desc()).limit(50).all()
+    logs = db.query(AdminActivityLog).order_by(AdminActivityLog.timestamp.desc()).limit(50).all()
     results = []
     for log in logs:
         # compute relative time string
         try:
             ts = datetime.fromisoformat(log.timestamp.replace('Z', '+00:00'))
             dur = int((datetime.now(timezone.utc) - ts).total_seconds())
-            if dur < 60:
-                rel = "Just now"
-            elif dur < 3600:
-                rel = f"{dur // 60} mins ago"
-            elif dur < 86400:
-                rel = f"{dur // 3600} hours ago"
-            else:
-                rel = f"{dur // 86400} days ago"
+            if dur < 60: rel = "Just now"
+            elif dur < 3600: rel = f"{dur//60} mins ago"
+            elif dur < 86400: rel = f"{dur//3600} hours ago"
+            else: rel = f"{dur//86400} days ago"
         except Exception:
             rel = "Unknown"
 
@@ -3110,8 +2561,7 @@ async def get_audit_logs(db: Session = Depends(get_db)):
         })
     return results
 
-# ── Candidate Leaderboard ───────────────────────────────────────────────
-
+# ── Candidate Leaderboard ───────────────────────────────────────────────────────
 
 @app.get("/api/leaderboard", tags=["Recruiter"])
 async def get_leaderboard(db: Session = Depends(get_db)):
@@ -3119,15 +2569,11 @@ async def get_leaderboard(db: Session = Depends(get_db)):
     Return ONE ROW PER INTERVIEW SESSION so admins see every attempt a candidate made,
     including proctoring-terminated sessions with grade F and PROCTORING_ACT status.
     """
-    # Return only candidates who have confirmed their registration (i.e. not
-    # Pending/Canceled invites)
-    cands = db.query(Candidate).filter(
-        Candidate.invitation_status == "Confirmed").order_by(
-        Candidate.registration_date.desc()).all()
+    # Return only candidates who have confirmed their registration (i.e. not Pending/Canceled invites)
+    cands = db.query(Candidate).filter(Candidate.invitation_status == "Confirmed").order_by(Candidate.registration_date.desc()).all()
     rows = []
 
-    # Group candidates by email to handle redundancy if they register multiple
-    # times
+    # Group candidates by email to handle redundancy if they register multiple times
     from collections import defaultdict
     candidates_by_email = defaultdict(list)
     for c in cands:
@@ -3141,34 +2587,28 @@ async def get_leaderboard(db: Session = Depends(get_db)):
         all_interviews = []
         for c in group:
             all_interviews.extend(c.interviews)
-
+        
         # Sort them chronologically so attempt numbering is correct
-        all_interviews = sorted(
-            all_interviews, key=lambda i: getattr(
-                i, 'started_at', ''))
+        all_interviews = sorted(all_interviews, key=lambda i: getattr(i, 'started_at', ''))
 
         # Get the most recent resume across all records
         resume = None
         for c in group:
-            res = db.query(Resume).filter_by(
-                candidate_id=c.candidate_id).order_by(
-                Resume.resume_id.desc()).first()
+            res = db.query(Resume).filter_by(candidate_id=c.candidate_id).order_by(Resume.resume_id.desc()).first()
             if res:
                 resume = res
                 break
-
+                
         resume_score = getattr(resume, "resume_score", 0) if resume else 0
 
         # Resolve the candidate's assigned job role from ANY record in the email
         # group. This mirrors the candidate-portal logic (/portal) so the admin
         # pipeline shows the SAME role the candidate sees on their dashboard.
-        # Handles duplicate records and a role_id that literally stores the
-        # name.
+        # Handles duplicate records and a role_id that literally stores the name.
         group_job_role = ""
         for gc in group:
             if gc.role_id:
-                jr = db.query(JobRole).filter(
-                    JobRole.role_id == gc.role_id).first()
+                jr = db.query(JobRole).filter(JobRole.role_id == gc.role_id).first()
                 group_job_role = jr.role_name if jr else str(gc.role_id)
                 if group_job_role:
                     break
@@ -3213,26 +2653,20 @@ async def get_leaderboard(db: Session = Depends(get_db)):
             continue
 
         from collections import Counter
-        role_totals = Counter(
-            iv.role.role_name if iv.role else "" for iv in all_interviews)
+        role_totals = Counter(iv.role.role_name if iv.role else "" for iv in all_interviews)
         role_current_counts = {}
 
         for iv in all_interviews:
             role_name = iv.role.role_name if iv.role else ""
-            role_current_counts[role_name] = role_current_counts.get(
-                role_name, 0) + 1
+            role_current_counts[role_name] = role_current_counts.get(role_name, 0) + 1
             attempt_idx = role_current_counts[role_name]
             total_attempts = role_totals[role_name]
 
             report = getattr(iv, "report", None)
 
-            # Determine termination reason from report hiring_decision or
-            # status
+            # Determine termination reason from report hiring_decision or status
             termination_reason = None
-            hiring_decision = getattr(
-                report,
-                "hiring_decision",
-                "PENDING") if report else "PENDING"
+            hiring_decision = getattr(report, "hiring_decision", "PENDING") if report else "PENDING"
             if hiring_decision == "PROCTORING_ACT":
                 termination_reason = "PROCTORING_ACT"
             elif iv.status_id == 500:  # FAILED status
@@ -3240,16 +2674,14 @@ async def get_leaderboard(db: Session = Depends(get_db)):
 
             # Format attempt label with timestamp
             try:
-                ts_obj = datetime.fromisoformat(
-                    iv.started_at.replace('Z', '+00:00'))
+                ts_obj = datetime.fromisoformat(iv.started_at.replace('Z', '+00:00'))
                 ts_str = ts_obj.strftime("%d %b %Y, %I:%M %p")
             except Exception:
                 ts_str = iv.started_at[:16] if iv.started_at else "Unknown"
 
             attempt_label = f"Attempt #{attempt_idx}" if total_attempts > 1 else "Interview"
 
-            is_completed = bool(
-                iv.completed_at or iv.overall_score > 0 or hiring_decision == "PROCTORING_ACT")
+            is_completed = bool(iv.completed_at or iv.overall_score > 0 or hiring_decision == "PROCTORING_ACT")
 
             d = {
                 "id": latest_c.candidate_id,
@@ -3292,14 +2724,9 @@ async def get_leaderboard(db: Session = Depends(get_db)):
 
     # Sort by session_started_at desc (most recent first).
     # (A previously-defined unused `sort_key` helper was removed as dead code.)
-    rows.sort(
-        key=lambda r: r.get(
-            "session_started_at",
-            "") or "",
-        reverse=True)
+    rows.sort(key=lambda r: r.get("session_started_at", "") or "", reverse=True)
 
-    # Deduplicate globally by Email + Job Role, keeping only the most recent
-    # attempt
+    # Deduplicate globally by Email + Job Role, keeping only the most recent attempt
     seen_roles = set()
     unique_rows = []
     for r in rows:
@@ -3312,6 +2739,7 @@ async def get_leaderboard(db: Session = Depends(get_db)):
     return {"total": len(ranked), "candidates": ranked}
 
 
+
 # ── Proctoring Termination Endpoint ──────────────────────────────────────────
 
 class ProctoringTerminationRequest(BaseModel):
@@ -3319,14 +2747,11 @@ class ProctoringTerminationRequest(BaseModel):
     interview_id: str = Field(default="")
     proctoring_logs: list[dict] = Field(default_factory=list)
     integrity_data: dict = Field(default_factory=dict)
-    termination_reason: str = Field(
-        default="Proctoring violation threshold exceeded")
+    termination_reason: str = Field(default="Proctoring violation threshold exceeded")
     proctoring_warnings: int = Field(default=3)
 
-
 @app.post("/api/interviews/terminate-proctoring", tags=["Data"])
-async def terminate_proctoring(
-        req: ProctoringTerminationRequest, db: Session = Depends(get_db)):
+async def terminate_proctoring(req: ProctoringTerminationRequest, db: Session = Depends(get_db)):
     """
     Called by the frontend when a proctoring violation terminates an interview.
     Creates a FinalReport with grade=F, score=0, hiring_decision=PROCTORING_ACT.
@@ -3341,8 +2766,7 @@ async def terminate_proctoring(
     # Find the active (uncompleted) interview session to terminate
     iv = None
     if req.interview_id:
-        iv = db.query(InterviewSession).filter_by(
-            interview_id=req.interview_id).first()
+        iv = db.query(InterviewSession).filter_by(interview_id=req.interview_id).first()
     if not iv:
         # Fall back to latest uncompleted session for this candidate
         iv = db.query(InterviewSession).filter_by(candidate_id=req.candidate_id).order_by(
@@ -3350,12 +2774,10 @@ async def terminate_proctoring(
         ).first()
 
     if not iv:
-        raise HTTPException(status_code=404,
-                            detail="No active interview session found")
+        raise HTTPException(status_code=404, detail="No active interview session found")
 
     # Only terminate if not already completed with a real report
-    existing_report = db.query(FinalReport).filter_by(
-        interview_id=iv.interview_id).first()
+    existing_report = db.query(FinalReport).filter_by(interview_id=iv.interview_id).first()
     if existing_report and existing_report.hiring_decision != "PROCTORING_ACT":
         # Already has a legitimate report — do not overwrite
         return {"status": "already_completed", "interview_id": iv.interview_id}
@@ -3398,8 +2820,7 @@ async def terminate_proctoring(
             recommendation="PROCTORING_ACT",
             strengths=json.dumps([]),
             weaknesses=json.dumps([req.termination_reason]),
-            summary=f"Interview terminated by proctoring system. Reason: {
-                req.termination_reason}",
+            summary=f"Interview terminated by proctoring system. Reason: {req.termination_reason}",
             hiring_decision="PROCTORING_ACT",
             integrity_score=0,
             integrity_verdict="HIGH_RISK",
@@ -3414,17 +2835,10 @@ async def terminate_proctoring(
 
     try:
         db.commit()
-        logger.info(
-            f"[Proctoring] Interview {
-                iv.interview_id} terminated for candidate {
-                req.candidate_id}. Reason: {
-                req.termination_reason}")
+        logger.info(f"[Proctoring] Interview {iv.interview_id} terminated for candidate {req.candidate_id}. Reason: {req.termination_reason}")
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to save proctoring termination: {
-                str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to save proctoring termination: {str(e)}")
 
     clear_session(req.candidate_id)
     return {
@@ -3437,32 +2851,25 @@ async def terminate_proctoring(
 
 
 @app.delete("/api/candidates/{candidate_id}", tags=["Admin"])
-async def delete_candidate(candidate_id: str, db: Session = Depends(
-        get_db), _admin: dict = Depends(require_admin)):
+async def delete_candidate(candidate_id: str, db: Session = Depends(get_db), _admin: dict = Depends(require_admin)):
     c = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Candidate not found")
-
+    
     # Due to cascade delete settings in models, deleting the candidate will
-    # automatically delete all associated records (resumes, interviews,
-    # reports, etc.)
+    # automatically delete all associated records (resumes, interviews, reports, etc.)
     try:
         db.delete(c)
         db.commit()
-        return {"status": "success",
-                "message": f"Candidate {candidate_id} deleted."}
+        return {"status": "success", "message": f"Candidate {candidate_id} deleted."}
     except Exception as e:
         db.rollback()
         logger.error(f"Failed to delete candidate {candidate_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to delete candidate.")
+        raise HTTPException(status_code=500, detail="Failed to delete candidate.")
 
 # ── AI Engine: Smart Question Generation ─────────────────────────────────
 
-
-@app.post("/generate-question",
-          response_model=QuestionResponse, tags=["AI Engine"])
+@app.post("/generate-question", response_model=QuestionResponse, tags=["AI Engine"])
 async def generate_question(req: QuestionRequest):
     """Context-aware, adaptive, profile-specific question generation."""
     result = await generate_smart_question(
@@ -3481,16 +2888,13 @@ async def generate_question(req: QuestionRequest):
         follow_up_hint=result["follow_up_hint"],
     )
 
-
 class TTSRequest(BaseModel):
     text: str = Field(..., min_length=1)
-
 
 @app.post("/api/tts", tags=["AI Engine"])
 async def stream_tts_post(req: TTSRequest):
     """Streams an audio blob from ElevenLabs or OpenAI based on text input."""
     return await generate_tts_stream(req.text)
-
 
 @app.get("/api/tts", tags=["AI Engine"])
 async def stream_tts_get(text: str):
@@ -3498,7 +2902,6 @@ async def stream_tts_get(text: str):
     return await generate_tts_stream(text)
 
 # ── WebSocket STT (Sprint 2) ──────────────────────────────────────────────
-
 
 @app.websocket("/ws/stt")
 async def websocket_stt_endpoint(websocket: WebSocket):
@@ -3508,18 +2911,16 @@ async def websocket_stt_endpoint(websocket: WebSocket):
     """
     await websocket.accept()
     audio_buffer = bytearray()
-
+    
     try:
         while True:
             data = await websocket.receive()
             if "bytes" in data:
                 audio_buffer.extend(data["bytes"])
-                # Memory protection: clear buffer if it exceeds ~2MB (approx 1
-                # min of audio)
+                # Memory protection: clear buffer if it exceeds ~2MB (approx 1 min of audio)
                 if len(audio_buffer) > 2 * 1024 * 1024:
                     audio_buffer.clear()
-                    logger.warning(
-                        "WebSocket STT buffer overflow (>2MB). Cleared to prevent OOM.")
+                    logger.warning("WebSocket STT buffer overflow (>2MB). Cleared to prevent OOM.")
                 # Send interim feedback so UI knows it's alive
                 await websocket.send_json({"type": "interim", "text": "Listening..."})
             elif "text" in data:
@@ -3544,44 +2945,41 @@ async def websocket_stt_endpoint(websocket: WebSocket):
 
 # ── AI Engine: Answer Assessment ──────────────────────────────────────────
 
-# ── Silent AI/Plagiarism Detection Engine ───────────────────────────────
+# ── Silent AI/Plagiarism Detection Engine ─────────────────────────────────────
 # Runs on every answer server-side. Completely invisible to the candidate.
 # Returns a structured detection report the frontend integrity engine scores.
 
 _AI_SYNTAX_PATTERNS = [
     # Classic AI opener phrases
-    (r"\bCertainly[,!]?\b", "opener:certainly"),
-    (r"\bAbsolutely[,!]?\b", "opener:absolutely"),
-    (r"\bGreat question\b", "opener:great_question"),
-    (r"\bOf course[,!]?\b", "opener:of_course"),
-    (r"\bSure[,!]? here('s| is)\b", "opener:sure_here"),
+    (r"\bCertainly[,!]?\b",                          "opener:certainly"),
+    (r"\bAbsolutely[,!]?\b",                          "opener:absolutely"),
+    (r"\bGreat question\b",                           "opener:great_question"),
+    (r"\bOf course[,!]?\b",                           "opener:of_course"),
+    (r"\bSure[,!]? here('s| is)\b",                  "opener:sure_here"),
     # Robotic structure markers
-    (r"\bFirstly\b.{0,120}\bSecondly\b", "structure:firstly_secondly"),
-    (r"\bIn conclusion\b", "structure:in_conclusion"),
-    (r"\bTo summarize\b", "structure:to_summarize"),
-    (r"\bIn summary\b", "structure:in_summary"),
-    (r"\bIt is worth noting that\b", "structure:worth_noting"),
-    (r"\bIt is important to note that\b", "structure:important_to_note"),
-    (r"\bFurthermore\b.{0,80}\bMoreover\b", "structure:furthermore_moreover"),
-    (r"\bThere are (three|four|five|several|multiple) (types|ways|approaches|key|main)\b",
-     "structure:n_types"),
+    (r"\bFirstly\b.{0,120}\bSecondly\b",              "structure:firstly_secondly"),
+    (r"\bIn conclusion\b",                            "structure:in_conclusion"),
+    (r"\bTo summarize\b",                             "structure:to_summarize"),
+    (r"\bIn summary\b",                               "structure:in_summary"),
+    (r"\bIt is worth noting that\b",                  "structure:worth_noting"),
+    (r"\bIt is important to note that\b",             "structure:important_to_note"),
+    (r"\bFurthermore\b.{0,80}\bMoreover\b",          "structure:furthermore_moreover"),
+    (r"\bThere are (three|four|five|several|multiple) (types|ways|approaches|key|main)\b", "structure:n_types"),
     # Textbook / encyclopedia phrasing
-    (r"\bis defined as\b", "academic:is_defined_as"),
-    (r"\bin the context of\b", "academic:in_context_of"),
-    (r"\bplays a crucial role\b", "academic:crucial_role"),
-    (r"\bplays a key role\b", "academic:key_role"),
-    (r"\bsignificant impact\b", "academic:significant_impact"),
+    (r"\bis defined as\b",                            "academic:is_defined_as"),
+    (r"\bin the context of\b",                        "academic:in_context_of"),
+    (r"\bplays a crucial role\b",                     "academic:crucial_role"),
+    (r"\bplays a key role\b",                         "academic:key_role"),
+    (r"\bsignificant impact\b",                       "academic:significant_impact"),
     (r"\bin today's (world|environment|landscape|digital age)\b", "academic:todays_world"),
-    (r"\b(leverag|utiliz|optim)(e|ing|ed|es)\b", "academic:leverage_utilize"),
-    (r"\bensur(e|ing) (that|the|a|an)\b", "academic:ensuring_that"),
+    (r"\b(leverag|utiliz|optim)(e|ing|ed|es)\b",      "academic:leverage_utilize"),
+    (r"\bensur(e|ing) (that|the|a|an)\b",             "academic:ensuring_that"),
     # AI list enumeration
-    (r"(1\.|2\.|3\.).{0,30}(1\.|2\.|3\.)", "format:numbered_list"),
-    (r"(• |\* |– |— ).{0,60}(• |\* |– |— )", "format:bullet_list"),
+    (r"(1\.|2\.|3\.).{0,30}(1\.|2\.|3\.)",          "format:numbered_list"),
+    (r"(• |\* |– |— ).{0,60}(• |\* |– |— )",        "format:bullet_list"),
     # Suspiciously formal vocabulary in spoken context
-    (r"\b(aforementioned|notwithstanding|henceforth|heretofore|therein)\b",
-     "vocab:formal_spoken"),
-    (r"\b(paradigm shift|holistic approach|synerg|ecosystem approach)\b",
-     "vocab:buzzword_heavy"),
+    (r"\b(aforementioned|notwithstanding|henceforth|heretofore|therein)\b", "vocab:formal_spoken"),
+    (r"\b(paradigm shift|holistic approach|synerg|ecosystem approach)\b",   "vocab:buzzword_heavy"),
 ]
 
 _HUMAN_HEDGE_WORDS = [
@@ -3589,7 +2987,6 @@ _HUMAN_HEDGE_WORDS = [
     "honestly", "basically", "actually", "so", "right", "hmm", "well",
     "i think", "i believe", "i guess", "maybe", "probably", "personally"
 ]
-
 
 def _detect_ai_answer(answer: str, wpm: float, question_index: int) -> dict:
     """
@@ -3621,11 +3018,7 @@ def _detect_ai_answer(answer: str, wpm: float, question_index: int) -> dict:
 
     text = answer.strip()
     words = re.findall(r"\b[a-z']+\b", text.lower())
-    sentences = [
-        s.strip() for s in re.split(
-            r'[.!?]+',
-            text) if len(
-            s.strip()) > 5]
+    sentences = [s.strip() for s in re.split(r'[.!?]+', text) if len(s.strip()) > 5]
     total_words = len(words)
     total_sentences = max(len(sentences), 1)
 
@@ -3639,18 +3032,15 @@ def _detect_ai_answer(answer: str, wpm: float, question_index: int) -> dict:
             pattern_hits += 1
             matched_patterns.append(label)
     # Score: 0 hits = 0.0, 1 hit = 0.2, 2 hits = 0.45, 3+ = 0.75+
-    pattern_score = min(1.0, pattern_hits * 0.20 +
-                        max(0, pattern_hits - 2) * 0.15)
+    pattern_score = min(1.0, pattern_hits * 0.20 + max(0, pattern_hits - 2) * 0.15)
 
     # ── Layer 2: Human Hedge Word Ratio ───────────────────────────────────
-    hedge_count = sum(1 for w in words if any(
-        h in w or h == w for h in _HUMAN_HEDGE_WORDS))
+    hedge_count = sum(1 for w in words if any(h in w or h == w for h in _HUMAN_HEDGE_WORDS))
     hedge_ratio = hedge_count / max(total_words, 1)
     # Humans: hedge_ratio typically 0.02–0.08. AI: near 0.
     # Score: 0 = very suspicious (no hedges), 1 = clearly human
     hedge_score_raw = min(1.0, hedge_ratio / 0.05)   # normalized
-    # invert: no hedges = high suspicion
-    hedge_suspicion = max(0.0, 1.0 - hedge_score_raw)
+    hedge_suspicion = max(0.0, 1.0 - hedge_score_raw) # invert: no hedges = high suspicion
     # Reduce weight for very short answers (< 30 words)
     if total_words < 30:
         hedge_suspicion *= 0.5
@@ -3660,20 +3050,16 @@ def _detect_ai_answer(answer: str, wpm: float, question_index: int) -> dict:
     ttr = unique_words / max(total_words, 1)
     # AI tends to have higher TTR (more varied, formal vocabulary)
     # Humans in speech: TTR 0.4–0.65. AI: 0.65–0.85
-    ttr_suspicion = max(0.0, min(1.0, (ttr - 0.60) / 0.25)
-                        ) if ttr > 0.60 else 0.0
+    ttr_suspicion = max(0.0, min(1.0, (ttr - 0.60) / 0.25)) if ttr > 0.60 else 0.0
 
     # ── Layer 4: Sentence Length Uniformity ───────────────────────────────
     sent_lengths = [len(s.split()) for s in sentences]
     if len(sent_lengths) >= 3:
         avg_len = sum(sent_lengths) / len(sent_lengths)
-        variance = sum(
-            (l - avg_len) ** 2 for l in sent_lengths) / len(sent_lengths)
+        variance = sum((l - avg_len) ** 2 for l in sent_lengths) / len(sent_lengths)
         std_dev = variance ** 0.5
-        # Human speech: high variance (std_dev > 8). AI: very uniform (std_dev
-        # < 4)
-        uniformity_suspicion = max(
-            0.0, min(1.0, (6.0 - std_dev) / 6.0)) if std_dev < 6 else 0.0
+        # Human speech: high variance (std_dev > 8). AI: very uniform (std_dev < 4)
+        uniformity_suspicion = max(0.0, min(1.0, (6.0 - std_dev) / 6.0)) if std_dev < 6 else 0.0
     else:
         uniformity_suspicion = 0.0
 
@@ -3690,12 +3076,12 @@ def _detect_ai_answer(answer: str, wpm: float, question_index: int) -> dict:
     # ── Weighted Combination ───────────────────────────────────────────────
     # Weights: patterns are strongest signal, hedge ratio second
     ai_probability = min(1.0,
-                         pattern_score * 0.40 +
-                         hedge_suspicion * 0.25 +
-                         uniformity_suspicion * 0.15 +
-                         ttr_suspicion * 0.10 +
-                         wpm_suspicion * 0.10
-                         )
+        pattern_score       * 0.40 +
+        hedge_suspicion     * 0.25 +
+        uniformity_suspicion * 0.15 +
+        ttr_suspicion        * 0.10 +
+        wpm_suspicion        * 0.10
+    )
 
     # ── Map to integrity signals ───────────────────────────────────────────
     if ai_probability >= 0.80:
@@ -3713,38 +3099,34 @@ def _detect_ai_answer(answer: str, wpm: float, question_index: int) -> dict:
     )
 
     return {
-        "ai_probability": round(ai_probability, 3),
-        "is_suspected": ai_probability >= 0.50,
-        "is_confirmed": ai_probability >= 0.80,
+        "ai_probability":  round(ai_probability, 3),
+        "is_suspected":    ai_probability >= 0.50,
+        "is_confirmed":    ai_probability >= 0.80,
         "layers": {
-            "pattern_score": round(pattern_score, 3),
-            "hedge_suspicion": round(hedge_suspicion, 3),
-            "ttr_suspicion": round(ttr_suspicion, 3),
+            "pattern_score":        round(pattern_score, 3),
+            "hedge_suspicion":      round(hedge_suspicion, 3),
+            "ttr_suspicion":        round(ttr_suspicion, 3),
             "uniformity_suspicion": round(uniformity_suspicion, 3),
-            "wpm_suspicion": round(wpm_suspicion, 3),
+            "wpm_suspicion":        round(wpm_suspicion, 3),
         },
-        "matched_patterns": matched_patterns,
+        "matched_patterns":  matched_patterns,
         "integrity_signals": signals,
     }
 
 
-@app.post("/api/interview/assess",
-          response_model=AssessResponse, tags=["AI Engine"])
+@app.post("/api/interview/assess", response_model=AssessResponse, tags=["AI Engine"])
 async def assess_candidate(data: AssessRequest, db: Session = Depends(get_db)):
     """Full context-aware answer evaluation with multi-LLM orchestration."""
     filler_words = detect_filler_words(data.spoken_answer)
 
-    # Merge behavioral telemetry emotion with detected_emotion if Human.js is
-    # active
+    # Merge behavioral telemetry emotion with detected_emotion if Human.js is active
     resolved_emotion = (
-        data.behavioral_telemetry.get(
-            "emotion") or data.detected_emotion or "Neutral"
+        data.behavioral_telemetry.get("emotion") or data.detected_emotion or "Neutral"
     )
 
     combined_answer = data.spoken_answer
     if data.workspace_code.strip():
-        combined_answer += f"\n\n[Candidate submitted the following code]:\n```\n{
-            data.workspace_code}\n```"
+        combined_answer += f"\n\n[Candidate submitted the following code]:\n```\n{data.workspace_code}\n```"
 
     # ── Run silent AI/plagiarism detection FIRST (never visible to candidate) ──
     ai_detection = _detect_ai_answer(
@@ -3768,10 +3150,7 @@ async def assess_candidate(data: AssessRequest, db: Session = Depends(get_db)):
     # Log workspace code submission if present (stored for recruiter report)
     if data.workspace_code.strip():
         logger.info(
-            f"Code submission from {
-                data.candidate_id} ({
-                len(
-                    data.workspace_code)} chars) "
+            f"Code submission from {data.candidate_id} ({len(data.workspace_code)} chars) "
             f"for: {data.current_question[:60]}..."
         )
         # Append code context to session memory
@@ -3786,10 +3165,8 @@ async def assess_candidate(data: AssessRequest, db: Session = Depends(get_db)):
     try:
         from database.models import ConversationHistory, QuestionEvaluation, CandidateAnswer, KeywordEvaluation, UnifiedInterviewData, InterviewQuestionsLog
         from database.db_utils import generate_enterprise_id
-
-        iv = db.query(InterviewSession).filter_by(
-            candidate_id=data.candidate_id).order_by(
-            InterviewSession.started_at.desc()).first()
+        
+        iv = db.query(InterviewSession).filter_by(candidate_id=data.candidate_id).order_by(InterviewSession.started_at.desc()).first()
         if iv:
             # ── 1. Log AI Question to ConversationHistory ──
             db.add(ConversationHistory(
@@ -3819,18 +3196,15 @@ async def assess_candidate(data: AssessRequest, db: Session = Depends(get_db)):
                 candidate_id=data.candidate_id,
                 interview_id=iv.interview_id,
                 technical_score=float(result.get("technical_score", 0)),
-                communication_score=float(
-                    result.get("communication_score", 60)),
+                communication_score=float(result.get("communication_score", 60)),
                 behavior_score=float(result.get("behavioral_score", 60)),
                 confidence_score=float(result.get("confidence_score", 60)),
-                feedback=result.get("eq_feedback") or result.get(
-                    "feedback") or ""
+                feedback=result.get("eq_feedback") or result.get("feedback") or ""
             ))
             # ── 5. Log Keyword Evaluation (with expected keywords) ──
-            expected_kws = result.get(
-                "positive_keywords", []) + result.get("negative_keywords", [])
-            matched_kws = result.get("positive_keywords", [])
-            missing_kws = result.get("negative_keywords", [])
+            expected_kws = result.get("positive_keywords", []) + result.get("negative_keywords", [])
+            matched_kws  = result.get("positive_keywords", [])
+            missing_kws  = result.get("negative_keywords", [])
             kw_match_pct = (len(matched_kws) / max(len(expected_kws), 1)) * 100
             db.add(KeywordEvaluation(
                 keyword_eval_id=generate_enterprise_id(db, "EVALK"),
@@ -3851,11 +3225,9 @@ async def assess_candidate(data: AssessRequest, db: Session = Depends(get_db)):
                 matched_keywords=json.dumps(matched_kws),
                 missing_keywords=json.dumps(missing_kws),
                 answer_score=float(result.get("technical_score", 0)),
-                answer_feedback=result.get(
-                    "eq_feedback") or result.get("feedback") or "",
+                answer_feedback=result.get("eq_feedback") or result.get("feedback") or "",
                 plagiarism_score=int(result.get("plagiarism_score", 0)),
-                plagiarism_reasoning=str(
-                    result.get("plagiarism_reasoning", ""))
+                plagiarism_reasoning=str(result.get("plagiarism_reasoning", ""))
             ))
             # ── 7. Log to InterviewQuestionsLog (tracks question sequence) ──
             # Count existing questions for sequence numbering
@@ -3880,53 +3252,47 @@ async def assess_candidate(data: AssessRequest, db: Session = Depends(get_db)):
         logger.error(f"Failed to persist assessment data to database: {db_e}")
         db.rollback()
 
-    # Safe feedback key resolution (handles both 'feedback' and 'eq_feedback'
-    # from parsers)
-    feedback_text = result.get("eq_feedback") or result.get(
-        "feedback") or "Assessment complete."
+    # Safe feedback key resolution (handles both 'feedback' and 'eq_feedback' from parsers)
+    feedback_text = result.get("eq_feedback") or result.get("feedback") or "Assessment complete."
 
     return AssessResponse(
-        action=result.get("action", "normal"),
-        technical_score=int(result.get("technical_score", 0)),
-        communication_score=int(result.get("communication_score", 60)),
-        confidence_score=int(result.get("confidence_score", 60)),
-        problem_solving_score=int(result.get("problem_solving_score", 60)),
-        role_alignment_score=int(result.get("role_alignment_score", 60)),
-        professionalism_score=int(result.get("professionalism_score", 60)),
-        learning_potential_score=int(
-            result.get("learning_potential_score", 60)),
-        behavioral_score=int(result.get("behavioral_score", 60)),
-        fluency_score=int(result.get("fluency_score", 60)),
-        plagiarism_score=int(result.get("plagiarism_score", 0)),
-        plagiarism_reasoning=str(result.get("plagiarism_reasoning", "")),
-        eq_feedback=feedback_text,
-        repeated_words_detected=filler_words,
-        next_technical_question=result.get("next_technical_question", ""),
-        follow_up_question=result.get("follow_up_question", ""),
-        next_topic=result.get("next_topic", ""),
-        answer_quality=result.get("answer_quality", "average"),
-        final_verdict=result.get("final_verdict", ""),
-        model_used="sterling ai-2.0-flash",
-        ai_detection=ai_detection,   # ← silent detection payload
+        action=                  result.get("action", "normal"),
+        technical_score=         int(result.get("technical_score", 0)),
+        communication_score=     int(result.get("communication_score", 60)),
+        confidence_score=        int(result.get("confidence_score", 60)),
+        problem_solving_score=   int(result.get("problem_solving_score", 60)),
+        role_alignment_score=    int(result.get("role_alignment_score", 60)),
+        professionalism_score=   int(result.get("professionalism_score", 60)),
+        learning_potential_score=int(result.get("learning_potential_score", 60)),
+        behavioral_score=        int(result.get("behavioral_score", 60)),
+        fluency_score=           int(result.get("fluency_score", 60)),
+        plagiarism_score=        int(result.get("plagiarism_score", 0)),
+        plagiarism_reasoning=    str(result.get("plagiarism_reasoning", "")),
+        eq_feedback=             feedback_text,
+        repeated_words_detected= filler_words,
+        next_technical_question= result.get("next_technical_question", ""),
+        follow_up_question=      result.get("follow_up_question", ""),
+        next_topic=              result.get("next_topic", ""),
+        answer_quality=          result.get("answer_quality", "average"),
+        final_verdict=           result.get("final_verdict", ""),
+        model_used=              "sterling ai-2.0-flash",
+        ai_detection=            ai_detection,   # ← silent detection payload
     )
 
-# ── Audio Transcription (Sterling Analysis Engine) ──────────────────────
-
+# ── Audio Transcription (Sterling Analysis Engine) ───────────────────────────────────
 
 @app.post("/api/transcribe", tags=["AI Engine"])
 async def transcribe_audio_endpoint(file: UploadFile = File(...)):
     """Transcribe audio blob using Groq Whisper (300ms) or OpenAI Whisper fallback."""
     raw_bytes = await file.read()
     if len(raw_bytes) < 100:
-        return {"transcript": "", "model_used": "none",
-                "error": "Audio too short"}
+        return {"transcript": "", "model_used": "none", "error": "Audio too short"}
 
     result = await transcribe_audio(
         audio_bytes=raw_bytes,
         filename=file.filename or "audio.webm",
     )
     return result
-
 
 @app.post("/api/analyze-audio-authenticity", tags=["Security"])
 async def analyze_audio_authenticity(file: UploadFile = File(...)):
@@ -3952,10 +3318,7 @@ async def analyze_audio_authenticity(file: UploadFile = File(...)):
 
         # Convert to numpy array for analysis
         import numpy as np
-        audio_array = np.frombuffer(
-            audio_bytes,
-            dtype=np.int16).astype(
-            np.float32)
+        audio_array = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32)
 
         if len(audio_array) == 0:
             return {
@@ -3978,8 +3341,7 @@ async def analyze_audio_authenticity(file: UploadFile = File(...)):
 
         # ── Check 2: Background noise floor ──
         sorted_amps = np.sort(np.abs(audio_array))
-        noise_floor = float(
-            np.mean(sorted_amps[:len(sorted_amps) // 10])) if len(sorted_amps) > 10 else 0
+        noise_floor = float(np.mean(sorted_amps[:len(sorted_amps) // 10])) if len(sorted_amps) > 10 else 0
         if noise_floor < 5.0:
             spoof_signals.append("suspiciously_clean_audio")
             spoof_probability += 25
@@ -4006,24 +3368,20 @@ async def analyze_audio_authenticity(file: UploadFile = File(...)):
     except Exception as e:
         logger.warning(f"Audio authenticity analysis failed: {e}")
         return {
-            "status": "success",
-            "is_synthetic": False,
-            "confidence": 0,
-            "provider": "HeuristicAnalyzer",
-            "message": "Analysis failed",
+            "status": "success", 
+            "is_synthetic": False, 
+            "confidence": 0, 
+            "provider": "HeuristicAnalyzer", 
+            "message": "Analysis failed", 
             "signals": ["error"]
         }
 
-
 @app.post("/api/interviews/{interview_id}/recording", tags=["AI Engine"])
-async def upload_interview_recording(
-        interview_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_interview_recording(interview_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
     """Upload WebM video recording of the entire interview session."""
-    iv = db.query(InterviewSession).filter_by(
-        interview_id=interview_id).first()
-    if not iv:
-        raise HTTPException(status_code=404, detail="Interview not found")
-
+    iv = db.query(InterviewSession).filter_by(interview_id=interview_id).first()
+    if not iv: raise HTTPException(status_code=404, detail="Interview not found")
+    
     raw_bytes = await file.read()
     if len(raw_bytes) == 0:
         raise HTTPException(status_code=400, detail="Empty video file")
@@ -4032,31 +3390,24 @@ async def upload_interview_recording(
     if supabase_client:
         try:
             encrypted_bytes = encrypt_data(raw_bytes)
-            filename = f"INT_{interview_id}_{
-                int(
-                    datetime.now(
-                        timezone.utc).timestamp())}.webm"
+            filename = f"INT_{interview_id}_{int(datetime.now(timezone.utc).timestamp())}.webm"
             supabase_client.storage.from_("interview-recordings").upload(
-                filename,
-                encrypted_bytes,
-                file_options={
-                    "content-type": "application/octet-stream",
-                    "upsert": "true"}
+                filename, 
+                encrypted_bytes, 
+                file_options={"content-type": "application/octet-stream", "upsert": "true"}
             )
-            recording_url = supabase_client.storage.from_(
-                "interview-recordings").get_public_url(filename)
+            recording_url = supabase_client.storage.from_("interview-recordings").get_public_url(filename)
         except Exception as e:
             logger.error(f"Failed to upload video to Supabase: {e}")
-
+            
     if not recording_url:
         # Fallback to local URL if Supabase fails
         base_url = os.getenv('SUPABASE_URL', 'https://supabase.co')
         recording_url = f"{base_url}/storage/v1/object/public/interview-recordings/INT_{interview_id}.webm"
-
-    iv.recording_url = recording_url  # type: ignore
+        
+    iv.recording_url = recording_url # type: ignore
     db.commit()
     return {"status": "success", "recording_url": recording_url}
-
 
 @app.post("/api/interviews/{interview_id}/recording/chunk", tags=["AI Engine"])
 async def upload_recording_chunk(
@@ -4075,13 +3426,9 @@ async def upload_recording_chunk(
 
     # Sweep abandoned partial uploads: if a client disconnects mid-upload the final
     # chunk never arrives and the temp file is never cleaned. Delete any temp file
-    # older than the configured TTL (default 6h) so they cannot accumulate
-    # forever.
+    # older than the configured TTL (default 6h) so they cannot accumulate forever.
     try:
-        ttl_seconds = int(
-            os.environ.get(
-                "TEMP_RECORDING_TTL_SECONDS", str(
-                    6 * 3600)))
+        ttl_seconds = int(os.environ.get("TEMP_RECORDING_TTL_SECONDS", str(6 * 3600)))
         now_ts = _time.time()
         for stale in temp_dir.glob("recording_*.webm"):
             try:
@@ -4094,14 +3441,7 @@ async def upload_recording_chunk(
 
     # Security: Sanitize ids to prevent path traversal
     safe_iid = interview_id.replace("/", "").replace("\\", "").replace(".", "")
-    safe_sid = (
-        sessionId or "").replace(
-        "/",
-        "").replace(
-            "\\",
-            "").replace(
-                ".",
-        "")
+    safe_sid = (sessionId or "").replace("/", "").replace("\\", "").replace(".", "")
     file_path = temp_dir / f"recording_{safe_iid}_{safe_sid}.webm"
 
     # Append chunk
@@ -4110,39 +3450,29 @@ async def upload_recording_chunk(
 
     if chunkIndex == totalChunks - 1:
         # This was the final chunk, now upload to Supabase.
-        # Wrap in try/finally so the temp file is always removed, even on
-        # error.
+        # Wrap in try/finally so the temp file is always removed, even on error.
         try:
-            iv = db.query(InterviewSession).filter_by(
-                interview_id=interview_id).first()
-            if not iv:
-                raise HTTPException(
-                    status_code=404, detail="Interview not found")
+            iv = db.query(InterviewSession).filter_by(interview_id=interview_id).first()
+            if not iv: raise HTTPException(status_code=404, detail="Interview not found")
 
             raw_bytes = file_path.read_bytes()
             recording_url = ""
 
             if supabase_client:
                 try:
-                    filename = f"INT_{interview_id}_{
-                        int(
-                            datetime.now(
-                                timezone.utc).timestamp())}.webm"
+                    filename = f"INT_{interview_id}_{int(datetime.now(timezone.utc).timestamp())}.webm"
                     supabase_client.storage.from_("interview-recordings").upload(
-                        filename, raw_bytes, file_options={
-                            "content-type": "video/webm", "upsert": "true"}
+                        filename, raw_bytes, file_options={"content-type": "video/webm", "upsert": "true"}
                     )
-                    recording_url = supabase_client.storage.from_(
-                        "interview-recordings").get_public_url(filename)
+                    recording_url = supabase_client.storage.from_("interview-recordings").get_public_url(filename)
                 except Exception as e:
-                    logger.error(
-                        f"Failed to upload chunked video to Supabase: {e}")
+                    logger.error(f"Failed to upload chunked video to Supabase: {e}")
 
             if not recording_url:
                 base_url = os.getenv('SUPABASE_URL', 'https://supabase.co')
                 recording_url = f"{base_url}/storage/v1/object/public/interview-recordings/INT_{interview_id}.webm"
 
-            iv.recording_url = recording_url  # type: ignore
+            iv.recording_url = recording_url # type: ignore
             db.commit()
 
             return {"status": "completed", "recording_url": recording_url}
@@ -4157,32 +3487,25 @@ async def upload_recording_chunk(
 
 # ── AI Engine: Final Report ───────────────────────────────────────────────
 
-
 @app.get("/api/interview/ai-report/{candidate_id}", tags=["AI Engine"])
 async def get_ai_report(candidate_id: str, db: Session = Depends(get_db)):
     """Generate Sterling AI-powered final evaluation report from memory."""
     c = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
-    if not c:
-        raise HTTPException(status_code=404, detail="Candidate not found")
-
-    iv = db.query(InterviewSession).filter_by(
-        candidate_id=candidate_id).order_by(
-        InterviewSession.started_at.desc()).first()
-    resume = db.query(Resume).filter_by(
-        candidate_id=candidate_id).order_by(
-        Resume.resume_id.desc()).first()
+    if not c: raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    iv = db.query(InterviewSession).filter_by(candidate_id=candidate_id).order_by(InterviewSession.started_at.desc()).first()
+    resume = db.query(Resume).filter_by(candidate_id=candidate_id).order_by(Resume.resume_id.desc()).first()
     job_role_name = iv.role.role_name if (iv and iv.role) else ""
-
+    
     report = await generate_final_report(
         candidate_id=candidate_id,
         candidate_name=str(c.name),
         job_role=job_role_name,
         experience=str(resume.experience_years) if resume else "",
     )
-    return {"candidate": {"name": c.name,
-                          "job_role": job_role_name}, "ai_report": report}
+    return {"candidate": {"name": c.name, "job_role": job_role_name}, "ai_report": report}
 
-# ── Data: Save Interview & Recordings ───────────────────────────────────
+# ── Data: Save Interview & Recordings ──────────────────────────────────────────────────
 # NOTE: A duplicate POST /api/interviews/{interview_id}/recording route (tags=["Data"])
 # used to live here. FastAPI always routes to the first-registered match — the one in
 # the "AI Engine" section above — so this definition was dead code and has been removed
@@ -4190,27 +3513,19 @@ async def get_ai_report(candidate_id: str, db: Session = Depends(get_db)):
 
 
 @app.post("/api/interviews/save", tags=["Data"])
-async def save_interview(req: SaveInterviewRequest,
-                         bg: BackgroundTasks, db: Session = Depends(get_db)):
+async def save_interview(req: SaveInterviewRequest, bg: BackgroundTasks, db: Session = Depends(get_db)):
     ts = ist_isoformat()
 
     c = db.query(Candidate).filter_by(candidate_id=req.candidate_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Candidate not found")
-
-    iv = db.query(InterviewSession).filter_by(
-        candidate_id=req.candidate_id).order_by(
-        InterviewSession.started_at.desc()).first()
+        
+    iv = db.query(InterviewSession).filter_by(candidate_id=req.candidate_id).order_by(InterviewSession.started_at.desc()).first()
     if not iv:
-        raise HTTPException(status_code=404,
-                            detail="Active interview session not found")
-
-    resume = db.query(Resume).filter_by(
-        candidate_id=req.candidate_id).order_by(
-        Resume.resume_id.desc()).first()
-    # BUG-05 fix: ats_score → resume_score
-    candidate_resume_score = getattr(
-        resume, "resume_score", 0) if resume else 0
+        raise HTTPException(status_code=404, detail="Active interview session not found")
+        
+    resume = db.query(Resume).filter_by(candidate_id=req.candidate_id).order_by(Resume.resume_id.desc()).first()
+    candidate_resume_score = getattr(resume, "resume_score", 0) if resume else 0  # BUG-05 fix: ats_score → resume_score
     candidate_job_role = iv.role.role_name if (iv and iv.role) else "default"
 
     global_score = calculate_global_score(
@@ -4239,18 +3554,13 @@ async def save_interview(req: SaveInterviewRequest,
     iv.fluency_score = req.fluency_score  # type: ignore
     iv.recommendation = hiring.get("decision", "Neutral")
     # Not creating a new InterviewSession, just updating the existing one
-
+    
     # BUG-13 fix: Compute grade for FinalReport (was always NULL)
-    if global_score >= 90:
-        grade = "S"
-    elif global_score >= 80:
-        grade = "A"
-    elif global_score >= 70:
-        grade = "B"
-    elif global_score >= 60:
-        grade = "C"
-    else:
-        grade = "F"
+    if global_score >= 90: grade = "S"
+    elif global_score >= 80: grade = "A"
+    elif global_score >= 70: grade = "B"
+    elif global_score >= 60: grade = "C"
+    else: grade = "F"
 
     new_report = FinalReport(
         report_id=generate_enterprise_id(db, "REP"),
@@ -4276,8 +3586,7 @@ async def save_interview(req: SaveInterviewRequest,
         plagiarism_score=req.plagiarism_score,
         plagiarism_reasoning=req.plagiarism_reasoning,
     )
-    # Sprint 3: Attach integrity score to interview session for dashboard
-    # display
+    # Sprint 3: Attach integrity score to interview session for dashboard display
     integrity_score = req.integrity_score
     integrity_band = score_band(integrity_score)
     if hasattr(iv, 'proctoring_warnings'):
@@ -4290,23 +3599,15 @@ async def save_interview(req: SaveInterviewRequest,
         f"Signals={len(req.integrity_data.get('signal_log', []))}"
     )
     db.add(new_report)
-
+    
     try:
         db.commit()
-        logger.info(
-            f"Interview saved: {
-                iv.interview_id} | GlobalScore={global_score} | Decision={
-                hiring.get(
-                    'decision',
-                    'N/A')}")
+        logger.info(f"Interview saved: {iv.interview_id} | GlobalScore={global_score} | Decision={hiring.get('decision', 'N/A')}")
     except Exception as e:
         db.rollback()
         logger.error(f"DB persist failed: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to save interview: {
-                str(e)}")
-
+        raise HTTPException(status_code=500, detail=f"Failed to save interview: {str(e)}")
+        
     clear_session(req.candidate_id)
     return {
         "interview_id": iv.interview_id,
@@ -4317,56 +3618,41 @@ async def save_interview(req: SaveInterviewRequest,
         "hiring_label": hiring.get("label", "Under Review"),
     }
 
-
 @app.patch("/api/interviews/{interview_id}/decision", tags=["Data"])
-async def update_hiring_decision(
-        interview_id: str, req: DecisionUpdateRequest, db: Session = Depends(get_db)):
-    iv = db.query(InterviewSession).filter_by(
-        interview_id=interview_id).first()
+async def update_hiring_decision(interview_id: str, req: DecisionUpdateRequest, db: Session = Depends(get_db)):
+    iv = db.query(InterviewSession).filter_by(interview_id=interview_id).first()
     if not iv:
         raise HTTPException(status_code=404, detail="Interview not found")
-
+        
     report = db.query(FinalReport).filter_by(interview_id=interview_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-
+    
     old_decision = getattr(report, "hiring_decision", "PENDING")
     new_decision = getattr(req, "decision")
     report.hiring_decision = new_decision
     db.commit()
 
-    # ── Email notification to candidate on decision change (REMOVED) ────────
-    # Auto-email removed per user request. Email will be sent manually via new
-    # endpoint.
-
+    # ── Email notification to candidate on decision change (REMOVED) ───────────
+    # Auto-email removed per user request. Email will be sent manually via new endpoint.
+    
     return {"success": True, "decision": new_decision}
 
-
 @app.post("/api/candidates/{candidate_id}/send-decision-email", tags=["Admin"])
-async def send_decision_email_manual(
-        candidate_id: str, db: Session = Depends(get_db)):
-    candidate = db.query(Candidate).filter_by(
-        candidate_id=candidate_id).first()
+async def send_decision_email_manual(candidate_id: str, db: Session = Depends(get_db)):
+    candidate = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
-
-    iv = db.query(InterviewSession).filter_by(
-        candidate_id=candidate_id).order_by(
-        InterviewSession.started_at.desc()).first()
+        
+    iv = db.query(InterviewSession).filter_by(candidate_id=candidate_id).order_by(InterviewSession.started_at.desc()).first()
     if not iv:
-        raise HTTPException(
-            status_code=404,
-            detail="No interview session found")
-
-    report = db.query(FinalReport).filter_by(
-        interview_id=iv.interview_id).first()
-    decision = getattr(
-        report,
-        "hiring_decision",
-        "PENDING") if report else "PENDING"
-
+        raise HTTPException(status_code=404, detail="No interview session found")
+        
+    report = db.query(FinalReport).filter_by(interview_id=iv.interview_id).first()
+    decision = getattr(report, "hiring_decision", "PENDING") if report else "PENDING"
+    
     name = candidate.name or "Candidate"
-
+    
     if decision in ("HIRE", "HIRED"):
         subject = f"🎉 Congratulations {name} — You've been selected!"
         html = f"""
@@ -4428,22 +3714,16 @@ async def send_decision_email_manual(
         </div>
         """
     else:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Email templates are only supported for HIRE, NO HIRE, PENDING, and PROCTORING ACT. Current status is {decision}.")
+        raise HTTPException(status_code=400, detail=f"Email templates are only supported for HIRE, NO HIRE, PENDING, and PROCTORING ACT. Current status is {decision}.")
 
     try:
         if candidate.email:
-            send_notification_email(
-                str(candidate.email), str(name), subject, html)
+            send_notification_email(str(candidate.email), str(name), subject, html)
             return {"success": True, "message": "Email sent successfully"}
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="Candidate has no email address")
+            raise HTTPException(status_code=400, detail="Candidate has no email address")
     except Exception as email_err:
-        raise HTTPException(status_code=500,
-                            detail=f"Failed to send email: {email_err}")
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {email_err}")
 
 
 # ── Data: Report ──────────────────────────────────────────────────────────
@@ -4451,52 +3731,36 @@ async def send_decision_email_manual(
 def _build_interview_dict(iv_session, report):
     """Helper: build a consistent interview dict from a session + its report."""
     def _safe_json_list(val):
-        if not val:
-            return []
-        if isinstance(val, list):
-            return val
-        try:
-            return json.loads(val)
-        except Exception:
-            return []
+        if not val: return []
+        if isinstance(val, list): return val
+        try: return json.loads(val)
+        except Exception: return []
 
-    hiring_decision = getattr(
-        report,
-        "hiring_decision",
-        "PENDING") if report else "PENDING"
+    hiring_decision = getattr(report, "hiring_decision", "PENDING") if report else "PENDING"
     is_proctoring_terminated = hiring_decision == "PROCTORING_ACT"
 
     try:
-        ts_obj = datetime.fromisoformat(
-            iv_session.started_at.replace(
-                'Z', '+00:00'))
+        ts_obj = datetime.fromisoformat(iv_session.started_at.replace('Z', '+00:00'))
         session_ts = ts_obj.strftime("%d %b %Y, %I:%M %p")
     except Exception:
-        session_ts = iv_session.started_at[:
-                                           16] if iv_session.started_at else "Unknown"
+        session_ts = iv_session.started_at[:16] if iv_session.started_at else "Unknown"
 
     # Build transcript
     transcript = []
     try:
-        convos = sorted(
-            iv_session.conversation,
-            key=lambda c: c.timestamp) if iv_session.conversation else []
+        convos = sorted(iv_session.conversation, key=lambda c: c.timestamp) if iv_session.conversation else []
     except Exception:
         convos = []
-
+        
     try:
-        key_evals = list(
-            iv_session.keyword_evals) if iv_session.keyword_evals else []
+        key_evals = list(iv_session.keyword_evals) if iv_session.keyword_evals else []
     except Exception:
         key_evals = []
 
     # Real per-question scores (0-10) from UnifiedInterviewData.answer_score — used
-    # for the per-question breakdown AND the trajectory chart (no fabricated
-    # data).
+    # for the per-question breakdown AND the trajectory chart (no fabricated data).
     try:
-        unified = sorted(
-            iv_session.unified_answers,
-            key=lambda u: u.timestamp) if iv_session.unified_answers else []
+        unified = sorted(iv_session.unified_answers, key=lambda u: u.timestamp) if iv_session.unified_answers else []
     except Exception:
         unified = []
 
@@ -4509,19 +3773,14 @@ def _build_interview_dict(iv_session, report):
         negative_kws = []
         if i < len(key_evals):
             try:
-                positive_kws = json.loads(
-                    key_evals[i].matched_keywords or "[]")
-                negative_kws = json.loads(
-                    key_evals[i].missing_keywords or "[]")
+                positive_kws = json.loads(key_evals[i].matched_keywords or "[]")
+                negative_kws = json.loads(key_evals[i].missing_keywords or "[]")
             except Exception:
-                pass  # nosec
+                pass
 
         # Real per-question score; 0 when this question has no stored score.
         try:
-            q_score = round(
-                float(
-                    unified[i].answer_score),
-                1) if i < len(unified) else 0.0
+            q_score = round(float(unified[i].answer_score), 1) if i < len(unified) else 0.0
         except Exception:
             q_score = 0.0
 
@@ -4581,8 +3840,7 @@ def _build_interview_dict(iv_session, report):
         "plagiarism_reasoning": getattr(report, "plagiarism_reasoning", "") if report else "",
         "grade": getattr(report, "grade", "F" if is_proctoring_terminated else "N/A") if report else ("F" if is_proctoring_terminated else "N/A"),
         "qa_history": transcript,
-        # real 0-10 scores for the trajectory chart
-        "per_question_scores": per_question_scores,
+        "per_question_scores": per_question_scores,  # real 0-10 scores for the trajectory chart
         # FIX: previously BOTH keys returned video_clip_url (copy-paste bug), so the
         # "full recording" link was wrong and — since clip generation was removed —
         # always empty. Now recording_url returns the real recording, and the preview
@@ -4592,19 +3850,13 @@ def _build_interview_dict(iv_session, report):
         "duration_seconds": int(getattr(iv_session, "duration_seconds", 0) or 0),
     }
 
-
 @app.get("/api/reports/{candidate_id}", tags=["Data"])
-async def get_candidate_report(candidate_id: str, db: Session = Depends(
-        get_db), _auth: dict = Depends(require_candidate_or_admin)):
+async def get_candidate_report(candidate_id: str, db: Session = Depends(get_db), _auth: dict = Depends(require_candidate_or_admin)):
     """Return the MOST RECENT interview report for a candidate (backward compat)."""
     c = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
-    if not c:
-        raise HTTPException(status_code=404, detail="Candidate not found")
+    if not c: raise HTTPException(status_code=404, detail="Candidate not found")
 
-    interviews = sorted(
-        list(c.interviews),  # type: ignore
-        key=lambda i: i.started_at,
-        reverse=True)
+    interviews = sorted(c.interviews, key=lambda i: i.started_at, reverse=True)  # type: ignore
     latest = interviews[0] if interviews else None
     job_role_name = (latest.role.role_name if (latest and latest.role) else "")
 
@@ -4629,40 +3881,30 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(
         "github": c.github,
         "portfolio": c.portfolio,
     }
-
+    
     # Fetch Resume
-    resumes = sorted(
-        list(c.resumes),  # type: ignore
-        key=lambda r: r.created_at,
-        reverse=True)
+    resumes = sorted(c.resumes, key=lambda r: r.created_at, reverse=True)  # type: ignore
     latest_resume = resumes[0] if resumes else None
-
     def _safe_parse_list(val, default=None):
         if default is None:
             default = []
-        if not val:
-            return default
+        if not val: return default
         val_str = str(val)
-        try:
-            return json.loads(val_str)
-        except Exception:
-            return [s.strip() for s in val_str.split(",")]
+        try: return json.loads(val_str)
+        except Exception: return [s.strip() for s in val_str.split(",")]
 
     def _safe_parse_string(val, default=""):
-        if not val:
-            return default
+        if not val: return default
         val_str = str(val)
         try:
             parsed = json.loads(val_str)
-            if isinstance(parsed, list):
-                return "\n".join([str(x) for x in parsed])
+            if isinstance(parsed, list): return "\n".join([str(x) for x in parsed])
             return str(parsed)
         except Exception:
             return val_str
 
     def _parse_experience(val):
-        if not val:
-            return 0.0
+        if not val: return 0.0
         val_str = str(val).lower()
         import re
         match = re.search(r"(\d+(\.\d+)?)", val_str)
@@ -4682,14 +3924,12 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(
             "projects_summary": _safe_parse_string(str(latest_resume.projects_summary) if latest_resume.projects_summary else None),
             "certifications": str(latest_resume.certifications) if latest_resume.certifications else "",
         }
-
+        
     # Fetch Audit Trail (Security & Admin logs)
     audit_logs = []
-    sec_logs = db.query(SecurityEventLog).filter(
-        SecurityEventLog.target_email == c.email).all()
-    admin_logs = db.query(AdminActivityLog).filter(
-        AdminActivityLog.target == c.email).all()
-
+    sec_logs = db.query(SecurityEventLog).filter(SecurityEventLog.target_email == c.email).all()
+    admin_logs = db.query(AdminActivityLog).filter(AdminActivityLog.target == c.email).all()
+    
     for sl in sec_logs:
         audit_logs.append({
             "type": "SECURITY",
@@ -4704,7 +3944,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(
             "action": al.action_type,
             "details": f"By: {al.admin_email}"
         })
-
+        
     # Also add a registration event
     audit_logs.append({
         "type": "SYSTEM",
@@ -4712,7 +3952,7 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(
         "action": "CANDIDATE_REGISTERED",
         "details": "Account created."
     })
-
+    
     audit_logs.sort(key=lambda x: x["timestamp"], reverse=True)
 
     if latest:
@@ -4742,19 +3982,16 @@ async def get_candidate_report(candidate_id: str, db: Session = Depends(
 
 
 @app.get("/api/reports/{candidate_id}/all", tags=["Data"])
-async def get_all_candidate_reports(candidate_id: str, db: Session = Depends(
-        get_db), _auth: dict = Depends(require_candidate_or_admin)):
+async def get_all_candidate_reports(candidate_id: str, db: Session = Depends(get_db), _auth: dict = Depends(require_candidate_or_admin)):
     """
     Return ALL interview sessions for a candidate as a list, newest first.
     Each item includes session timestamp, attempt number, grade, termination_reason,
     and full integrity data. Used by admin report section.
     """
     c = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
-    if not c:
-        raise HTTPException(status_code=404, detail="Candidate not found")
+    if not c: raise HTTPException(status_code=404, detail="Candidate not found")
 
-    # type: ignore  oldest first for numbering
-    interviews = sorted(c.interviews, key=lambda i: i.started_at)
+    interviews = sorted(c.interviews, key=lambda i: i.started_at)  # type: ignore  oldest first for numbering
     total = len(interviews)
 
     c_dict = {
@@ -4765,8 +4002,7 @@ async def get_all_candidate_reports(candidate_id: str, db: Session = Depends(
     }
 
     all_ivs = []
-    for idx, iv_session in enumerate(
-            reversed(interviews), start=1):  # newest first, attempt# reversed
+    for idx, iv_session in enumerate(reversed(interviews), start=1):  # newest first, attempt# reversed
         attempt_number = total - idx + 1  # newest = highest attempt number
         report = getattr(iv_session, "report", None)
         iv_dict = _build_interview_dict(iv_session, report)
@@ -4779,41 +4015,28 @@ async def get_all_candidate_reports(candidate_id: str, db: Session = Depends(
 
 # ── Data: Dashboard ───────────────────────────────────────────────────────
 
-
 @app.get("/api/dashboard", response_model=DashboardData, tags=["Data"])
 async def get_dashboard_data(db: Session = Depends(get_db)):
-    total = db.query(Candidate).filter(
-        Candidate.invitation_status == "Confirmed").count()
-    # BUG-16 fix: Count only COMPLETED sessions (completed_at IS NOT NULL),
-    # not all sessions
-    complete = db.query(InterviewSession).filter(
-        (InterviewSession.completed_at.isnot(None)) | (
-            InterviewSession.overall_score > 0)).count()
-
+    total = db.query(Candidate).filter(Candidate.invitation_status == "Confirmed").count()
+    # BUG-16 fix: Count only COMPLETED sessions (completed_at IS NOT NULL), not all sessions
+    complete = db.query(InterviewSession).filter((InterviewSession.completed_at.isnot(None)) | (InterviewSession.overall_score > 0)).count()
+    
     interviews = db.query(InterviewSession).all()
-    avg_tech = sum(i.technical_score for i in interviews) / \
-        len(interviews) if interviews else 0.0  # type: ignore
-    avg_conf = sum(i.confidence_score for i in interviews) / \
-        len(interviews) if interviews else 0.0  # type: ignore
-
-    recent = db.query(Candidate).filter(
-        Candidate.invitation_status == "Confirmed").order_by(
-        Candidate.registration_date.desc()).limit(5).all()
-
+    avg_tech = sum(i.technical_score for i in interviews) / len(interviews) if interviews else 0.0  # type: ignore
+    avg_conf = sum(i.confidence_score for i in interviews) / len(interviews) if interviews else 0.0  # type: ignore
+    
+    recent = db.query(Candidate).filter(Candidate.invitation_status == "Confirmed").order_by(Candidate.registration_date.desc()).limit(5).all()
+    
     recent_dicts = []
     for r in recent:
-        r_interviews = sorted(
-            list(r.interviews),  # type: ignore
-            key=lambda i: i.started_at,
-            reverse=True)
+        r_interviews = sorted(r.interviews, key=lambda i: i.started_at, reverse=True)  # type: ignore
         r_latest = r_interviews[0] if r_interviews else None
-
+        
         job_role_name = ""
         if r_latest and getattr(r_latest, "role", None):
             job_role_name = r_latest.role.role_name
         elif r.role_id:
-            role_obj = db.query(JobRole).filter(
-                JobRole.role_id == r.role_id).first()
+            role_obj = db.query(JobRole).filter(JobRole.role_id == r.role_id).first()
             if role_obj:
                 job_role_name = role_obj.role_name
             else:
@@ -4825,7 +4048,7 @@ async def get_dashboard_data(db: Session = Depends(get_db)):
             "email": r.email,
             "created_at": r.registration_date
         })
-
+        
     return DashboardData(
         total_candidates=total, interviews_completed=complete,
         avg_technical_score=round(float(avg_tech), 1),  # type: ignore
@@ -4835,20 +4058,8 @@ async def get_dashboard_data(db: Session = Depends(get_db)):
 
 # ── WebSocket: Real-time NLP Stream ──────────────────────────────────────
 
-
 @app.websocket("/ws/interview/{candidate_id}")
 async def websocket_interview(websocket: WebSocket, candidate_id: str):
-    # Authenticate WebSocket connection using HttpOnly cookie
-    cookie_token = websocket.cookies.get("session_token")
-    if not cookie_token:
-        await websocket.close(code=1008)
-        return
-    try:
-        jwt.decode(cookie_token, JWT_SECRET, algorithms=["HS256"])
-    except Exception:
-        await websocket.close(code=1008)
-        return
-
     await websocket.accept()
     logger.info(f"[WS] Connected: {candidate_id}")
     try:
@@ -4867,9 +4078,9 @@ async def websocket_interview(websocket: WebSocket, candidate_id: str):
 
             elif msg_type == "transcript":
                 # Real-time NLP analysis of partial transcript
-                text = msg.get("data", "")
+                text    = msg.get("data", "")
                 fillers = detect_filler_words(text)
-                wpm = words_per_minute(text, msg.get("duration", 30))
+                wpm     = words_per_minute(text, msg.get("duration", 30))
                 session = get_session(candidate_id)
                 await websocket.send_json({
                     "type": "analysis",
@@ -4888,24 +4099,19 @@ async def websocket_interview(websocket: WebSocket, candidate_id: str):
                     if not hasattr(session, "behavioral_log"):
                         session.behavioral_log = []
                     session.behavioral_log.append(telemetry)
-                    # Keep last 50 readings (covers a ~8 minute interview at
-                    # 10s intervals)
+                    # Keep last 50 readings (covers a ~8 minute interview at 10s intervals)
                     if len(session.behavioral_log) > 50:
                         session.behavioral_log = session.behavioral_log[-50:]
-                logger.debug(
-                    f"[WS] Behavioral telemetry from {candidate_id}: attention={
-                        telemetry.get(
-                            'attention_score', 'N/A')}")
+                logger.debug(f"[WS] Behavioral telemetry from {candidate_id}: attention={telemetry.get('attention_score', 'N/A')}")
                 # No response needed — fire and forget
 
             elif msg_type == "submit_answer":
-                # Full async assessment via WebSocket (avoids HTTP timeout on
-                # slow connections)
-                answer = msg.get("answer", "")
+                # Full async assessment via WebSocket (avoids HTTP timeout on slow connections)
+                answer   = msg.get("answer", "")
                 question = msg.get("question", "")
-                emotion = msg.get("emotion", "Neutral")
-                fillers = detect_filler_words(answer)
-                wpm = msg.get("wpm", 0)
+                emotion  = msg.get("emotion", "Neutral")
+                fillers  = detect_filler_words(answer)
+                wpm      = msg.get("wpm", 0)
                 await websocket.send_json({"type": "assessing", "message": "Sterling AI is evaluating your answer..."})
                 try:
                     result = await assess_answer(
@@ -4919,20 +4125,19 @@ async def websocket_interview(websocket: WebSocket, candidate_id: str):
                         filler_words=fillers,
                         wpm=wpm,
                     )
-                    feedback = result.get("eq_feedback") or result.get(
-                        "feedback") or "Assessment complete."
+                    feedback = result.get("eq_feedback") or result.get("feedback") or "Assessment complete."
                     await websocket.send_json({
                         "type": "assessment_complete",
-                        "technical_score": int(result.get("technical_score", 0)),
+                        "technical_score":     int(result.get("technical_score", 0)),
                         "communication_score": int(result.get("communication_score", 60)),
-                        "confidence_score": int(result.get("confidence_score", 60)),
-                        "behavioral_score": int(result.get("behavioral_score", 60)),
-                        "fluency_score": int(result.get("fluency_score", 60)),
-                        "feedback": feedback,
-                        "next_question": result.get("next_technical_question", ""),
-                        "answer_quality": result.get("answer_quality", "average"),
-                        "filler_words": fillers,
-                        "model_used": result.get("model_used", "sterling ai"),
+                        "confidence_score":    int(result.get("confidence_score", 60)),
+                        "behavioral_score":    int(result.get("behavioral_score", 60)),
+                        "fluency_score":       int(result.get("fluency_score", 60)),
+                        "feedback":            feedback,
+                        "next_question":       result.get("next_technical_question", ""),
+                        "answer_quality":      result.get("answer_quality", "average"),
+                        "filler_words":        fillers,
+                        "model_used":          result.get("model_used", "sterling ai"),
                     })
                 except Exception as assess_err:
                     logger.error(f"[WS] Assessment error: {assess_err}")
@@ -4948,12 +4153,16 @@ async def websocket_interview(websocket: WebSocket, candidate_id: str):
         try:
             await websocket.close(code=1011)
         except Exception:
-            pass  # nosec
+            pass
 
 
 # ════════════════════════════════════════════════════════════════════════════
 # ── SCHEDULING MODULE (Phase 1 — Candidate Portal Upgrade) ──────────────
 # ════════════════════════════════════════════════════════════════════════════
+
+from services.email_service import send_otp_email, send_notification_email
+
+
 
 
 # ── Slot Models (Pydantic) ────────────────────────────────────────────────
@@ -4965,18 +4174,15 @@ class SlotCreateRequest(BaseModel):
     timezone: str = "Asia/Kolkata"
     max_bookings: int = 1
 
-
 class BookSlotRequest(BaseModel):
     slot_id: str
     candidate_id: str
-
 
 class CustomBookSlotRequest(BaseModel):
     candidate_id: str
     date: str
     start_time: str
     timezone: str = "Asia/Kolkata"
-
 
 class RescheduleRequest(BaseModel):
     new_slot_id: str
@@ -5001,14 +4207,10 @@ async def create_slot(data: SlotCreateRequest, db: Session = Depends(get_db)):
     db.commit()
     return {"slot_id": slot_id, "status": "created"}
 
-
 @app.get("/api/admin/slots", tags=["Scheduling"])
 async def get_all_slots(db: Session = Depends(get_db)):
     """Admin: get all slots with booking counts."""
-    slots = db.query(InterviewSlot).filter_by(
-        is_active=True).order_by(
-        InterviewSlot.date,
-        InterviewSlot.start_time).all()
+    slots = db.query(InterviewSlot).filter_by(is_active=True).order_by(InterviewSlot.date, InterviewSlot.start_time).all()
     result = []
     for s in slots:
         booked = len([b for b in s.bookings if b.status == "BOOKED"])
@@ -5023,13 +4225,11 @@ async def get_all_slots(db: Session = Depends(get_db)):
             "available": s.max_bookings - booked,
             "is_full": booked >= s.max_bookings,
             "bookings": [
-                {"candidate_id": b.candidate_id,
-                    "status": b.status, "booked_at": b.booked_at}
+                {"candidate_id": b.candidate_id, "status": b.status, "booked_at": b.booked_at}
                 for b in s.bookings
             ]
         })
     return result
-
 
 @app.get("/api/admin/bookings", tags=["Admin", "Scheduling"])
 async def admin_get_all_bookings(db: Session = Depends(get_db)):
@@ -5061,7 +4261,6 @@ async def admin_get_all_bookings(db: Session = Depends(get_db)):
     # Sort by date
     result.sort(key=lambda x: (x["slot"]["date"], x["slot"]["start_time"]))
     return result
-
 
 @app.delete("/api/admin/slots/{slot_id}", tags=["Scheduling"])
 async def delete_slot(slot_id: str, db: Session = Depends(get_db)):
@@ -5100,43 +4299,32 @@ async def get_available_slots(db: Session = Depends(get_db)):
             })
     return result
 
-
 @app.post("/api/slots/custom-book", tags=["Scheduling"])
-async def custom_book_slot(data: CustomBookSlotRequest,
-                           background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def custom_book_slot(data: CustomBookSlotRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Candidate books an interview slot on their own selected date/time."""
-
+    
     # Check if candidate already has an active booking
-    existing = db.query(SlotBooking).filter_by(
-        candidate_id=data.candidate_id, status="BOOKED").first()
+    existing = db.query(SlotBooking).filter_by(candidate_id=data.candidate_id, status="BOOKED").first()
     if existing:
-        raise HTTPException(
-            status_code=409,
-            detail="You already have a scheduled interview. Please cancel it first to reschedule.")
+        raise HTTPException(status_code=409, detail="You already have a scheduled interview. Please cancel it first to reschedule.")
 
     # Reject any slot whose start time has already passed (IST). e.g. at 3:01 PM
     # a candidate must not be able to book the 3:00 PM slot. The frontend sends
     # start_time like "3:00 PM"; compare it against the current IST wall clock.
     from datetime import datetime as _dt, timedelta as _td, timezone as _tz
     try:
-        slot_dt = _dt.strptime(
-            f"{data.date} {data.start_time}", "%Y-%m-%d %I:%M %p")
+        slot_dt = _dt.strptime(f"{data.date} {data.start_time}", "%Y-%m-%d %I:%M %p")
     except Exception:
         try:
-            slot_dt = _dt.strptime(
-                f"{data.date} {data.start_time}", "%Y-%m-%d %H:%M")
+            slot_dt = _dt.strptime(f"{data.date} {data.start_time}", "%Y-%m-%d %H:%M")
         except Exception:
             slot_dt = None
     if slot_dt is not None:
-        ist_now = (_dt.now(_tz.utc) +
-                   _td(hours=5, minutes=30)).replace(tzinfo=None)
+        ist_now = (_dt.now(_tz.utc) + _td(hours=5, minutes=30)).replace(tzinfo=None)
         if slot_dt <= ist_now:
-            raise HTTPException(
-                status_code=400,
-                detail="That time has already passed. Please choose a later slot.")
+            raise HTTPException(status_code=400, detail="That time has already passed. Please choose a later slot.")
 
-    candidate = db.query(Candidate).filter_by(
-        candidate_id=data.candidate_id).first()
+    candidate = db.query(Candidate).filter_by(candidate_id=data.candidate_id).first()
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
@@ -5144,8 +4332,7 @@ async def custom_book_slot(data: CustomBookSlotRequest,
     # Self-scheduled AI interviews run in parallel, so a given date/time has no
     # exclusivity conflict. Reuse an existing slot for this exact date/time/timezone
     # (so every candidate who picks it shares one slot) and only create a new slot
-    # when none exists yet. A generous group capacity keeps it effectively
-    # open.
+    # when none exists yet. A generous group capacity keeps it effectively open.
     GROUP_CAPACITY = 100
     slot = db.query(InterviewSlot).filter_by(
         date=data.date,
@@ -5203,8 +4390,7 @@ async def custom_book_slot(data: CustomBookSlotRequest,
         </div></body></html>
         """
         if candidate.email:
-            send_notification_email(str(candidate.email), str(
-                candidate.name), f"✅ Interview Confirmed — {slot.date} at {slot.start_time}", html)
+            send_notification_email(str(candidate.email), str(candidate.name), f"✅ Interview Confirmed — {slot.date} at {slot.start_time}", html)
 
     background_tasks.add_task(send_booking_confirmation)
 
@@ -5215,41 +4401,29 @@ async def custom_book_slot(data: CustomBookSlotRequest,
         "message": "Interview scheduled! Check your email for confirmation."
     }
 
-
 @app.post("/api/slots/book", tags=["Scheduling"])
-async def book_slot(data: BookSlotRequest,
-                    background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def book_slot(data: BookSlotRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Candidate books an interview slot."""
     # RACE-CONDITION FIX: lock the slot row for the duration of this transaction so
     # two concurrent requests can't both pass the capacity check and overbook the
     # slot. On PostgreSQL this emits SELECT ... FOR UPDATE; on SQLite it is a safe
     # no-op. The capacity count is taken with a fresh query (not the cached
     # relationship) so it reflects committed rows.
-    slot = db.query(InterviewSlot).filter_by(
-        slot_id=data.slot_id,
-        is_active=True).with_for_update().first()
+    slot = db.query(InterviewSlot).filter_by(slot_id=data.slot_id, is_active=True).with_for_update().first()
     if not slot:
-        raise HTTPException(status_code=404,
-                            detail="Slot not found or no longer available")
+        raise HTTPException(status_code=404, detail="Slot not found or no longer available")
 
-    booked_count = db.query(SlotBooking).filter_by(
-        slot_id=data.slot_id, status="BOOKED").count()
+    booked_count = db.query(SlotBooking).filter_by(slot_id=data.slot_id, status="BOOKED").count()
     if booked_count >= slot.max_bookings:
         db.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail="This slot is already full. Please choose another.")
+        raise HTTPException(status_code=409, detail="This slot is already full. Please choose another.")
 
     # Check if candidate already has an active booking
-    existing = db.query(SlotBooking).filter_by(
-        candidate_id=data.candidate_id, status="BOOKED").first()
+    existing = db.query(SlotBooking).filter_by(candidate_id=data.candidate_id, status="BOOKED").first()
     if existing:
-        raise HTTPException(
-            status_code=409,
-            detail="You already have a scheduled interview. Please cancel it first to reschedule.")
+        raise HTTPException(status_code=409, detail="You already have a scheduled interview. Please cancel it first to reschedule.")
 
-    candidate = db.query(Candidate).filter_by(
-        candidate_id=data.candidate_id).first()
+    candidate = db.query(Candidate).filter_by(candidate_id=data.candidate_id).first()
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
@@ -5285,8 +4459,7 @@ async def book_slot(data: BookSlotRequest,
         </div></body></html>
         """
         if candidate.email:
-            send_notification_email(str(candidate.email), str(
-                candidate.name), f"✅ Interview Confirmed — {slot.date} at {slot.start_time}", html)
+            send_notification_email(str(candidate.email), str(candidate.name), f"✅ Interview Confirmed — {slot.date} at {slot.start_time}", html)
 
     background_tasks.add_task(send_booking_confirmation)
 
@@ -5297,13 +4470,10 @@ async def book_slot(data: BookSlotRequest,
         "message": "Interview scheduled! Check your email for confirmation."
     }
 
-
 @app.get("/api/candidates/{candidate_id}/booking", tags=["Scheduling"])
-async def get_candidate_booking(candidate_id: str, db: Session = Depends(
-        get_db), _auth: dict = Depends(require_candidate_or_admin)):
+async def get_candidate_booking(candidate_id: str, db: Session = Depends(get_db), _auth: dict = Depends(require_candidate_or_admin)):
     """Get the candidate's current active booking, if any."""
-    booking = db.query(SlotBooking).filter_by(
-        candidate_id=candidate_id, status="BOOKED").first()
+    booking = db.query(SlotBooking).filter_by(candidate_id=candidate_id, status="BOOKED").first()
     if not booking:
         return {"booking": None}
     slot = booking.slot
@@ -5321,7 +4491,6 @@ async def get_candidate_booking(candidate_id: str, db: Session = Depends(
         }
     }
 
-
 @app.patch("/api/bookings/{booking_id}/cancel", tags=["Scheduling"])
 async def cancel_booking(booking_id: str, db: Session = Depends(get_db)):
     """Candidate cancels their booking to reschedule."""
@@ -5329,12 +4498,10 @@ async def cancel_booking(booking_id: str, db: Session = Depends(get_db)):
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
     if booking.status != "BOOKED":
-        raise HTTPException(status_code=409,
-                            detail="Booking is not in BOOKED state")
+        raise HTTPException(status_code=409, detail="Booking is not in BOOKED state")
     booking.status = "CANCELLED"  # type: ignore
     db.commit()
     return {"status": "cancelled"}
-
 
 @app.patch("/api/bookings/{booking_id}/noshow", tags=["Scheduling"])
 async def mark_no_show(booking_id: str, db: Session = Depends(get_db)):
@@ -5346,12 +4513,10 @@ async def mark_no_show(booking_id: str, db: Session = Depends(get_db)):
     db.commit()
 
     # Notify candidate
-    candidate = db.query(Candidate).filter_by(
-        candidate_id=booking.candidate_id).first()
+    candidate = db.query(Candidate).filter_by(candidate_id=booking.candidate_id).first()
     if candidate:
         slot = booking.slot
-        FRONTEND_URL = os.getenv("FRONTEND_URL",
-                                 "https://ai-interview-portal.vercel.app")
+        FRONTEND_URL = os.getenv("FRONTEND_URL", "https://ai-interview-portal.vercel.app")
         html = f"""
         <html><body style="font-family:Arial,sans-serif;padding:20px;color:#0f172a;">
         <div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;border:1px solid #e2e8f0;border-top:4px solid #f59e0b;">
@@ -5366,8 +4531,7 @@ async def mark_no_show(booking_id: str, db: Session = Depends(get_db)):
           <p style="font-size:12px;color:#94a3b8;text-align:center;">Sterling AI Interview Engine © Sterling E-Mobility</p>
         </div></body></html>
         """
-        send_notification_email(str(candidate.email), str(
-            candidate.name), "⚠️ You missed your Sterling interview — reschedule now", html)
+        send_notification_email(str(candidate.email), str(candidate.name), "⚠️ You missed your Sterling interview — reschedule now", html)
 
     return {"status": "no_show_marked"}
 
@@ -5375,30 +4539,18 @@ async def mark_no_show(booking_id: str, db: Session = Depends(get_db)):
 # ── Candidate Portal: Profile & Status ─────────────────────────────────────
 
 @app.get("/api/candidates/{candidate_id}/portal", tags=["Candidate Portal"])
-async def get_candidate_portal(candidate_id: str, db: Session = Depends(
-        get_db), _auth: dict = Depends(require_candidate_or_admin)):
+async def get_candidate_portal(candidate_id: str, db: Session = Depends(get_db), _auth: dict = Depends(require_candidate_or_admin)):
     """Full candidate portal data: profile, booking, latest interview status."""
-    candidate = db.query(Candidate).filter_by(
-        candidate_id=candidate_id).first()
+    candidate = db.query(Candidate).filter_by(candidate_id=candidate_id).first()
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
-    interviews = sorted(
-        list(candidate.interviews),  # type: ignore
-        key=lambda i: i.started_at,
-        reverse=True)
+    interviews = sorted(candidate.interviews, key=lambda i: i.started_at, reverse=True)  # type: ignore
     latest = interviews[0] if interviews else None
 
-    report = db.query(FinalReport).filter_by(
-        interview_id=latest.interview_id).first() if latest else None
-    hiring_decision = getattr(
-        report,
-        "hiring_decision",
-        "PENDING") if report else "PENDING"
-    is_completed = bool(
-        latest and (
-            latest.completed_at or (
-                latest.overall_score or 0) > 0))
+    report = db.query(FinalReport).filter_by(interview_id=latest.interview_id).first() if latest else None
+    hiring_decision = getattr(report, "hiring_decision", "PENDING") if report else "PENDING"
+    is_completed = bool(latest and (latest.completed_at or (latest.overall_score or 0) > 0))
 
     # Score tier (for candidate display — no exact score shown)
     global_score = float(latest.overall_score or 0) if latest else 0.0
@@ -5414,8 +4566,7 @@ async def get_candidate_portal(candidate_id: str, db: Session = Depends(
         score_tier = None
 
     # Booking
-    booking = db.query(SlotBooking).filter_by(
-        candidate_id=candidate_id, status="BOOKED").first()
+    booking = db.query(SlotBooking).filter_by(candidate_id=candidate_id, status="BOOKED").first()
     booking_data = None
     if booking:
         slot = booking.slot
@@ -5428,8 +4579,7 @@ async def get_candidate_portal(candidate_id: str, db: Session = Depends(
         }
 
     # Application status pipeline
-    if is_completed and hiring_decision not in (
-            "PENDING", "UNDER_REVIEW", "IN_PROGRESS"):
+    if is_completed and hiring_decision not in ("PENDING", "UNDER_REVIEW", "IN_PROGRESS"):
         app_stage = "DECISION_MADE"
     elif is_completed:
         app_stage = "UNDER_REVIEW"
@@ -5441,26 +4591,18 @@ async def get_candidate_portal(candidate_id: str, db: Session = Depends(
         app_stage = "REGISTERED"
 
     # Resume
-    resume = db.query(Resume).filter_by(
-        candidate_id=candidate_id).order_by(
-        Resume.resume_id.desc()).first()
+    resume = db.query(Resume).filter_by(candidate_id=candidate_id).order_by(Resume.resume_id.desc()).first()
 
     # Attempt history (limited info for candidate)
     attempts = []
     for idx, iv in enumerate(interviews[:5]):
-        iv_report = db.query(FinalReport).filter_by(
-            interview_id=iv.interview_id).first()
+        iv_report = db.query(FinalReport).filter_by(interview_id=iv.interview_id).first()
         iv_score = float(iv.overall_score or 0)
-        if iv_score >= 85:
-            tier = "Exceptional"
-        elif iv_score >= 70:
-            tier = "Strong"
-        elif iv_score >= 55:
-            tier = "Good"
-        elif iv_score > 0:
-            tier = "Needs Development"
-        else:
-            tier = None
+        if iv_score >= 85: tier = "Exceptional"
+        elif iv_score >= 70: tier = "Strong"
+        elif iv_score >= 55: tier = "Good"
+        elif iv_score > 0: tier = "Needs Development"
+        else: tier = None
         attempts.append({
             "attempt_number": idx + 1,
             "date": iv.started_at[:10] if iv.started_at else None,
@@ -5474,13 +4616,11 @@ async def get_candidate_portal(candidate_id: str, db: Session = Depends(
     if latest and latest.role:
         current_job_role_name = latest.role.role_name
     elif candidate.role_id:
-        role_record = db.query(JobRole).filter_by(
-            role_id=candidate.role_id).first()
+        role_record = db.query(JobRole).filter_by(role_id=candidate.role_id).first()
         if role_record:
             current_job_role_name = role_record.role_name
         else:
-            # fallback in case role_id is literally the string name
-            current_job_role_name = candidate.role_id
+            current_job_role_name = candidate.role_id # fallback in case role_id is literally the string name
 
     return {
         "candidate": {
@@ -5508,17 +4648,14 @@ async def get_candidate_portal(candidate_id: str, db: Session = Depends(
         "booking": booking_data,
         "resume": {
             "uploaded": bool(resume),
-            # type: ignore
-            "resume_score": float(resume.resume_score or 0) if resume else 0,
+            "resume_score": float(resume.resume_score or 0) if resume else 0,  # type: ignore
         },
         "attempts": attempts,
         "interview_id": latest.interview_id if latest else None,
     }
 
-
 class ChatRequest(BaseModel):
     message: str
-
 
 @app.get("/api/admin/ai-learning-stats", tags=["Admin"])
 async def get_ai_learning_statistics(_admin: dict = Depends(require_admin)):
@@ -5539,7 +4676,6 @@ async def get_ai_learning_statistics(_admin: dict = Depends(require_admin)):
             "historical_log": []
         }}
 
-
 @app.post("/api/assistant/chat")
 async def assistant_chat(req: ChatRequest):
     try:
@@ -5552,4 +4688,4 @@ async def assistant_chat(req: ChatRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("Main:app", host="0.0.0.0", port=8000, reload=True)  # nosec
+    uvicorn.run("Main:app", host="0.0.0.0", port=8000, reload=True)

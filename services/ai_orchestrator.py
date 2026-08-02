@@ -26,8 +26,8 @@ logger = logging.getLogger("AIOrchestrator")
 
 # ── Model Configuration ────────────────────────────────────────────────────
 
-GEMINI_MODEL = "gemini-2.0-flash"
-GROQ_MODEL = "llama-3.3-70b-versatile"   # Free tier: 6000 RPD
+GEMINI_MODEL  = "gemini-2.0-flash"
+GROQ_MODEL    = "llama-3.3-70b-versatile"   # Free tier: 6000 RPD
 DEEPSEEK_MODEL = "deepseek-chat"             # ~$0.001/1k tokens
 
 # ── Lazy SDK imports (no crash if not installed) ───────────────────────────
@@ -55,8 +55,8 @@ except ImportError:
 # ── Internal stats ─────────────────────────────────────────────────────────
 
 _stats = {
-    "gemini": {"calls": 0, "failures": 0, "total_ms": 0.0},
-    "groq": {"calls": 0, "failures": 0, "total_ms": 0.0},
+    "gemini":   {"calls": 0, "failures": 0, "total_ms": 0.0},
+    "groq":     {"calls": 0, "failures": 0, "total_ms": 0.0},
     "deepseek": {"calls": 0, "failures": 0, "total_ms": 0.0},
     "fallback": {"calls": 0, "failures": 0, "total_ms": 0.0},
 }
@@ -72,8 +72,7 @@ def _record(model: str, elapsed_ms: float, failed: bool = False):
 
 # ── Gemini driver ──────────────────────────────────────────────────────────
 
-async def _call_gemini_raw(
-        prompt: str, temperature: float = 0.65, max_tokens: int = 1024) -> str:
+async def _call_gemini_raw(prompt: str, temperature: float = 0.65, max_tokens: int = 1024) -> str:
     if not GEMINI_OK:
         raise RuntimeError("google-genai SDK not installed")
     key = os.getenv("GEMINI_API_KEY", "")
@@ -94,8 +93,7 @@ async def _call_gemini_raw(
 
 # ── Groq driver ────────────────────────────────────────────────────────────
 
-async def _call_groq_raw(
-        prompt: str, temperature: float = 0.65, max_tokens: int = 1024) -> str:
+async def _call_groq_raw(prompt: str, temperature: float = 0.65, max_tokens: int = 1024) -> str:
     if not GROQ_OK:
         raise RuntimeError("groq SDK not installed. pip install groq")
     key = os.getenv("GROQ_API_KEY", "")
@@ -106,7 +104,7 @@ async def _call_groq_raw(
         model=GROQ_MODEL,
         messages=[
             {"role": "system", "content": "You are an expert AI interview evaluation engine. Always respond with valid JSON only."},
-            {"role": "user", "content": prompt},
+            {"role": "user",   "content": prompt},
         ],
         temperature=temperature,
         max_tokens=max_tokens,
@@ -117,11 +115,9 @@ async def _call_groq_raw(
 
 # ── DeepSeek driver ────────────────────────────────────────────────────────
 
-async def _call_deepseek_raw(
-        prompt: str, temperature: float = 0.65, max_tokens: int = 1024) -> str:
+async def _call_deepseek_raw(prompt: str, temperature: float = 0.65, max_tokens: int = 1024) -> str:
     if not OPENAI_OK:
-        raise RuntimeError(
-            "openai SDK not installed (used for DeepSeek). pip install openai")
+        raise RuntimeError("openai SDK not installed (used for DeepSeek). pip install openai")
     key = os.getenv("DEEPSEEK_API_KEY", "")
     if not key:
         raise RuntimeError("DEEPSEEK_API_KEY not configured")
@@ -133,7 +129,7 @@ async def _call_deepseek_raw(
         model=DEEPSEEK_MODEL,
         messages=[
             {"role": "system", "content": "You are an expert AI interview engine. Respond with valid JSON only."},
-            {"role": "user", "content": prompt},
+            {"role": "user",   "content": prompt},
         ],
         temperature=temperature,
         max_tokens=max_tokens,
@@ -152,20 +148,17 @@ async def orchestrate(
 ) -> tuple[str, str]:
     """
     Route prompt to the best available model.
-
+    
     Returns: (raw_text_response, model_name_used)
-
+    
     Raises: RuntimeError if all models are unavailable.
     """
     # Build priority order based on task and env config
     order = _build_priority(task, preferred_model)
 
     for model_name in order:
-        breaker = get_breaker(
-            model_name,
-            failure_threshold=3,
-            recovery_timeout=60)
-        driver = _get_driver(model_name)
+        breaker = get_breaker(model_name, failure_threshold=3, recovery_timeout=60)
+        driver  = _get_driver(model_name)
 
         if driver is None:
             continue
@@ -175,24 +168,19 @@ async def orchestrate(
             raw = await breaker.call(driver, prompt, temperature, max_tokens)
             elapsed = (time.monotonic() - t0) * 1000
             _record(model_name, elapsed)
-            logger.info(
-                f"[Orchestrator] {model_name} responded in {
-                    elapsed:.0f}ms for task={task}")
+            logger.info(f"[Orchestrator] {model_name} responded in {elapsed:.0f}ms for task={task}")
             return raw, model_name
         except CircuitOpenError:
-            logger.warning(
-                f"[Orchestrator] {model_name} circuit is OPEN — skipping")
+            logger.warning(f"[Orchestrator] {model_name} circuit is OPEN — skipping")
             continue
         except Exception as exc:
             elapsed = (time.monotonic() - t0) * 1000
             _record(model_name, elapsed, failed=True)
-            logger.warning(
-                f"[Orchestrator] {model_name} failed ({exc}) — trying next")
+            logger.warning(f"[Orchestrator] {model_name} failed ({exc}) — trying next")
             continue
 
     # All models failed — use rule-based fallback
-    logger.error(
-        "[Orchestrator] ALL models failed. Using rule-based fallback.")
+    logger.error("[Orchestrator] ALL models failed. Using rule-based fallback.")
     _record("fallback", 0)
     raise RuntimeError("All AI models are currently unavailable.")
 
@@ -201,7 +189,7 @@ def _build_priority(task: str, preferred: Optional[str]) -> list[str]:
     """Build the model priority list based on task type and availability."""
     if preferred:
         return [preferred, "gemini", "groq", "deepseek"]
-
+    
     # Task-specific routing
     if task in ("assessment", "report"):
         # Groq is much faster and avoids the current Gemini rate limits
@@ -219,9 +207,9 @@ def _build_priority(task: str, preferred: Optional[str]) -> list[str]:
 def _get_driver(model: str):
     """Return the async driver function for a model name."""
     return {
-        "gemini": _call_gemini_raw if GEMINI_OK else None,
-        "groq": _call_groq_raw if GROQ_OK else None,
-        "deepseek": _call_deepseek_raw if OPENAI_OK else None,
+        "gemini":   _call_gemini_raw   if GEMINI_OK else None,
+        "groq":     _call_groq_raw     if GROQ_OK   else None,
+        "deepseek": _call_deepseek_raw if OPENAI_OK  else None,
     }.get(model)
 
 
@@ -231,9 +219,9 @@ def get_orchestrator_stats() -> dict:
     for model, s in _stats.items():
         calls = s["calls"] or 1  # avoid zero division
         result[model] = {
-            "total_calls": s["calls"],
+            "total_calls":   s["calls"],
             "failure_count": s["failures"],
-            "success_rate": round((calls - s["failures"]) / calls * 100, 1),
+            "success_rate":  round((calls - s["failures"]) / calls * 100, 1),
             "avg_latency_ms": round(s["total_ms"] / calls, 0),
         }
     return result

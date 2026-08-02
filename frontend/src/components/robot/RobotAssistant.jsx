@@ -425,7 +425,7 @@ function ChatPanel({ onClose }) {
     try {
       const res = await apiClient.askAssistant({ message: userMsg });
       setMessages((prev) => [...prev, { role: 'assistant', content: res.reply }]);
-    } catch (err) { console.error(err);
+    } catch (err) {
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', content: 'I am having trouble connecting to my neural net right now. Please try again.' },

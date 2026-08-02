@@ -70,7 +70,7 @@ export function useAudioStream() {
       // We use getOutputTimeDomain on the default output when available.
       // On unsupported browsers, we fall back to an energy simulation model.
       analyser.connect(ctx.destination);
-    } catch (e) { console.error(e);
+    } catch (e) {
       // AudioContext blocked by autoplay policy — use simulation model below
       audioCtxRef.current = null;
       analyserRef.current = null;
@@ -82,7 +82,7 @@ export function useAudioStream() {
       if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
         audioCtxRef.current.close();
       }
-    } catch (e) { console.error(e);console.error(e); }
+    } catch (e) {}
     audioCtxRef.current = null;
     analyserRef.current = null;
     smoothedFreqRef.current = 0;
@@ -98,7 +98,7 @@ export function useAudioStream() {
       return smoothedFreqRef.current;
     }
 
-    let raw; // = 0;
+    let raw = 0;
 
     if (analyserRef.current) {
       // Real path: read from AudioContext analyser
@@ -305,6 +305,3 @@ export function useAudioStream() {
 
   return { speak, speakChunks, enqueue, stop, isSpeaking, isReady: true, getAudioFrequency, playActiveListeningCue };
 }
-
-// eslint-disable-next-line
-console.log(typeof raw !== "undefined" ? raw : "");
