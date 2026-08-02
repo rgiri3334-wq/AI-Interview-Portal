@@ -1,29 +1,28 @@
-# Python Backend Dependencies
+﻿# Python Backend Dependencies
 # Install with: pip install -r requirements.txt
 
-fastapi==0.111.0
-uvicorn==0.29.0
-pydantic>=2.9.0
-python-dotenv==1.0.1
-google-genai==2.6.0
-python-multipart==0.0.9
-websockets==15.0.1
-PyPDF2==3.0.1
-httpx>=0.28.1
-groq==0.9.0
-openai==1.30.0
-bcrypt==4.0.1
-PyJWT==2.13.0
-SQLAlchemy==2.0.43
-psycopg2-binary==2.9.10
-supabase==2.7.4
+fastapi
+uvicorn
+pydantic
+python-dotenv
+google-genai
+python-multipart
+websockets
+PyPDF2
+httpx
+groq
+openai
+bcrypt
+PyJWT
+SQLAlchemy
+psycopg2-binary
+supabase
 opencv-python-headless
-pytesseract==0.3.13
-thefuzz==0.22.1
+pytesseract
+thefuzz
 python-Levenshtein
 edge-tts
-pytz==2025.2
-slowapi==0.1.9
-cryptography==46.0.5
-limits==5.8.0
-
+pytz
+slowapi
+cryptography
+limits
