@@ -272,7 +272,7 @@ export default function AdminCandidateRegistration() {
                       </div>
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1">Department</label>
-                        <select value={department} onChange={e => setDepartment(e.target.value)} required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-shadow">
+                        <select value={department} onChange={e => setDepartment(e.target.value)} required className="w-full px-4 py-3 bg-slate-50 text-slate-900 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-shadow">
                           <option value="">Select Department...</option>
                           {Object.keys(DEFAULT_STRUCTURE).map(d => (
                             <option key={d} value={d}>{d}</option>
@@ -281,7 +281,7 @@ export default function AdminCandidateRegistration() {
                       </div>
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1">Job Role</label>
-                        <select value={role} onChange={e => setRole(e.target.value)} required disabled={!department} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none disabled:opacity-50 transition-shadow">
+                        <select value={role} onChange={e => setRole(e.target.value)} required disabled={!department} className="w-full px-4 py-3 bg-slate-50 text-slate-900 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none disabled:opacity-50 transition-shadow">
                           <option value="">Select Role...</option>
                           {availableRoles.map(r => (
                             <option key={r} value={r}>{r}</option>

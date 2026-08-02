@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -264,7 +265,8 @@ function IntegritySignalModal({ candidate, onClose }) {
           </p>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 
@@ -353,10 +355,10 @@ function CandidateListModal({ filter, leaderboard, onClose, onNavigate, onDecisi
     title = "Shortlisted Candidates";
   }
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6"
       onClick={onClose}
     >
       <motion.div
@@ -431,7 +433,8 @@ function CandidateListModal({ filter, leaderboard, onClose, onNavigate, onDecisi
           )}
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 
