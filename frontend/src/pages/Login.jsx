@@ -47,6 +47,7 @@ export default function Login() {
         sessionStorage.setItem('role', res.role || 'admin');
         if (res.email) sessionStorage.setItem('adminEmail', res.email);
         if (res.role) sessionStorage.setItem('adminRole', res.role);
+        if (res.token) sessionStorage.setItem('adminToken', res.token);
         // We will call the onSuccess callback if provided, else navigate immediately
         return res;
       }

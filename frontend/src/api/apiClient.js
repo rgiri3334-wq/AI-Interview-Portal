@@ -28,8 +28,13 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   config.headers['X-Request-ID'] = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
   
-  // Tokens are now handled exclusively by HttpOnly cookies (withCredentials: true).
-  // sessionStorage token storage has been removed to prevent XSS vulnerabilities.
+  // Tokens are now handled primarily by HttpOnly cookies (withCredentials: true),
+  // but due to cross-site cookie blocking in modern browsers (e.g. Safari, Chrome without CHIPS),
+  // we restore the Bearer token fallback for cross-origin deployments (Vercel -> Render).
+  const token = sessionStorage.getItem('adminToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
 
   // #19: only log requests in dev — avoids noisy/info-leaking console in production.
   if (import.meta.env?.DEV) {
