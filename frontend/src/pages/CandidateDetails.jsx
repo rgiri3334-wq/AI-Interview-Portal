@@ -172,10 +172,14 @@ export default function CandidateDetails() {
           setBooking(b);
           setStage(app.stage || 'REGISTERED');
           
+          const assignedRole = app.job_role || c.role_id;
+          const assignedDept = c.department_id;
+
           // Pre-populate fields
           setForm(prev => ({
             ...prev,
-            job_role: app.job_role || '',
+            job_role: assignedRole || '',
+            department: assignedDept || '',
             experience: c.experience_level || '',
             skills: c.key_skills || '',
             github_url: c.github_url || '',
@@ -186,13 +190,15 @@ export default function CandidateDetails() {
             phone_number: c.phone_number || ''
           }));
           
-          if (app.job_role) {
+          if (assignedRole) {
             setHasAppliedRole(true);
-            // Reverse lookup department
-            for (const [dept, roles] of Object.entries(DEFAULT_STRUCTURE)) {
-              if (roles.includes(app.job_role)) {
-                setForm(prev => ({ ...prev, department: dept }));
-                break;
+            // Reverse lookup department if only role was provided
+            if (!assignedDept) {
+              for (const [dept, roles] of Object.entries(DEFAULT_STRUCTURE)) {
+                if (roles.includes(assignedRole)) {
+                  setForm(prev => ({ ...prev, department: dept }));
+                  break;
+                }
               }
             }
           }
