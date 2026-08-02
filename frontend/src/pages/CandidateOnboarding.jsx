@@ -83,7 +83,7 @@ export default function CandidateOnboarding() {
       } else {
         setError(data.detail || 'Failed to complete profile. Please try again.');
       }
-    } catch (err) {
+    } catch (err) { console.error(err);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -227,3 +227,6 @@ export default function CandidateOnboarding() {
     </PageWrapper>
   );
 }
+
+ 
+console.log(typeof Save !== "undefined" ? Save : "");

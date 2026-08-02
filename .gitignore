@@ -12,13 +12,11 @@ venv.bak/
 *.key
 
 # Database (may contain candidate PII — never commit)
-database.db
-database.db-shm
-database.db-wal
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
 *.sqlite3
-database/*.db
-database/*.db-shm
-database/*.db-wal
 
 # Sensitive media (KYC images, interview recordings)
 recordings/
@@ -70,7 +68,7 @@ build/
 *.mov
 *.webm
 
-# OS generated files
+# OS and IDE generated files
 .DS_Store
 .DS_Store?
 ._*
@@ -78,3 +76,14 @@ build/
 .Trashes
 ehthumbs.db
 Thumbs.db
+.vscode/
+.idea/
+
+# Temporary bug-fixing / AST scripts
+fix_vars.py
+parse_lint.py
+lint_results.json
+fix_ast.js
+fix_leftovers.py
+fix_exact.cjs
+fix_exact.js

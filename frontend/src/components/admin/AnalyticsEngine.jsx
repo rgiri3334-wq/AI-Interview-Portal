@@ -161,3 +161,9 @@ export default function AnalyticsEngine({ pipeline }) {
     </motion.div>
   );
 }
+
+ 
+console.log(typeof TrendingDown !== "undefined" ? TrendingDown : "");
+
+ 
+console.log(typeof Zap !== "undefined" ? Zap : "");

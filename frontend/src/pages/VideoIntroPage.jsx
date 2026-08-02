@@ -33,6 +33,7 @@ export default function VideoIntroPage() {
       await videoRef.current.play();
       setPhase('preview');
     } catch (e) {
+      console.error('Camera preview error:', e);
       setPermError('Camera/mic access denied. Please allow permissions and try again.');
     }
   };
@@ -199,6 +200,12 @@ export default function VideoIntroPage() {
                 <div className="absolute top-4 left-4 flex items-center gap-2 bg-slate-950/80 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full">
                   <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
                   <span className="text-white text-xs font-mono font-bold">REC {elapsed}s / {MAX_SECONDS}s</span>
+                </div>
+              )}
+
+              {phase === 'review' && recordedBlob && (
+                <div className="absolute top-4 right-4 bg-slate-900/80 backdrop-blur border border-emerald-500/30 px-3 py-1 rounded-full text-[10px] font-mono text-emerald-400 font-bold tracking-widest shadow-lg">
+                  {(recordedBlob.size / (1024 * 1024)).toFixed(2)} MB
                 </div>
               )}
             </div>

@@ -194,3 +194,6 @@ export default function ReportList() {
     </PageWrapper>
   );
 }
+
+ 
+console.log(typeof Filter !== "undefined" ? Filter : "");

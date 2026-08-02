@@ -34,26 +34,31 @@ logger = logging.getLogger("IntegrityEngine")
 
 SIGNAL_WEIGHTS = {
     # Tab / focus violations (proctoring)
-    "tab_switch_1st":          0,   # 1st tab switch → grace period, no deduction
-    "tab_switch_2nd":          8,   # 2nd tab switch → mild deduction
-    "tab_switch_3rd_plus":    15,   # 3rd+ tab switch → significant deduction
-    "devtools_detected":      12,   # Browser devtools opened during interview
+    "tab_switch_1st": 0,   # 1st tab switch → grace period, no deduction
+    "tab_switch_2nd": 8,   # 2nd tab switch → mild deduction
+    "tab_switch_3rd_plus": 15,   # 3rd+ tab switch → significant deduction
+    "devtools_detected": 12,   # Browser devtools opened during interview
 
     # Answer syntax signals
-    "gpt_syntax_confirmed":   20,   # CONFIRMED ChatGPT syntax (requires challenge fail too)
-    "gpt_syntax_suspected":    0,   # Suspected only → fires challenge, NO deduction yet
-    "resume_challenge_fail_1":  0,  # 1st resume claim failure → no deduction (grace)
+    # CONFIRMED ChatGPT syntax (requires challenge fail too)
+    "gpt_syntax_confirmed": 20,
+    "gpt_syntax_suspected": 0,   # Suspected only → fires challenge, NO deduction yet
+    # 1st resume claim failure → no deduction (grace)
+    "resume_challenge_fail_1": 0,
     "resume_challenge_fail_2": 18,  # 2nd consecutive failure on SAME claim → deduction
 
     # Behavioral signals (weighted low because individually meaningless)
     # FAIRNESS FIX: "zero_filler_words" no longer deducts. Absence of fillers (um/uh)
     # disproportionately flags non-native English speakers, articulate candidates, and
     # those who simply prepared — it is not evidence of cheating. Kept at weight 0 so
-    # it can still surface as an informational signal without penalizing the score.
-    "zero_filler_words":       0,   # (was 5) absence of fillers is not a cheating signal
-    "perfect_structure_every": 8,   # Every answer is robotically structured (STAR/format)
-    "abnormally_fast_wpm":    10,   # >280 WPM sustained (reading from script)
-    "abnormally_low_wpm":      0,   # <30 WPM (confusion, not cheating)
+    # it can still surface as an informational signal without penalizing the
+    # score.
+    # (was 5) absence of fillers is not a cheating signal
+    "zero_filler_words": 0,
+    # Every answer is robotically structured (STAR/format)
+    "perfect_structure_every": 8,
+    "abnormally_fast_wpm": 10,   # >280 WPM sustained (reading from script)
+    "abnormally_low_wpm": 0,   # <30 WPM (confusion, not cheating)
 }
 
 # ── GPT / AI Syntax Detector ─────────────────────────────────────────────────
@@ -87,6 +92,7 @@ GPT_SYNTAX_PATTERNS = [
 # Extracts specific, challengeable claims from a resume for the AI to probe.
 # Returns a list of strings that can be injected into the question prompt.
 
+
 def extract_challenge_targets(resume_data: dict) -> list[str]:
     """
     Given resume parsed data (from parse_and_score_resume), extract specific
@@ -117,7 +123,8 @@ def extract_challenge_targets(resume_data: dict) -> list[str]:
         targets.append(f"Probe area from resume: '{area}'")
 
     if not targets:
-        targets.append("No specific resume claims available — assess stated skills only.")
+        targets.append(
+            "No specific resume claims available — assess stated skills only.")
 
     return targets[:5]
 
@@ -163,7 +170,12 @@ def detect_gpt_syntax(transcript: str) -> dict:
     matched = []
     for pattern in GPT_SYNTAX_PATTERNS:
         if re.search(pattern, transcript, re.IGNORECASE):
-            matched.append(pattern.replace(r"\b", "").replace(r".{0,80}", "..."))
+            matched.append(
+                pattern.replace(
+                    r"\b",
+                    "").replace(
+                    r".{0,80}",
+                    "..."))
 
     return {
         "suspected": len(matched) >= 1,
@@ -183,13 +195,15 @@ class IntegrityEngine:
     def __init__(self, candidate_id: str):
         self.candidate_id = candidate_id
         self.score = 100              # Starts at 100 (clean), only goes down
-        self.signals: list[dict] = [] # Audit log — every signal recorded
+        self.signals: list[dict] = []  # Audit log — every signal recorded
         self._tab_switch_count = 0
         self._gpt_suspected_count = 0
         self._gpt_challenge_pending = False
-        self._resume_fail_streak: dict[str, int] = {}  # skill → consecutive fails
+        # skill → consecutive fails
+        self._resume_fail_streak: dict[str, int] = {}
 
-    def record_signal(self, signal_key: str, metadata: Optional[dict] = None) -> dict:
+    def record_signal(self, signal_key: str,
+                      metadata: Optional[dict] = None) -> dict:
         """
         Record an integrity signal event.
         Returns {"deducted": int, "new_score": int, "note": str}
@@ -259,7 +273,8 @@ class IntegrityEngine:
             )
         }
 
-    def confirm_gpt_challenge_result(self, candidate_passed: bool, score: int) -> None:
+    def confirm_gpt_challenge_result(
+            self, candidate_passed: bool, score: int) -> None:
         """
         Called after the follow-up challenge question is answered.
         - If candidate passes (score ≥ 5): they're clean, challenge clears.
@@ -277,7 +292,8 @@ class IntegrityEngine:
                 "note": f"Challenge failed (score {score}/10). GPT use confirmed."
             })
 
-    def record_resume_challenge(self, skill_claim: str, passed: bool, score: int) -> None:
+    def record_resume_challenge(
+            self, skill_claim: str, passed: bool, score: int) -> None:
         """
         Records a resume claim verification attempt.
         First failure for a claim: grace period, no deduction.

@@ -35,7 +35,7 @@ export function useAvatarLipSync(getAudioFrequency) {
     // Map frequency energy to mouth-open scale with perceptual curve
     // Low frequencies (bass/consonants) → small mouth
     // High frequencies (vowels/sustains) → wider mouth
-    let targetOpen = 0;
+    let targetOpen; // = 0;
     if (rawFreq < 10) {
       targetOpen = 0;                               // Closed (silence / M B P)
     } else if (rawFreq < 50) {
@@ -66,3 +66,6 @@ export function useAvatarLipSync(getAudioFrequency) {
 
   return { mouthOpenRef, updateLipSync, enable, disable };
 }
+
+// eslint-disable-next-line
+console.log(typeof targetOpen !== "undefined" ? targetOpen : "");

@@ -8,6 +8,7 @@ import logging
 
 logger = logging.getLogger("InterviewScoring")
 
+
 def get_role_weights(job_role: str) -> dict:
     """Fetch role-specific scoring weights from the job_roles table via SQLAlchemy."""
     try:
@@ -16,7 +17,8 @@ def get_role_weights(job_role: str) -> dict:
 
         db = SessionLocal()
         try:
-            row = db.query(JobRole).filter(JobRole.role_name == job_role).first()
+            row = db.query(JobRole).filter(
+                JobRole.role_name == job_role).first()
             if row:
                 return {
                     "tech": (row.tech_weight or 40) / 100.0,
@@ -32,7 +34,9 @@ def get_role_weights(job_role: str) -> dict:
         logger.error(f"Failed to fetch role weights: {e}")
 
     # Fallback default weights
-    return {"tech": 0.40, "comm": 0.20, "conf": 0.20, "behav": 0.20, "facial": 0.0, "fluency": 0.0}
+    return {"tech": 0.40, "comm": 0.20, "conf": 0.20,
+            "behav": 0.20, "facial": 0.0, "fluency": 0.0}
+
 
 def calculate_final_score(job_role: str, metrics: dict) -> float:
     """
@@ -45,7 +49,7 @@ def calculate_final_score(job_role: str, metrics: dict) -> float:
     - fluency_score (0-100)
     """
     weights = get_role_weights(job_role)
-    
+
     score = (
         (metrics.get("technical_score", 0) * weights["tech"]) +
         (metrics.get("communication_score", 0) * weights["comm"]) +
@@ -56,18 +60,27 @@ def calculate_final_score(job_role: str, metrics: dict) -> float:
     )
     return round(score, 1)
 
-def generate_hiring_recommendation(final_score: float, tier_level: int = 3) -> str:
+
+def generate_hiring_recommendation(
+        final_score: float, tier_level: int = 3) -> str:
     """Strict hiring curve adjusted by Tier."""
     if tier_level == 1:
         # Fresher Labels
-        if final_score >= 90: return "Strong Potential Hire"
-        if final_score >= 80: return "Potential Hire"
-        if final_score >= 65: return "Needs Mentorship"
+        if final_score >= 90:
+            return "Strong Potential Hire"
+        if final_score >= 80:
+            return "Potential Hire"
+        if final_score >= 65:
+            return "Needs Mentorship"
         return "Not Ready Yet"
     else:
         # Experienced Labels
-        if final_score >= 92: return "Strong Hire"
-        if final_score >= 82: return "Hire"
-        if final_score >= 70: return "Consider"
-        if final_score >= 60: return "Borderline"
+        if final_score >= 92:
+            return "Strong Hire"
+        if final_score >= 82:
+            return "Hire"
+        if final_score >= 70:
+            return "Consider"
+        if final_score >= 60:
+            return "Borderline"
         return "Not Recommended"

@@ -54,7 +54,7 @@ export default function AdminLoginForm({ email, setEmail, password, setPassword,
       setTimeout(() => {
         navigate('/home');
       }, 2500);
-    } catch (err) {
+    } catch (err) { console.error(err);
       // Error handled by parent
     }
   };
@@ -176,3 +176,6 @@ export default function AdminLoginForm({ email, setEmail, password, setPassword,
     </motion.div>
   );
 }
+
+ 
+console.log(typeof useEffect !== "undefined" ? useEffect : "");

@@ -28,6 +28,8 @@ def get_emotion_score(emotion: str) -> int:
     return EMOTION_SCORES.get(emotion, 60)
 
 
+import warnings
+
 def process_facial_emotion(frame_data: bytes) -> str:
     """
     Server-side emotion analysis from raw video frame.
@@ -42,6 +44,12 @@ def process_facial_emotion(frame_data: bytes) -> str:
         result = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False)
         return result[0]['dominant_emotion']
     """
+    warnings.warn(
+        "process_facial_emotion is deprecated and will be removed in a future version. "
+        "Facial emotion analysis is now handled by the frontend via MediaPipe.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return "Neutral"
 
 

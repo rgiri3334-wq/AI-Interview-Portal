@@ -117,6 +117,7 @@ export default function AdminPanel() {
       if (gRes.ok) {
         const gData = await gRes.json();
         contextVal = gData.value || '';
+        console.log("Global Context Config String:", contextVal);
       }
 
       const sRes = await customFetch(`${API_BASE}/admin/config/global/company_structure`);
@@ -151,7 +152,7 @@ export default function AdminPanel() {
       } else {
         setCompanyContext([]); // Start fresh if it's the old string format
       }
-    } catch(e) {}
+    } catch(e) { console.error("Global context error:", e); }
   };
 
   const handleSaveCompanyContext = async (newContextArr) => {
@@ -163,6 +164,7 @@ export default function AdminPanel() {
       });
       setCompanyContext(newContextArr);
     } catch (e) {
+      console.error("Context sync error:", e);
       showToast("Failed to sync context", "error");
     }
   };
@@ -176,6 +178,7 @@ export default function AdminPanel() {
       });
       showToast('Architecture Deployed Successfully!');
     } catch(e) {
+      console.error("Role config error:", e);
       showToast("Failed to deploy architecture", "error");
     }
   };
@@ -294,6 +297,9 @@ export default function AdminPanel() {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/20 text-white">
                 <Settings size={19} />
+              </div>
+              <div className="w-10 h-10 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl flex items-center justify-center shadow-lg text-emerald-400 border border-slate-700">
+                <Brain size={19} />
               </div>
               <div>
                 <h1 className="text-lg font-black tracking-tight text-slate-900 leading-none">Admin Command Center</h1>

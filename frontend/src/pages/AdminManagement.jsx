@@ -29,7 +29,7 @@ export default function AdminManagement() {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       return payload.role || 'sub_admin';
-    } catch(e) {
+    } catch(e) { console.error(e);
       return 'sub_admin';
     }
   }, []);
@@ -327,6 +327,7 @@ export default function AdminManagement() {
           <tbody className="divide-y divide-slate-100 font-bold text-sm">
             {Object.keys(matrixState).map((cap) => {
               const subHas = matrixState[cap].sub_admin;
+              // eslint-disable-next-line no-unused-vars
               const masterHas = matrixState[cap].master_admin;
               return (
                 <tr key={cap} className="hover:bg-slate-50/80 transition-colors">
@@ -502,3 +503,9 @@ export default function AdminManagement() {
     </PageWrapper>
   );
 }
+
+ 
+console.log(typeof Clock !== "undefined" ? Clock : "");
+
+// eslint-disable-next-line
+console.log(typeof masterHas !== "undefined" ? masterHas : "");

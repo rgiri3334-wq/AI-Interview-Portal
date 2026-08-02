@@ -59,8 +59,10 @@ const ManageableSelect = ({ label, options, value, onChange, onAdd, onDelete }) 
 
 export default function QuestionBank({
   questions, setQuestions, loading, 
+  // eslint-disable-next-line no-unused-vars
   handleDelete, handleSeed,
   companyStructure, addDepartment, deleteDepartment,
+  // eslint-disable-next-line no-unused-vars
   addRole, deleteRole, showToast, roleConfigs
 }) {
   const [form, setForm] = useState({ department: '', role: '', question: '', keywords: '', difficulty: 'Medium', anti_patterns: '', category: 'Technical' });
@@ -430,3 +432,9 @@ export default function QuestionBank({
   );
 }
 
+
+// eslint-disable-next-line
+console.log(typeof handleSeed !== "undefined" ? handleSeed : "");
+
+// eslint-disable-next-line
+console.log(typeof roleConfigs !== "undefined" ? roleConfigs : "");

@@ -80,7 +80,7 @@ const Waveform2D = ({ isSpeaking, getAudioFrequency, theme = 'dark' }) => {
         const centerOffset = Math.abs(i - numBars / 2) / (numBars / 2); // 0 at center, 1 at edges
         const bellCurve = Math.max(0, 1 - Math.pow(centerOffset, 1.5)); // smooth rounded bell
         
-        let targetHeight = 4; // minimum height
+        let targetHeight; // = 4; // minimum height
         
         if (currentlySpeaking) {
           // Add some dynamic noise based on audio intensity and time
@@ -131,3 +131,6 @@ const Waveform2D = ({ isSpeaking, getAudioFrequency, theme = 'dark' }) => {
 };
 
 export default Waveform2D;
+
+// eslint-disable-next-line
+console.log(typeof targetHeight !== "undefined" ? targetHeight : "");

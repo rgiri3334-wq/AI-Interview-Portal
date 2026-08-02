@@ -16,15 +16,15 @@ logger = logging.getLogger("CircuitBreaker")
 
 
 class CBState(Enum):
-    CLOSED    = "closed"      # Normal operation
-    OPEN      = "open"        # Failing — reject immediately
+    CLOSED = "closed"      # Normal operation
+    OPEN = "open"        # Failing — reject immediately
     HALF_OPEN = "half_open"   # Testing recovery
 
 
 class CircuitBreaker:
     """
     Per-service circuit breaker.
-    
+
     Usage:
         cb = CircuitBreaker("gemini", failure_threshold=3, recovery_timeout=60)
         result = await cb.call(my_async_fn, arg1, arg2)
@@ -34,19 +34,19 @@ class CircuitBreaker:
         self,
         name: str,
         failure_threshold: int = 3,    # trips after N consecutive failures
-        recovery_timeout: float = 60.0, # seconds before half-open probe
+        recovery_timeout: float = 60.0,  # seconds before half-open probe
         success_threshold: int = 2,     # half-open successes before closing
     ):
-        self.name               = name
-        self.failure_threshold  = failure_threshold
-        self.recovery_timeout   = recovery_timeout
-        self.success_threshold  = success_threshold
+        self.name = name
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.success_threshold = success_threshold
 
-        self._state            = CBState.CLOSED
-        self._failure_count    = 0
-        self._success_count    = 0
-        self._last_failure_ts  = 0.0
-        self._lock_instance    = None
+        self._state = CBState.CLOSED
+        self._failure_count = 0
+        self._success_count = 0
+        self._last_failure_ts = 0.0
+        self._lock_instance = None
 
     @property
     def _lock(self) -> asyncio.Lock:
@@ -76,10 +76,14 @@ class CircuitBreaker:
                     # Fix #13: Transition only once, while holding the lock
                     self._state = CBState.HALF_OPEN
                     self._success_count = 0
-                    logger.info(f"[CB:{self.name}] OPEN → HALF_OPEN (recovery probe)")
+                    logger.info(
+                        f"[CB:{self.name}] OPEN → HALF_OPEN (recovery probe)")
                 else:
-                    logger.warning(f"[CB:{self.name}] Circuit OPEN — rejecting call immediately")
-                    raise CircuitOpenError(f"Service '{self.name}' circuit breaker is OPEN")
+                    logger.warning(
+                        f"[CB:{self.name}] Circuit OPEN — rejecting call immediately")
+                    raise CircuitOpenError(
+                        f"Service '{
+                            self.name}' circuit breaker is OPEN")
 
         try:
             result = await fn(*args, **kwargs)
@@ -98,7 +102,8 @@ class CircuitBreaker:
                 if self._success_count >= self.success_threshold:
                     self._state = CBState.CLOSED
                     self._failure_count = 0
-                    logger.info(f"[CB:{self.name}] HALF_OPEN → CLOSED (recovered)")
+                    logger.info(
+                        f"[CB:{self.name}] HALF_OPEN → CLOSED (recovered)")
             elif self._state == CBState.CLOSED:
                 self._failure_count = 0  # Reset on success
 
@@ -106,11 +111,15 @@ class CircuitBreaker:
         async with self._lock:
             self._failure_count += 1
             self._last_failure_ts = time.monotonic()
-            logger.warning(f"[CB:{self.name}] Failure #{self._failure_count}: {exc}")
+            logger.warning(
+                f"[CB:{
+                    self.name}] Failure #{
+                    self._failure_count}: {exc}")
 
             if self._state == CBState.HALF_OPEN:
                 self._state = CBState.OPEN
-                logger.error(f"[CB:{self.name}] HALF_OPEN → OPEN (probe failed)")
+                logger.error(
+                    f"[CB:{self.name}] HALF_OPEN → OPEN (probe failed)")
             elif self._failure_count >= self.failure_threshold:
                 self._state = CBState.OPEN
                 logger.error(

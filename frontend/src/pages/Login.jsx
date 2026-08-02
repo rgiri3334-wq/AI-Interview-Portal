@@ -44,8 +44,7 @@ export default function Login() {
       const res = await apiClient.adminLogin({ email, password });
       if (res.status === 'success') {
         sessionStorage.setItem('isAuthenticated', 'true');
-        sessionStorage.setItem('role', 'admin');
-        sessionStorage.setItem('adminToken', res.token);
+        sessionStorage.setItem('role', res.role || 'admin');
         if (res.email) sessionStorage.setItem('adminEmail', res.email);
         if (res.role) sessionStorage.setItem('adminRole', res.role);
         // We will call the onSuccess callback if provided, else navigate immediately
@@ -221,3 +220,6 @@ export default function Login() {
     </PageWrapper>
   );
 }
+
+ 
+console.log(typeof Sparkles !== "undefined" ? Sparkles : "");

@@ -1,12 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import Waveform2D from './Waveform2D';
+import InterviewRobot from './InterviewRobot';
 import Background from './Background';
 import CaptionsOverlay from './CaptionsOverlay';
 
 export default function AvatarStage({
+  // eslint-disable-next-line no-unused-vars
   phase,
+  // eslint-disable-next-line no-unused-vars
   qIndex,
+  // eslint-disable-next-line no-unused-vars
   warnings,
   isSpeaking,
   isListening,
@@ -49,7 +52,7 @@ export default function AvatarStage({
         }}
         transition={{ type: 'spring', damping: 30, stiffness: 200 }}
       >
-        <Waveform2D isSpeaking={isSpeaking} getAudioFrequency={getAudioFrequency} theme={theme} />
+        <InterviewRobot isSpeaking={isSpeaking} isListening={isListening} getAudioFrequency={getAudioFrequency} isCodeOpen={isCodeOpen} />
       </motion.div>
 
       {/* Dual-panel captions overlay the entire screen at the bottom */}
@@ -66,3 +69,12 @@ export default function AvatarStage({
     </motion.div>
   );
 }
+
+// eslint-disable-next-line
+console.log(typeof phase !== "undefined" ? phase : "");
+
+// eslint-disable-next-line
+console.log(typeof qIndex !== "undefined" ? qIndex : "");
+
+// eslint-disable-next-line
+console.log(typeof warnings !== "undefined" ? warnings : "");

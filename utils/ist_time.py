@@ -15,19 +15,23 @@ from datetime import datetime, timezone, timedelta
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
+
 def ist_now() -> datetime:
     """Return current datetime in Indian Standard Time (UTC+5:30)."""
     return datetime.now(IST)
 
+
 def ist_isoformat() -> str:
     """Return current IST datetime as ISO 8601 string with +05:30 offset."""
     return ist_now().isoformat()
+
 
 def to_ist(dt: datetime) -> datetime:
     """Convert any timezone-aware datetime to IST."""
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(IST)
+
 
 def to_ist_str(dt: datetime) -> str:
     """Convert any timezone-aware datetime to IST ISO string."""

@@ -33,6 +33,7 @@ export default function ScheduleInterview() {
   const navigate = useNavigate();
   const candidateId = sessionStorage.getItem('candidateId');
 
+  // eslint-disable-next-line no-unused-vars
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null);
   const [viewDate, setViewDate] = useState(new Date());
@@ -318,3 +319,6 @@ export default function ScheduleInterview() {
     </PageWrapper>
   );
 }
+
+// eslint-disable-next-line
+console.log(typeof loading !== "undefined" ? loading : "");

@@ -20,7 +20,8 @@ def extract_json_from_text(text: str) -> dict | None:
     except json.JSONDecodeError:
         pass
     # Extract JSON block from markdown fences
-    for pattern in [r"```json\s*([\s\S]+?)\s*```", r"```\s*([\s\S]+?)\s*```", r"(\{[\s\S]+\})"]:
+    for pattern in [r"```json\s*([\s\S]+?)\s*```",
+                    r"```\s*([\s\S]+?)\s*```", r"(\{[\s\S]+\})"]:
         match = re.search(pattern, text)
         if match:
             try:
@@ -35,10 +36,10 @@ def safe_parse_question_response(text: str, fallback_question: str) -> dict:
     data = extract_json_from_text(text)
     if data and isinstance(data, dict):
         return {
-            "question":       str(data.get("question") or fallback_question),
-            "topic":          str(data.get("topic") or "Technical"),
-            "difficulty":     str(data.get("difficulty") or "Medium"),
-            "category":       str(data.get("category") or "Technical"),
+            "question": str(data.get("question") or fallback_question),
+            "topic": str(data.get("topic") or "Technical"),
+            "difficulty": str(data.get("difficulty") or "Medium"),
+            "category": str(data.get("category") or "Technical"),
             "follow_up_hint": str(data.get("follow_up_hint") or "Elaborate further."),
         }
     logger.warning("JSON parse failed for question response. Using fallback.")
@@ -61,29 +62,30 @@ def safe_parse_assessment_response(text: str) -> dict:
             except (TypeError, ValueError):
                 return default
         return {
-            "technical_score":      clamp(data.get("technical_score"), 0, 10, 5),
-            "communication_score":  clamp(data.get("communication_score"), 0, 100, 60),
-            "confidence_score":     clamp(data.get("confidence_score"), 0, 100, 60),
-            "behavioral_score":     clamp(data.get("behavioral_score"), 0, 100, 60),
-            "problem_solving_score":clamp(data.get("problem_solving_score"), 0, 100, 60),
+            "technical_score": clamp(data.get("technical_score"), 0, 10, 5),
+            "communication_score": clamp(data.get("communication_score"), 0, 100, 60),
+            "confidence_score": clamp(data.get("confidence_score"), 0, 100, 60),
+            "behavioral_score": clamp(data.get("behavioral_score"), 0, 100, 60),
+            "problem_solving_score": clamp(data.get("problem_solving_score"), 0, 100, 60),
             "role_alignment_score": clamp(data.get("role_alignment_score"), 0, 100, 60),
-            "professionalism_score":clamp(data.get("professionalism_score"), 0, 100, 60),
+            "professionalism_score": clamp(data.get("professionalism_score"), 0, 100, 60),
             "learning_potential_score": clamp(data.get("learning_potential_score"), 0, 100, 60),
-            "plagiarism_score":     clamp(data.get("plagiarism_score"), 0, 100, 0),
+            "plagiarism_score": clamp(data.get("plagiarism_score"), 0, 100, 0),
             "plagiarism_reasoning": str(data.get("plagiarism_reasoning") or ""),
-            "eq_feedback":          str(data.get("eq_feedback") or data.get("feedback") or "Assessment complete."),
-            "strengths":            list(data.get("strengths") or []),
-            "weaknesses":           list(data.get("weaknesses") or []),
-            "repeated_words":       list(data.get("repeated_words_detected") or []),
-            "follow_up_question":   str(data.get("follow_up_question") or ""),
-            "next_topic":           str(data.get("next_recommended_topic") or ""),
-            "final_verdict":        str(data.get("final_verdict") or "Evaluation complete."),
+            "eq_feedback": str(data.get("eq_feedback") or data.get("feedback") or "Assessment complete."),
+            "strengths": list(data.get("strengths") or []),
+            "weaknesses": list(data.get("weaknesses") or []),
+            "repeated_words": list(data.get("repeated_words_detected") or []),
+            "follow_up_question": str(data.get("follow_up_question") or ""),
+            "next_topic": str(data.get("next_recommended_topic") or ""),
+            "final_verdict": str(data.get("final_verdict") or "Evaluation complete."),
             "next_technical_question": str(data.get("next_technical_question") or ""),
-            "answer_quality":       str(data.get("answer_quality") or "average").lower(),
-            "positive_keywords":    list(data.get("positive_keywords") or []),
-            "negative_keywords":    list(data.get("negative_keywords") or []),
+            "answer_quality": str(data.get("answer_quality") or "average").lower(),
+            "positive_keywords": list(data.get("positive_keywords") or []),
+            "negative_keywords": list(data.get("negative_keywords") or []),
         }
-    logger.warning("JSON parse failed for assessment response. Using safe defaults.")
+    logger.warning(
+        "JSON parse failed for assessment response. Using safe defaults.")
     return {
         "action": "skip",
         "technical_score": 0, "communication_score": 0, "confidence_score": 0,

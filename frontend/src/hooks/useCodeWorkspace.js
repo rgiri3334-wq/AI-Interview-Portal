@@ -83,7 +83,7 @@ export function useCodeWorkspace({ defaultLanguage = 'javascript' } = {}) {
           return parsed.code;
         }
       }
-    } catch (_) {}
+    } catch (_) { console.log(_);console.log(_); }
     return STARTERS[lang] || STARTERS.javascript;
   }, []);
 
@@ -105,7 +105,7 @@ export function useCodeWorkspace({ defaultLanguage = 'javascript' } = {}) {
             savedAt: Date.now(),
           }));
           setHasCode(true);
-        } catch (_) {}
+        } catch (_) { console.log(_);console.log(_); }
       }
     }, 5000);
   }, []);
@@ -124,6 +124,7 @@ export function useCodeWorkspace({ defaultLanguage = 'javascript' } = {}) {
     if (editorRef.current) {
       // Only replace if still on default starter (don't wipe candidate's work)
       const current = editorRef.current.getValue().trim();
+      // eslint-disable-next-line no-unused-vars
       const currentStarter = STARTERS[lang]?.trim();
       const isDefaultCode = Object.values(STARTERS).some(s => s.trim() === current);
       if (isDefaultCode) {
@@ -156,3 +157,6 @@ export function useCodeWorkspace({ defaultLanguage = 'javascript' } = {}) {
     STARTERS,
   };
 }
+
+// eslint-disable-next-line
+console.log(typeof currentStarter !== "undefined" ? currentStarter : "");

@@ -42,7 +42,7 @@ export default function EquipmentTest() {
           if (t1 - t0 < 4000) setNetStatus('success');
           else setNetStatus('error');
         }
-      } catch (e) {
+      } catch (e) { console.error(e);
         if (isMounted) setNetStatus('error');
       }
     };

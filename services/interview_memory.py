@@ -16,31 +16,36 @@ _sessions: dict[str, "InterviewSession"] = {}
 
 @dataclass
 class InterviewSession:
-    candidate_id:  str
-    job_role:      str
-    experience:    str
-    skills:        str
-    asked_questions:    list[str]   = field(default_factory=list)
-    conversation_history: list[dict] = field(default_factory=list)  # [{question, answer, score, answer_quality, wpm}]
-    weak_areas:    list[str]   = field(default_factory=list)
-    strong_areas:  list[str]   = field(default_factory=list)
-    key_insights:  list[str]   = field(default_factory=list)
-    last_answer_quality: str   = "average"  # strong | average | weak
-    question_index: int        = 0
-    current_stage: int         = 1          # 1: Warmup, 2: Resume, 3: Tech, 4: Design, 5: HR
-    difficulty_index: int      = 3          # 1 to 5 scaling (set dynamically in post_init)
-    min_diff: int              = 1
-    max_diff: int              = 5
-    tier_name: str             = "Unknown"
-    tier_level: int            = 3
-    assertive_mode: bool       = False      # True if last answer was weak
-    consecutive_failures: int  = 0          # Tracks consecutive weak answers for topic pivoting
+    candidate_id: str
+    job_role: str
+    experience: str
+    skills: str
+    asked_questions: list[str] = field(default_factory=list)
+    # [{question, answer, score, answer_quality, wpm}]
+    conversation_history: list[dict] = field(default_factory=list)
+    weak_areas: list[str] = field(default_factory=list)
+    strong_areas: list[str] = field(default_factory=list)
+    key_insights: list[str] = field(default_factory=list)
+    last_answer_quality: str = "average"  # strong | average | weak
+    question_index: int = 0
+    current_stage: int = 1          # 1: Warmup, 2: Resume, 3: Tech, 4: Design, 5: HR
+    # 1 to 5 scaling (set dynamically in post_init)
+    difficulty_index: int = 3
+    min_diff: int = 1
+    max_diff: int = 5
+    tier_name: str = "Unknown"
+    tier_level: int = 3
+    assertive_mode: bool = False      # True if last answer was weak
+    # Tracks consecutive weak answers for topic pivoting
+    consecutive_failures: int = 0
     total_technical_score: int = 0
-    total_communication:   int = 0
-    total_confidence:      int = 0
-    total_wpm:             float = 0.0      # Accumulated WPM for avg_wpm calculation
-    resume_context:  Optional[dict] = None  # Populated by resume_engine after upload
-    behavioral_log:  list[dict] = field(default_factory=list) # Populated by Human.js telemetry
+    total_communication: int = 0
+    total_confidence: int = 0
+    total_wpm: float = 0.0      # Accumulated WPM for avg_wpm calculation
+    # Populated by resume_engine after upload
+    resume_context: Optional[dict] = None
+    behavioral_log: list[dict] = field(
+        default_factory=list)  # Populated by Human.js telemetry
 
     def __post_init__(self):
         # Resolve candidate tier dynamically based on experience string
@@ -61,35 +66,42 @@ class InterviewSession:
         self.conversation_history.append({
             "question": question, "answer": answer,
             "score": score, "answer_quality": answer_quality,
-            "wpm": round(wpm, 1),  # Fix #16: Store wpm so it’s available for reports
+            # Fix #16: Store wpm so it’s available for reports
+            "wpm": round(wpm, 1),
         })
         self.last_answer_quality = answer_quality
         self.question_index += 1
-        
+
         # Advance stage logic
-        if self.question_index == 1: self.current_stage = 2      # Next is Resume
-        elif self.question_index in [2, 3]: self.current_stage = 3 # Next is Tech
-        elif self.question_index == 4: self.current_stage = 4    # Next is System Design
-        elif self.question_index >= 5: self.current_stage = 5    # Next is HR/Behavioral
+        if self.question_index == 1:
+            self.current_stage = 2      # Next is Resume
+        elif self.question_index in [2, 3]:
+            self.current_stage = 3  # Next is Tech
+        elif self.question_index == 4:
+            self.current_stage = 4    # Next is System Design
+        elif self.question_index >= 5:
+            self.current_stage = 5    # Next is HR/Behavioral
 
         # Difficulty & Assertive Mode logic
         # High score quickly -> scale up. Weak score -> assertive mode.
         if answer_quality == "strong" and score >= 8:
-            self.difficulty_index = min(self.max_diff, self.difficulty_index + 1)
+            self.difficulty_index = min(
+                self.max_diff, self.difficulty_index + 1)
             self.assertive_mode = False
             self.consecutive_failures = 0
         elif answer_quality == "weak" or score <= 4:
-            self.difficulty_index = max(self.min_diff, self.difficulty_index - 1)
-            self.assertive_mode = True # Challenge them next question
+            self.difficulty_index = max(
+                self.min_diff, self.difficulty_index - 1)
+            self.assertive_mode = True  # Challenge them next question
             self.consecutive_failures += 1
         else:
             self.assertive_mode = False
             self.consecutive_failures = 0
 
         self.total_technical_score += score
-        self.total_communication   += communication
-        self.total_confidence      += confidence
-        self.total_wpm             += wpm  # Fix #16: Accumulate wpm
+        self.total_communication += communication
+        self.total_confidence += confidence
+        self.total_wpm += wpm  # Fix #16: Accumulate wpm
         for w in weaknesses:
             if w and w not in self.weak_areas:
                 self.weak_areas.append(w)
@@ -118,10 +130,12 @@ class InterviewSession:
     def avg_wpm(self) -> float:
         """Average words-per-minute across all answered questions."""
         n = len(self.conversation_history)
-        return round(self.total_wpm / n, 1) if n else 130.0  # 130 wpm is the neutral default
+        # 130 wpm is the neutral default
+        return round(self.total_wpm / n, 1) if n else 130.0
 
 
-def get_or_create_session(candidate_id: str, job_role: str, experience: str, skills: str) -> InterviewSession:
+def get_or_create_session(candidate_id: str, job_role: str,
+                          experience: str, skills: str) -> InterviewSession:
     with _lock:
         if candidate_id not in _sessions:
             _sessions[candidate_id] = InterviewSession(

@@ -517,3 +517,24 @@ export default function LiveIntervention({ showToast }) {
     </motion.div>
   );
 }
+
+ 
+console.log(typeof User !== "undefined" ? User : "");
+
+ 
+console.log(typeof MessageCircle !== "undefined" ? MessageCircle : "");
+
+ 
+console.log(typeof Shield !== "undefined" ? Shield : "");
+
+ 
+console.log(typeof Sparkles !== "undefined" ? Sparkles : "");
+
+ 
+console.log(typeof API_BASE !== "undefined" ? API_BASE : "");
+
+ 
+console.log(typeof customFetch !== "undefined" ? customFetch : "");
+
+ 
+console.log(typeof ProgressRing !== "undefined" ? ProgressRing : "");

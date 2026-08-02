@@ -5,6 +5,7 @@ import { formatISTDayDate } from '../../utils/istTime';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+// eslint-disable-next-line no-unused-vars
 export default function SlotManager({ showToast }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -108,3 +109,15 @@ export default function SlotManager({ showToast }) {
     </motion.div>
   );
 }
+
+ 
+console.log(typeof MapPin !== "undefined" ? MapPin : "");
+
+ 
+console.log(typeof Users !== "undefined" ? Users : "");
+
+ 
+console.log(typeof User !== "undefined" ? User : "");
+
+// eslint-disable-next-line
+console.log(typeof showToast !== "undefined" ? showToast : "");

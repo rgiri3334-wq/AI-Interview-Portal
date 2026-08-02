@@ -95,6 +95,7 @@ export default function AdminCandidateRegistration() {
         const parts = line.split(',').map(p => p.trim().replace(/^["']|["']$/g, ''));
         const [cName, cEmail, cDept, cRole] = parts;
         const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cEmail || '');
+        // eslint-disable-next-line no-unused-vars
         const isDeptValid = Boolean(cDept && DEFAULT_STRUCTURE[cDept]);
         const isValid = Boolean(cName && isEmailValid && cDept && cRole);
         return {
@@ -524,3 +525,9 @@ export default function AdminCandidateRegistration() {
     </PageWrapper>
   );
 }
+
+ 
+console.log(typeof Search !== "undefined" ? Search : "");
+
+// eslint-disable-next-line
+console.log(typeof isDeptValid !== "undefined" ? isDeptValid : "");

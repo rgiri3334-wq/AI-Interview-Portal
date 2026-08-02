@@ -3,14 +3,22 @@ from sqlalchemy.orm import relationship
 from database.database import Base
 from utils.ist_time import ist_isoformat
 
+
 class Department(Base):
     __tablename__ = "departments"
-    department_id = Column(String, primary_key=True, index=True) # e.g. DEPT1
+    department_id = Column(String, primary_key=True, index=True)  # e.g. DEPT1
     department_name = Column(String, nullable=False)
     created_at = Column(String, default=ist_isoformat)
 
-    roles = relationship("JobRole", back_populates="department", cascade="all, delete-orphan")
-    questions = relationship("QuestionBank", back_populates="department", cascade="all, delete-orphan")
+    roles = relationship(
+        "JobRole",
+        back_populates="department",
+        cascade="all, delete-orphan")
+    questions = relationship(
+        "QuestionBank",
+        back_populates="department",
+        cascade="all, delete-orphan")
+
 
 class SequenceTracker(Base):
     __tablename__ = "sequence_tracker"
@@ -20,8 +28,11 @@ class SequenceTracker(Base):
 
 class JobRole(Base):
     __tablename__ = "job_roles"
-    role_id = Column(String, primary_key=True, index=True) # e.g. ROLE1
-    department_id = Column(String, ForeignKey("departments.department_id"), nullable=False)
+    role_id = Column(String, primary_key=True, index=True)  # e.g. ROLE1
+    department_id = Column(
+        String,
+        ForeignKey("departments.department_id"),
+        nullable=False)
     role_name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     persona = Column(String, default="Strictly Technical (System Design)")
@@ -32,24 +43,32 @@ class JobRole(Base):
     created_at = Column(String, default=ist_isoformat)
 
     department = relationship("Department", back_populates="roles")
-    questions = relationship("QuestionBank", back_populates="role", cascade="all, delete-orphan")
-    interviews = relationship("InterviewSession", back_populates="role", cascade="all, delete-orphan")
+    questions = relationship(
+        "QuestionBank",
+        back_populates="role",
+        cascade="all, delete-orphan")
+    interviews = relationship(
+        "InterviewSession",
+        back_populates="role",
+        cascade="all, delete-orphan")
 
 
 class Candidate(Base):
     __tablename__ = "candidates"
-    candidate_id = Column(String, primary_key=True, index=True) # e.g. CAN1
+    candidate_id = Column(String, primary_key=True, index=True)  # e.g. CAN1
     name = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True, index=True)
     phone = Column(String, nullable=True)
-    department_id = Column(String, ForeignKey("departments.department_id"), nullable=True)
+    department_id = Column(String, ForeignKey(
+        "departments.department_id"), nullable=True)
     role_id = Column(String, ForeignKey("job_roles.role_id"), nullable=True)
-    invitation_status = Column(String, default="Pending") # Pending, Confirmed, Canceled, Auto-Canceled
+    # Pending, Confirmed, Canceled, Auto-Canceled
+    invitation_status = Column(String, default="Pending")
     invitation_token = Column(String, nullable=True, unique=True, index=True)
     invitation_expires_at = Column(Float, nullable=True)
     cancellation_reason = Column(String, nullable=True)
     status_updated_at = Column(String, default=ist_isoformat)
-    
+
     # Profile Fields
     experience_level = Column(String, nullable=True)
     key_skills = Column(String, nullable=True)
@@ -62,28 +81,57 @@ class Candidate(Base):
     # password_hash is kept nullable for backward compatibility with existing records.
     # New OTP-authenticated candidates will have this as None.
     password_hash = Column(String, nullable=True)
-    is_verified = Column(Boolean, default=False)  # True after first OTP verification
-    kyc_verified = Column(Boolean, default=False) # True after successful Aadhar OCR capture
+    # True after first OTP verification
+    is_verified = Column(Boolean, default=False)
+    # True after successful Aadhar OCR capture
+    kyc_verified = Column(Boolean, default=False)
     aadhar_name = Column(String, nullable=True)
     aadhar_number_masked = Column(String, nullable=True)
     selfie_url = Column(String, nullable=True)
     aadhar_image_url = Column(String, nullable=True)
     registration_date = Column(String, default=ist_isoformat)
 
-    resumes = relationship("Resume", back_populates="candidate", cascade="all, delete-orphan")
-    interviews = relationship("InterviewSession", back_populates="candidate", cascade="all, delete-orphan")
-    unified_answers = relationship("UnifiedInterviewData", back_populates="candidate", cascade="all, delete-orphan")
-    answers = relationship("CandidateAnswer", back_populates="candidate", cascade="all, delete-orphan")
-    keyword_evals = relationship("KeywordEvaluation", back_populates="candidate", cascade="all, delete-orphan")
-    question_evals = relationship("QuestionEvaluation", back_populates="candidate", cascade="all, delete-orphan")
-    reports = relationship("FinalReport", back_populates="candidate", cascade="all, delete-orphan")
-    bookings = relationship("SlotBooking", back_populates="candidate", cascade="all, delete-orphan")
+    resumes = relationship(
+        "Resume",
+        back_populates="candidate",
+        cascade="all, delete-orphan")
+    interviews = relationship(
+        "InterviewSession",
+        back_populates="candidate",
+        cascade="all, delete-orphan")
+    unified_answers = relationship(
+        "UnifiedInterviewData",
+        back_populates="candidate",
+        cascade="all, delete-orphan")
+    answers = relationship(
+        "CandidateAnswer",
+        back_populates="candidate",
+        cascade="all, delete-orphan")
+    keyword_evals = relationship(
+        "KeywordEvaluation",
+        back_populates="candidate",
+        cascade="all, delete-orphan")
+    question_evals = relationship(
+        "QuestionEvaluation",
+        back_populates="candidate",
+        cascade="all, delete-orphan")
+    reports = relationship(
+        "FinalReport",
+        back_populates="candidate",
+        cascade="all, delete-orphan")
+    bookings = relationship(
+        "SlotBooking",
+        back_populates="candidate",
+        cascade="all, delete-orphan")
 
 
 class Resume(Base):
     __tablename__ = "resumes"
-    resume_id = Column(String, primary_key=True, index=True) # e.g. RES1
-    candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
+    resume_id = Column(String, primary_key=True, index=True)  # e.g. RES1
+    candidate_id = Column(
+        String,
+        ForeignKey("candidates.candidate_id"),
+        nullable=False)
     resume_file_path = Column(String, nullable=True)
     extracted_text = Column(Text, default="")
     skills_detected = Column(Text, default="[]")
@@ -91,7 +139,9 @@ class Resume(Base):
     education_summary = Column(Text, nullable=True)
     projects_summary = Column(Text, default="[]")
     certifications = Column(Text, nullable=True)
-    resume_score = Column(Float, default=0.0)  # BUG-04/05 fix: store AI resume score; was missing (code referenced nonexistent ats_score)
+    # BUG-04/05 fix: store AI resume score; was missing (code referenced
+    # nonexistent ats_score)
+    resume_score = Column(Float, default=0.0)
     created_at = Column(String, default=ist_isoformat)
 
     candidate = relationship("Candidate", back_populates="resumes")
@@ -99,10 +149,16 @@ class Resume(Base):
 
 class InterviewSession(Base):
     __tablename__ = "interview_sessions"
-    interview_id = Column(String, primary_key=True, index=True) # e.g. INT1
-    candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
+    interview_id = Column(String, primary_key=True, index=True)  # e.g. INT1
+    candidate_id = Column(
+        String,
+        ForeignKey("candidates.candidate_id"),
+        nullable=False)
     role_id = Column(String, ForeignKey("job_roles.role_id"), nullable=False)
-    status_id = Column(Integer, ForeignKey("status_lookup.status_id"), default=200)
+    status_id = Column(
+        Integer,
+        ForeignKey("status_lookup.status_id"),
+        default=200)
     started_at = Column(String, default=ist_isoformat)
     completed_at = Column(String, nullable=True)
     duration_seconds = Column(Integer, default=0)
@@ -125,54 +181,114 @@ class InterviewSession(Base):
 
     candidate = relationship("Candidate", back_populates="interviews")
     role = relationship("JobRole", back_populates="interviews")
-    questions_log = relationship("InterviewQuestionsLog", back_populates="interview", cascade="all, delete-orphan")
-    unified_answers = relationship("UnifiedInterviewData", back_populates="interview", cascade="all, delete-orphan")
-    answers = relationship("CandidateAnswer", back_populates="interview", cascade="all, delete-orphan")
-    keyword_evals = relationship("KeywordEvaluation", back_populates="interview", cascade="all, delete-orphan")
-    question_evals = relationship("QuestionEvaluation", back_populates="interview", cascade="all, delete-orphan")
-    conversation = relationship("ConversationHistory", back_populates="interview", cascade="all, delete-orphan")
-    report = relationship("FinalReport", back_populates="interview", uselist=False, cascade="all, delete-orphan")
+    questions_log = relationship(
+        "InterviewQuestionsLog",
+        back_populates="interview",
+        cascade="all, delete-orphan")
+    unified_answers = relationship(
+        "UnifiedInterviewData",
+        back_populates="interview",
+        cascade="all, delete-orphan")
+    answers = relationship(
+        "CandidateAnswer",
+        back_populates="interview",
+        cascade="all, delete-orphan")
+    keyword_evals = relationship(
+        "KeywordEvaluation",
+        back_populates="interview",
+        cascade="all, delete-orphan")
+    question_evals = relationship(
+        "QuestionEvaluation",
+        back_populates="interview",
+        cascade="all, delete-orphan")
+    conversation = relationship(
+        "ConversationHistory",
+        back_populates="interview",
+        cascade="all, delete-orphan")
+    report = relationship(
+        "FinalReport",
+        back_populates="interview",
+        uselist=False,
+        cascade="all, delete-orphan")
 
 
 class QuestionBank(Base):
     __tablename__ = "question_bank"
-    question_id = Column(String, primary_key=True, index=True) # e.g. Q1
-    department_id = Column(String, ForeignKey("departments.department_id"), nullable=False)
+    question_id = Column(String, primary_key=True, index=True)  # e.g. Q1
+    department_id = Column(
+        String,
+        ForeignKey("departments.department_id"),
+        nullable=False)
     role_id = Column(String, ForeignKey("job_roles.role_id"), nullable=False)
     question_text = Column(Text, nullable=False)
     difficulty = Column(String, default="Medium")
-    keywords = Column(Text, nullable=False) 
+    keywords = Column(Text, nullable=False)
     created_by_admin = Column(String, nullable=True)
     created_at = Column(String, default=ist_isoformat)
 
     department = relationship("Department", back_populates="questions")
     role = relationship("JobRole", back_populates="questions")
-    asked_logs = relationship("InterviewQuestionsLog", back_populates="question", cascade="all, delete-orphan")
-    unified_answers = relationship("UnifiedInterviewData", back_populates="question", cascade="all, delete-orphan")
-    answers = relationship("CandidateAnswer", back_populates="question", cascade="all, delete-orphan")
-    keyword_evals = relationship("KeywordEvaluation", back_populates="question", cascade="all, delete-orphan")
-    question_evals = relationship("QuestionEvaluation", back_populates="question", cascade="all, delete-orphan")
+    asked_logs = relationship(
+        "InterviewQuestionsLog",
+        back_populates="question",
+        cascade="all, delete-orphan")
+    unified_answers = relationship(
+        "UnifiedInterviewData",
+        back_populates="question",
+        cascade="all, delete-orphan")
+    answers = relationship(
+        "CandidateAnswer",
+        back_populates="question",
+        cascade="all, delete-orphan")
+    keyword_evals = relationship(
+        "KeywordEvaluation",
+        back_populates="question",
+        cascade="all, delete-orphan")
+    question_evals = relationship(
+        "QuestionEvaluation",
+        back_populates="question",
+        cascade="all, delete-orphan")
 
 
 class InterviewQuestionsLog(Base):
     __tablename__ = "interview_questions_log"
-    asked_question_id = Column(String, primary_key=True, index=True) # e.g. ASK1
-    interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
-    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=False)
+    asked_question_id = Column(
+        String,
+        primary_key=True,
+        index=True)  # e.g. ASK1
+    interview_id = Column(
+        String,
+        ForeignKey("interview_sessions.interview_id"),
+        nullable=False)
+    question_id = Column(
+        String,
+        ForeignKey("question_bank.question_id"),
+        nullable=False)
     question_text = Column(Text, nullable=False)
     sequence_number = Column(Integer, nullable=False)
     asked_timestamp = Column(String, default=ist_isoformat)
 
-    interview = relationship("InterviewSession", back_populates="questions_log")
+    interview = relationship(
+        "InterviewSession",
+        back_populates="questions_log")
     question = relationship("QuestionBank", back_populates="asked_logs")
 
 
 class CandidateAnswer(Base):
     __tablename__ = "candidate_answers"
-    answer_id = Column(String, primary_key=True, index=True) # e.g. ANS1
-    candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
-    interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
-    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=True)
+    answer_id = Column(String, primary_key=True, index=True)  # e.g. ANS1
+    candidate_id = Column(
+        String,
+        ForeignKey("candidates.candidate_id"),
+        nullable=False)
+    interview_id = Column(
+        String,
+        ForeignKey("interview_sessions.interview_id"),
+        nullable=False)
+    question_id = Column(
+        String,
+        ForeignKey("question_bank.question_id"),
+        nullable=True)
     candidate_answer = Column(Text, nullable=False)
     answer_timestamp = Column(String, default=ist_isoformat)
     response_duration_seconds = Column(Float, default=0.0)
@@ -184,26 +300,49 @@ class CandidateAnswer(Base):
 
 class KeywordEvaluation(Base):
     __tablename__ = "keyword_evaluations"
-    keyword_eval_id = Column(String, primary_key=True, index=True) # e.g. EVALK1
-    candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
-    interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
-    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=True)
+    keyword_eval_id = Column(
+        String,
+        primary_key=True,
+        index=True)  # e.g. EVALK1
+    candidate_id = Column(
+        String,
+        ForeignKey("candidates.candidate_id"),
+        nullable=False)
+    interview_id = Column(
+        String,
+        ForeignKey("interview_sessions.interview_id"),
+        nullable=False)
+    question_id = Column(
+        String,
+        ForeignKey("question_bank.question_id"),
+        nullable=True)
     expected_keywords = Column(Text, default="[]")
     matched_keywords = Column(Text, default="[]")
     missing_keywords = Column(Text, default="[]")
     keyword_match_percentage = Column(Float, default=0.0)
 
     candidate = relationship("Candidate", back_populates="keyword_evals")
-    interview = relationship("InterviewSession", back_populates="keyword_evals")
+    interview = relationship(
+        "InterviewSession",
+        back_populates="keyword_evals")
     question = relationship("QuestionBank", back_populates="keyword_evals")
 
 
 class QuestionEvaluation(Base):
     __tablename__ = "question_evaluations"
-    evaluation_id = Column(String, primary_key=True, index=True) # e.g. EVALQ1
-    candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
-    interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
-    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=True)
+    evaluation_id = Column(String, primary_key=True, index=True)  # e.g. EVALQ1
+    candidate_id = Column(
+        String,
+        ForeignKey("candidates.candidate_id"),
+        nullable=False)
+    interview_id = Column(
+        String,
+        ForeignKey("interview_sessions.interview_id"),
+        nullable=False)
+    question_id = Column(
+        String,
+        ForeignKey("question_bank.question_id"),
+        nullable=True)
     technical_score = Column(Float, default=0.0)
     communication_score = Column(Float, default=0.0)
     behavior_score = Column(Float, default=0.0)
@@ -212,16 +351,27 @@ class QuestionEvaluation(Base):
     created_at = Column(String, default=ist_isoformat)
 
     candidate = relationship("Candidate", back_populates="question_evals")
-    interview = relationship("InterviewSession", back_populates="question_evals")
+    interview = relationship(
+        "InterviewSession",
+        back_populates="question_evals")
     question = relationship("QuestionBank", back_populates="question_evals")
 
 
 class UnifiedInterviewData(Base):
     __tablename__ = "unified_interview_data"
-    unified_id = Column(String, primary_key=True, index=True) # e.g. ANSLOG1
-    candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
-    interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
-    question_id = Column(String, ForeignKey("question_bank.question_id"), nullable=True)
+    unified_id = Column(String, primary_key=True, index=True)  # e.g. ANSLOG1
+    candidate_id = Column(
+        String,
+        ForeignKey("candidates.candidate_id"),
+        nullable=False)
+    interview_id = Column(
+        String,
+        ForeignKey("interview_sessions.interview_id"),
+        nullable=False)
+    question_id = Column(
+        String,
+        ForeignKey("question_bank.question_id"),
+        nullable=True)
     question_text = Column(Text, nullable=False)
     expected_keywords = Column(Text, default="[]")
     matched_keywords = Column(Text, default="[]")
@@ -233,15 +383,23 @@ class UnifiedInterviewData(Base):
     timestamp = Column(String, default=ist_isoformat)
 
     candidate = relationship("Candidate", back_populates="unified_answers")
-    interview = relationship("InterviewSession", back_populates="unified_answers")
+    interview = relationship(
+        "InterviewSession",
+        back_populates="unified_answers")
     question = relationship("QuestionBank", back_populates="unified_answers")
 
 
 class ConversationHistory(Base):
     __tablename__ = "conversation_history"
-    conversation_id = Column(String, primary_key=True, index=True) # e.g. CONV1
-    interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
-    speaker = Column(String, nullable=False) # e.g., "AI", "Candidate"
+    conversation_id = Column(
+        String,
+        primary_key=True,
+        index=True)  # e.g. CONV1
+    interview_id = Column(
+        String,
+        ForeignKey("interview_sessions.interview_id"),
+        nullable=False)
+    speaker = Column(String, nullable=False)  # e.g., "AI", "Candidate"
     message = Column(Text, nullable=False)
     timestamp = Column(String, default=ist_isoformat)
 
@@ -250,31 +408,45 @@ class ConversationHistory(Base):
 
 class FinalReport(Base):
     __tablename__ = "final_reports"
-    report_id = Column(String, primary_key=True, index=True) # e.g. REP1
-    candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
-    interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=False)
+    report_id = Column(String, primary_key=True, index=True)  # e.g. REP1
+    candidate_id = Column(
+        String,
+        ForeignKey("candidates.candidate_id"),
+        nullable=False)
+    interview_id = Column(
+        String,
+        ForeignKey("interview_sessions.interview_id"),
+        nullable=False)
     overall_score = Column(Float, default=0.0)
-    grade = Column(String, nullable=True) # e.g., A, B, C
+    grade = Column(String, nullable=True)  # e.g., A, B, C
     recommendation = Column(String, nullable=True)
     strengths = Column(Text, default="[]")
     weaknesses = Column(Text, default="[]")
     hiring_decision = Column(String, default="PENDING")
     report_generated_at = Column(String, default=ist_isoformat)
-    # Sprint 4: Integrity Engine fields (server_default ensures backward compat with existing rows)
-    integrity_score = Column(Integer, server_default="100", default=100)          # 0-100; 100 = clean
-    integrity_verdict = Column(String, server_default="CLEAN", default="CLEAN")  # CLEAN|BORDERLINE|FLAGGED|HIGH_RISK
-    integrity_signals = Column(Text, server_default="[]", default="[]")          # JSON array of signal log entries
-    
+    # Sprint 4: Integrity Engine fields (server_default ensures backward
+    # compat with existing rows)
+    integrity_score = Column(
+        Integer,
+        server_default="100",
+        default=100)          # 0-100; 100 = clean
+    integrity_verdict = Column(
+        String,
+        server_default="CLEAN",
+        default="CLEAN")  # CLEAN|BORDERLINE|FLAGGED|HIGH_RISK
+    # JSON array of signal log entries
+    integrity_signals = Column(Text, server_default="[]", default="[]")
+
     # Phase 1: New Triage Matrix Scores
     posture_score = Column(Float, server_default="100.0", default=100.0)
     movement_score = Column(Float, server_default="100.0", default=100.0)
     eye_tracking_score = Column(Float, server_default="100.0", default=100.0)
     authenticity_score = Column(Float, server_default="100.0", default=100.0)
     environment_score = Column(Float, server_default="100.0", default=100.0)
-    
+
     plagiarism_score = Column(Integer, server_default="0", default=0)
     plagiarism_reasoning = Column(Text, nullable=True)
-    
+
     summary = Column(Text, nullable=True)
     timeline_data = Column(Text, default="[]")
 
@@ -284,9 +456,10 @@ class FinalReport(Base):
 
 class StatusLookup(Base):
     __tablename__ = "status_lookup"
-    status_id = Column(Integer, primary_key=True) # 100, 200...
+    status_id = Column(Integer, primary_key=True)  # 100, 200...
     status_name = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
+
 
 class GlobalConfig(Base):
     __tablename__ = "global_config"
@@ -304,13 +477,23 @@ class OTPStore(Base):
     """
     __tablename__ = "otp_store"
     otp_id = Column(String, primary_key=True, index=True)      # e.g. OTP1
-    identifier = Column(String, nullable=False, index=True)    # email or phone number
-    otp_hash = Column(String, nullable=False)                  # SHA-256 hash of the 6-digit code
-    purpose = Column(String, nullable=False)                   # "registration" | "login"
-    expires_at = Column(String, nullable=False)                # UTC ISO timestamp
-    is_used = Column(Boolean, default=False)                   # True once verified or invalidated
-    attempts = Column(Integer, default=0)                      # Brute-force guard: max 5
+    identifier = Column(
+        String,
+        nullable=False,
+        index=True)    # email or phone number
+    # SHA-256 hash of the 6-digit code
+    otp_hash = Column(String, nullable=False)
+    # "registration" | "login"
+    purpose = Column(String, nullable=False)
+    # UTC ISO timestamp
+    expires_at = Column(String, nullable=False)
+    # True once verified or invalidated
+    is_used = Column(Boolean, default=False)
+    # Brute-force guard: max 5
+    attempts = Column(Integer, default=0)
     created_at = Column(String, default=ist_isoformat)
+
+
 class AdminUser(Base):
     __tablename__ = "admin_users"
     admin_id = Column(String, primary_key=True, index=True)
@@ -318,6 +501,7 @@ class AdminUser(Base):
     password_hash = Column(String, nullable=False)
     role = Column(String, server_default="sub_admin", default="sub_admin")
     created_at = Column(String, default=ist_isoformat)
+
 
 class SystemTelemetryLog(Base):
     __tablename__ = "system_telemetry_logs"
@@ -328,23 +512,28 @@ class SystemTelemetryLog(Base):
     active_sessions = Column(Integer, default=0)
     ai_tokens_generated = Column(Integer, default=0)
 
+
 class AdminActivityLog(Base):
     __tablename__ = "admin_activity_logs"
     log_id = Column(Integer, primary_key=True, autoincrement=True)
     timestamp = Column(String, default=ist_isoformat)
     admin_email = Column(String, nullable=False)
-    action_type = Column(String, nullable=False) # e.g. VIEW_TELEMETRY, GRANT_ACCESS
-    target = Column(String, nullable=True) # e.g. "new.hr@example.com"
+    # e.g. VIEW_TELEMETRY, GRANT_ACCESS
+    action_type = Column(String, nullable=False)
+    target = Column(String, nullable=True)  # e.g. "new.hr@example.com"
+
 
 class SecurityEventLog(Base):
     __tablename__ = "security_event_logs"
     event_id = Column(Integer, primary_key=True, autoincrement=True)
     timestamp = Column(String, default=ist_isoformat)
-    event_type = Column(String, nullable=False) # e.g. FAILED_LOGIN, RATE_LIMIT_BLOCK
+    # e.g. FAILED_LOGIN, RATE_LIMIT_BLOCK
+    event_type = Column(String, nullable=False)
     ip_address = Column(String, nullable=True)
     target_email = Column(String, nullable=True)
 
-# ── Interview Scheduling (Phase 1) ────────────────────────────────────────────
+# ── Interview Scheduling (Phase 1) ──────────────────────────────────────
+
 
 class InterviewSlot(Base):
     """Admin-defined available interview time windows."""
@@ -354,20 +543,35 @@ class InterviewSlot(Base):
     start_time = Column(String, nullable=False)     # "09:00"
     end_time = Column(String, nullable=False)       # "09:45"
     timezone = Column(String, default="Asia/Kolkata")
-    max_bookings = Column(Integer, default=1)        # 1 = exclusive, >1 = group
+    # 1 = exclusive, >1 = group
+    max_bookings = Column(Integer, default=1)
     is_active = Column(Boolean, default=True)
     created_at = Column(String, default=ist_isoformat)
 
-    bookings = relationship("SlotBooking", back_populates="slot", cascade="all, delete-orphan")
+    bookings = relationship(
+        "SlotBooking",
+        back_populates="slot",
+        cascade="all, delete-orphan")
+
 
 class SlotBooking(Base):
     """A candidate's booking of an interview slot."""
     __tablename__ = "slot_bookings"
     booking_id = Column(String, primary_key=True, index=True)
-    slot_id = Column(String, ForeignKey("interview_slots.slot_id"), nullable=False)
-    candidate_id = Column(String, ForeignKey("candidates.candidate_id"), nullable=False)
-    interview_id = Column(String, ForeignKey("interview_sessions.interview_id"), nullable=True)
-    status = Column(String, default="BOOKED")       # BOOKED | COMPLETED | NO_SHOW | CANCELLED
+    slot_id = Column(
+        String,
+        ForeignKey("interview_slots.slot_id"),
+        nullable=False)
+    candidate_id = Column(
+        String,
+        ForeignKey("candidates.candidate_id"),
+        nullable=False)
+    interview_id = Column(
+        String,
+        ForeignKey("interview_sessions.interview_id"),
+        nullable=True)
+    # BOOKED | COMPLETED | NO_SHOW | CANCELLED
+    status = Column(String, default="BOOKED")
     booked_at = Column(String, default=ist_isoformat)
     reminder_sent = Column(Boolean, default=False)
     reminder_stage = Column(Integer, server_default="0", default=0)

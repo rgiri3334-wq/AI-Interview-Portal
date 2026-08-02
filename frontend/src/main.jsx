@@ -49,5 +49,7 @@ if (!rootElement) {
 
 // Render the application
 createRoot(rootElement).render(
-  <App />
+  <StrictMode>
+    <App />
+  </StrictMode>
 );

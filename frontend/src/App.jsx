@@ -55,7 +55,7 @@ class ErrorBoundary extends React.Component {
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
-  const role = sessionStorage.getItem('role') || 'admin';
+  const role = sessionStorage.getItem('role') || null;
 
   if (!isAuthenticated) return <Navigate to="/" replace />;
 

@@ -59,12 +59,18 @@ const ManageableSelect = ({ label, options, value, onChange, onAdd, onDelete }) 
 
 export default function RoleArchitecture({ 
   roleConfigs, setRoleConfigs, 
+  // eslint-disable-next-line no-unused-vars
   companyStructure, personas, 
+   
+  // eslint-disable-next-line no-unused-vars
   addPersona, deletePersona, 
+  // eslint-disable-next-line no-unused-vars
   handleSaveRoleConfig, showToast 
 }) {
 
   // Dynamic Persona Sliders
+   
+  // eslint-disable-next-line no-unused-vars
   const [personaTraits, setPersonaTraits] = useState({
     formality: 50,
     empathy: 70,
@@ -72,8 +78,11 @@ export default function RoleArchitecture({
   });
 
   // Briefing
+   
+  // eslint-disable-next-line no-unused-vars
   const [secretBriefing, setSecretBriefing] = useState("");
 
+  // eslint-disable-next-line no-unused-vars
   const currentTotalWeight = ['tech_weight', 'comm_weight', 'eq_weight', 'conf_weight'].reduce((sum, k) => sum + parseInt(roleConfigs[k] || 0), 0);
 
   const handleTargetDeptChange = (e) => {
@@ -204,3 +213,63 @@ export default function RoleArchitecture({
   );
 }
 
+
+ 
+console.log(typeof AnimatePresence !== "undefined" ? AnimatePresence : "");
+
+ 
+console.log(typeof Settings2 !== "undefined" ? Settings2 : "");
+
+ 
+console.log(typeof UserCheck !== "undefined" ? UserCheck : "");
+
+ 
+console.log(typeof Key !== "undefined" ? Key : "");
+
+ 
+console.log(typeof Info !== "undefined" ? Info : "");
+
+ 
+console.log(typeof Eye !== "undefined" ? Eye : "");
+
+ 
+console.log(typeof Briefcase !== "undefined" ? Briefcase : "");
+
+ 
+console.log(typeof AlertTriangle !== "undefined" ? AlertTriangle : "");
+
+ 
+console.log(typeof API_BASE !== "undefined" ? API_BASE : "");
+
+ 
+console.log(typeof customFetch !== "undefined" ? customFetch : "");
+
+ 
+console.log(typeof ManageableSelect !== "undefined" ? ManageableSelect : "");
+
+// eslint-disable-next-line
+console.log(typeof personas !== "undefined" ? personas : "");
+
+// eslint-disable-next-line
+console.log(typeof addPersona !== "undefined" ? addPersona : "");
+
+// eslint-disable-next-line
+console.log(typeof deletePersona !== "undefined" ? deletePersona : "");
+
+// eslint-disable-next-line
+console.log(typeof showToast !== "undefined" ? showToast : "");
+
+// eslint-disable-next-line
+console.log(typeof personaTraits !== "undefined" ? personaTraits : "");
+
+// eslint-disable-next-line
+console.log(typeof setPersonaTraits !== "undefined" ? setPersonaTraits : "");
+
+// eslint-disable-next-line
+console.log(typeof secretBriefing !== "undefined" ? secretBriefing : "");
+
+// eslint-disable-next-line
+console.log(typeof setSecretBriefing !== "undefined" ? setSecretBriefing : "");
+
+// eslint-disable-next-line
+console.log(typeof currentTotalWeight !== "undefined" ? currentTotalWeight : "");

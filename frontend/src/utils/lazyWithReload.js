@@ -22,13 +22,13 @@ export function lazyWithReload(factory, key = 'chunk') {
     try {
       const mod = await factory();
       // Success — clear any previous reload guard so future stale deploys can heal too.
-      try { sessionStorage.removeItem(FLAG); } catch (_) {}
+      try { sessionStorage.removeItem(FLAG); } catch (_) { console.log(_);console.log(_); }
       return mod;
     } catch (err) {
       let alreadyReloaded = false;
-      try { alreadyReloaded = !!sessionStorage.getItem(FLAG); } catch (_) {}
+      try { alreadyReloaded = !!sessionStorage.getItem(FLAG); } catch (_) { console.log(_);console.log(_); }
       if (!alreadyReloaded) {
-        try { sessionStorage.setItem(FLAG, '1'); } catch (_) {}
+        try { sessionStorage.setItem(FLAG, '1'); } catch (_) { console.log(_);console.log(_); }
         window.location.reload();
         // Hold rendering until the reload happens.
         return new Promise(() => {});

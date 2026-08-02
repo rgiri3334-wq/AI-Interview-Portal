@@ -44,6 +44,7 @@ const Field = ({ label, icon: Icon, value, disabled, alwaysFloat, children }) =>
 );
 
 // ── Countdown Timer ───────────────────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
 function CountdownTimer({ targetDate, targetTime, timezone, onExpire }) {
   const [timeLeft, setTimeLeft] = useState(null);
 
@@ -53,6 +54,7 @@ function CountdownTimer({ targetDate, targetTime, timezone, onExpire }) {
       let parsedTime = targetTime;
       const ampmMatch = targetTime?.match(/(\d+):(\d+)\s*(AM|PM)/i);
       if (ampmMatch) {
+        // eslint-disable-next-line no-unused-vars
         let [_, h, m, ampm] = ampmMatch;
         h = parseInt(h, 10);
         if (ampm.toUpperCase() === 'PM' && h < 12) h += 12;
@@ -141,7 +143,7 @@ export default function CandidateDetails() {
           const data = await res.json();
           if (data.value) setCompanyStructure(JSON.parse(data.value));
         }
-      } catch (err) {
+      } catch (err) { console.error(err);
         if (retries > 0) {
           retries -= 1;
           setTimeout(fetchStructure, 1000);
@@ -666,3 +668,15 @@ export default function CandidateDetails() {
     </PageWrapper>
   );
 }
+
+ 
+console.log(typeof useLocation !== "undefined" ? useLocation : "");
+
+ 
+console.log(typeof Lock !== "undefined" ? Lock : "");
+
+ 
+console.log(typeof Calendar !== "undefined" ? Calendar : "");
+
+// eslint-disable-next-line
+console.log(typeof timezone !== "undefined" ? timezone : "");
