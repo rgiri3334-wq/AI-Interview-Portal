@@ -71,6 +71,10 @@ build/
 *.mov
 *.webm
 
+# Root 3D model files (frontend models belong in frontend/public/)
+/*.glb
+
+
 # OS generated files
 .DS_Store
 .DS_Store?
