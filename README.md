@@ -103,7 +103,7 @@ flowchart TB
     end
 
     subgraph Persistence["🗄️ Persistence & Storage"]
-        DB[(PostgreSQL / SQLite WAL (21 Tables))]
+        DB[("PostgreSQL / SQLite WAL (21 Tables)")]
         S3["Supabase Storage (KYC Selfies & Recordings)"]
     end
 
@@ -143,57 +143,55 @@ flowchart TB
 Sterling AI does not read from static question lists. It dynamically scales difficulty up or down using a **5-stage cognitive state machine**:
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Stage1_Warmup: Candidate Joins Room
-    
-    state Stage1_Warmup {
-        [*] --> WarmupGreeting
-        WarmupGreeting: Personalized Greeting by Name
-        WarmupGreeting --> Icebreaker: Low Stakes Domain Chat
-        Icebreaker: Establish Baseline Cadence & WPM
-    }
+flowchart TD
+    Start(["Candidate Joins Session"]) --> S1
 
-    Stage1_Warmup --> Stage2_Resume: Baseline Established
-    
-    state Stage2_Resume {
-        [*] --> ExtractProjectClaims
-        ExtractProjectClaims: Parse Specific Claims from Resume
-        ExtractProjectClaims --> ArchitectureDrill: "Walk me through the architecture of Project X"
-        ArchitectureDrill --> ChallengeVerification: Verify Actual Authorship vs Buzzwords
-    }
+    subgraph S1["Stage 1: Personalized Warmup & Icebreaker"]
+        S1_Greet["Personalized Greeting by Name"]
+        S1_Ice["Low-Stakes Domain Chat & Rapport"]
+        S1_Base["Establish Baseline Speech Cadence & WPM"]
+        S1_Greet --> S1_Ice --> S1_Base
+    end
 
-    Stage2_Resume --> Stage3_TechStress: Claims Verified
-    
-    state Stage3_TechStress {
-        [*] --> DeepTechnicalDive
-        DeepTechnicalDive: Coding, Data Structures, Concurrency
-        state AnswerCheck <<choice>>
-        DeepTechnicalDive --> AnswerCheck: Evaluate Depth
-        AnswerCheck --> IncreaseDifficulty: Strong Answer (Score ≥ 80)
-        AnswerCheck --> AssertivePressureMode: Weak / Generic Answer
-        AssertivePressureMode: "Pressure-test logic against high-load / edge cases"
-        IncreaseDifficulty --> AdvanceOrStabilize
-        AssertivePressureMode --> AdvanceOrStabilize
-    }
+    S1 --> S2
 
-    Stage3_TechStress --> Stage4_SystemDesign: Technical Competence Proven
-    
-    state Stage4_SystemDesign {
-        [*] --> ScalabilityScenario
-        ScalabilityScenario: Design for 100k TPS, Failover, Tradeoffs
-        ScalabilityScenario --> LatencyBottleneckAnalysis
-    }
+    subgraph S2["Stage 2: Resume Deep-Dive & Claim Validation"]
+        S2_Parse["Extract Specific Projects & Tech Claims"]
+        S2_Drill["Architecture Drilldown: 'Explain your design in Project X'"]
+        S2_Audit["Validate Actual Authorship vs. AI Buzzwords"]
+        S2_Parse --> S2_Drill --> S2_Audit
+    end
 
-    Stage4_SystemDesign --> Stage5_EQClosing: System Design Complete
-    
-    state Stage5_EQClosing {
-        [*] --> STARBehavioral
-        STARBehavioral: Conflict De-escalation & Culture Fit
-        STARBehavioral --> Wrapup: Formal Sign-off & Telemetry Freeze
-    }
+    S2 --> S3
 
-    Stage5_EQClosing --> DossierGenerated: Stream Closed
-    DossierGenerated --> [*]
+    subgraph S3["Stage 3: Technical Stress-Test & Coding Sandbox"]
+        S3_Dive["Core Algorithms, Concurrency & Data Structures"]
+        S3_Eval{"Evaluate Answer Depth"}
+        S3_High["Strong Answer (Score ≥ 80)<br/>Increase Difficulty Tier"]
+        S3_Assert["Weak / Generic Answer<br/>ACTIVATE ASSERTIVE MODE: Pressure-Test Logic"]
+        S3_Dive --> S3_Eval
+        S3_Eval -- "Depth Verified" --> S3_High
+        S3_Eval -- "Superficial" --> S3_Assert
+    end
+
+    S3_High --> S4
+    S3_Assert --> S4
+
+    subgraph S4["Stage 4: Distributed System Design & Scalability"]
+        S4_Scale["High-Load Scenario (100k TPS, Failover, Sharding)"]
+        S4_Trade["Evaluate Engineering Trade-offs & Bottlenecks"]
+        S4_Scale --> S4_Trade
+    end
+
+    S4 --> S5
+
+    subgraph S5["Stage 5: Emotional Intelligence (EQ) & Culture Fit"]
+        S5_STAR["STAR Method: Handling Outages & Team Conflict"]
+        S5_Close["Formal Sign-off & Lock Telemetry Stream"]
+        S5_STAR --> S5_Close
+    end
+
+    S5 --> Finish(["Generate 7-Dimensional Executive Dossier & Decision"])
 ```
 
 ### 🎯 The 5 Experience Tiers
@@ -303,11 +301,11 @@ flowchart LR
 
     WPM --> P_WPM
 
-    P_None --> VerdictBands
-    P_Tab --> VerdictBands
-    P_Dev --> VerdictBands
-    P_GPT --> VerdictBands
-    P_WPM --> VerdictBands
+    P_None & P_Tab & P_Dev & P_GPT & P_WPM --> ScoreTally["Continuous Score Tally (100 → 0)"]
+    ScoreTally --> Band1
+    ScoreTally --> Band2
+    ScoreTally --> Band3
+    ScoreTally --> Band4
 ```
 
 ---
