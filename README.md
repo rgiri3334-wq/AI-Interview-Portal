@@ -1,12 +1,15 @@
 # 🎙️ Sterling AI — Autonomous Multi-Modal AI Interview Platform & Behavioral Proctoring OS
 
 > **Next-Generation Autonomous Talent Acquisition & Real-Time Cognitive Assessment Engine**  
-> Built for end-to-end autonomous candidate interviewing across **Real-Time WebSockets**, **3D WebGL Rigged Avatars (ReadyPlayerMe)**, **Whisper Speech-to-Text**, **Google Gemini 2.0 Flash Reasoning**, and **Fair Continuous Proctoring Telemetry**.
+> Built for end-to-end autonomous candidate interviewing across **Real-Time WebSockets**, **3D WebGL Rigged Avatars (ReadyPlayerMe)**, **Whisper Speech-to-Text**, **Google Gemini 2.0 Flash Reasoning**, and **Fair Continuous Proctoring Telemetry**.  
+>  
+> 🌐 **Live Production Application:** **[https://ai-interview-portal.vercel.app/](https://ai-interview-portal.vercel.app/)**
 
 ---
 
 <div align="center">
 
+[![Live Demo](https://img.shields.io/badge/Live%20Platform-ai--interview--portal.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://ai-interview-portal.vercel.app/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](file:///Main.py)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white)](file:///Main.py)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](file:///frontend/)
@@ -15,6 +18,14 @@
 [![Whisper STT](https://img.shields.io/badge/Whisper-Groq%20Large%20v3%20Turbo-F55036?style=for-the-badge&logo=openai&logoColor=white)](file:///services/whisper_service.py)
 [![Database](https://img.shields.io/badge/Database-Supabase%20PostgreSQL%20%2F%20SQLite%20WAL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](file:///database/models.py)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](file:///LICENSE)
+
+<br/>
+
+<p align="center">
+  <a href="https://ai-interview-portal.vercel.app/">
+    <img src="https://img.shields.io/badge/⚡%20LAUNCH%20LIVE%20PLATFORM-ai--interview--portal.vercel.app-00D1FF?style=for-the-badge&logo=vercel&logoColor=black" alt="Launch Live Platform" />
+  </a>
+</p>
 
 <p align="center">
   <b>Architected & Developed by Aditya Singh (<a href="https://github.com/adityasingh1786">@adityasingh1786</a>)</b>
@@ -498,7 +509,7 @@ docker run -d -p 8000:8000 --env-file .env --name interview-portal sterling-inte
 
 The repository includes pre-configured deployment manifests:
 - **Backend on Render:** [render.yaml](file:///render.yaml) defines auto-provisioning for FastAPI with Python runtime.
-- **Frontend on Vercel:** [frontend/vercel.json](file:///frontend/vercel.json) handles SPA routing rewrites.
+- **Frontend on Vercel:** Live in production at **[https://ai-interview-portal.vercel.app/](https://ai-interview-portal.vercel.app/)** (configured with SPA rewrites via [frontend/vercel.json](file:///frontend/vercel.json)).
 - **Database on Supabase:** Run [database_migration_candidate_cancellation.sql](file:///database_migration_candidate_cancellation.sql) inside the Supabase SQL editor.
 
 ---
