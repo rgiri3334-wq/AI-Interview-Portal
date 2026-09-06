@@ -1,0 +1,24 @@
+name: 🔄 Keep Backend & Demo Alive
+
+on:
+  schedule:
+    # Run every 14 minutes to prevent Render's 15-minute inactivity spin-down
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # Allows manual trigger anytime from GitHub Actions tab
+
+jobs:
+  keep-alive:
+    name: Ping Services
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Backend
+        run: |
+          echo "Sending keep-alive ping to Render Backend..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -m 60 "https://ai-interview-portal-1.onrender.com/docs" || echo "TIMEOUT/FAILED")
+          echo "Render Backend Response Code: $HTTP_STATUS"
+
+      - name: Ping Vercel Frontend
+        run: |
+          echo "Sending keep-alive ping to Vercel Frontend..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "https://ai-interview-portal.vercel.app/" || echo "TIMEOUT/FAILED")
+          echo "Vercel Frontend Response Code: $HTTP_STATUS"
